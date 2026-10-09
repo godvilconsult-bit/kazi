@@ -1,0 +1,75 @@
+[
+  {
+    "name": "formal loan summary en→sw",
+    "capability": "translate.en-sw",
+    "instructions": "Translate the executive summary below into formal Swahili for a bank loan application. Keep the headings and every figure exactly.",
+    "input": "## Executive summary\n\nJua Bora Ltd installs rooftop solar systems for homes and shops in Arusha. Since 2021 we have completed 340 installations and employ 12 technicians.\n\n## Loan request\n\nWe request a loan of TZS 80,000,000 to open a second branch in Moshi. We expect the branch to break even within 14 months.",
+    "acceptance": {
+      "rubric": [
+        "Complete translation of both sections",
+        "Formal Swahili register",
+        "Headings kept",
+        "All figures (340, 12, TZS 80,000,000, 14) unchanged"
+      ],
+      "format": "markdown",
+      "mustInclude": ["80,000,000", "Jua Bora Ltd"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "product page sw→en",
+    "capability": "translate.sw-en",
+    "instructions": "Translate this product description from Swahili into natural, friendly English for an online shop.",
+    "input": "Kahawa yetu ya Kilimanjaro hulimwa na wakulima wadogo kwenye miteremko ya mlima. Inakaangwa kwa wastani ili kuleta ladha ya chokoleti na matunda. Pakiti ya gramu 250 inatosha vikombe 30.",
+    "acceptance": {
+      "rubric": [
+        "Faithful to the source meaning",
+        "Natural marketing English",
+        "Keeps 250 g and 30 cups"
+      ],
+      "format": "text",
+      "mustInclude": ["250"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "contract clause en→sw keeps terms",
+    "capability": "translate.en-sw",
+    "instructions": "Translate this contract clause into formal Swahili. Use the term \"Mpangaji\" for Tenant and \"Mwenye Nyumba\" for Landlord.",
+    "input": "The Tenant shall pay rent of TZS 450,000 on or before the fifth day of each month. If rent is more than 14 days late, the Landlord may terminate this agreement with 30 days' written notice.",
+    "acceptance": {
+      "rubric": [
+        "Uses Mpangaji and Mwenye Nyumba as instructed",
+        "Amounts and day counts unchanged",
+        "Formal legal register"
+      ],
+      "format": "text",
+      "mustInclude": ["Mpangaji", "Mwenye Nyumba", "450,000"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "bulleted notice en→sw keeps list",
+    "capability": "translate.en-sw",
+    "instructions": "Translate this staff notice into simple Swahili. Keep it as a bulleted list.",
+    "input": "Staff notice:\n- The office opens at 8:00 and closes at 17:00.\n- Wear your ID badge at all times.\n- Report safety problems to the supervisor immediately.",
+    "acceptance": {
+      "rubric": ["All three points translated", "Bulleted list kept", "Times unchanged"],
+      "format": "markdown",
+      "mustInclude": ["8:00", "17:00"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "letter sw→en polite register",
+    "capability": "translate.sw-en",
+    "instructions": "Translate this letter into polite, formal English.",
+    "input": "Ndugu Mkurugenzi,\n\nNaomba kwa heshima kubwa kukujulisha kwamba mzigo wa mbegu ulioagizwa tarehe 3 Septemba bado haujafika. Tafadhali tujulishe tarehe mpya ya kufika.\n\nWako mtiifu,\nAsha Mwakyusa",
+    "acceptance": {
+      "rubric": ["Faithful translation", "Polite formal English letter", "Date and signature kept"],
+      "format": "text",
+      "mustInclude": ["Asha Mwakyusa"]
+    },
+    "expectPass": true
+  }
+]

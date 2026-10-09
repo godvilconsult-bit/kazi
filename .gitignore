@@ -1,0 +1,28 @@
+node_modules/
+dist/
+.next/
+out/
+coverage/
+.turbo/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+
+# Foundry
+packages/contracts/out/
+packages/contracts/cache/
+packages/contracts/broadcast/*/31337/
+
+# Local anvil deployments change on every restart
+packages/config/deployments/local.json
+
+# Supabase CLI local cache
+supabase/.temp/
+
+# Prisma generated client
+packages/db/src/generated/
+
+# Local anvil chain state (pnpm -F contracts dev)
+packages/contracts/.anvil/

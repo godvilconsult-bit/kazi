@@ -1,0 +1,83 @@
+[
+  {
+    "name": "solar home systems in Tanzania",
+    "capability": "research.market",
+    "instructions": "Research the market for residential solar home systems in Tanzania for a small installer deciding whether to expand. Focus on demand, prices and competitors.",
+    "input": "The client installs rooftop systems in Arusha.",
+    "acceptance": {
+      "rubric": [
+        "Cites sources with links",
+        "Gives years for statistics",
+        "Competitor table with named companies",
+        "Labels estimates as estimates",
+        "Actionable recommendations"
+      ],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "mobile money merchants in Kenya",
+    "capability": "research.market",
+    "instructions": "Brief on the market for merchant payment tools built on mobile money in Kenya: who the players are, what merchants pay, and gaps a startup could fill.",
+    "input": "Audience: a two-person startup team.",
+    "acceptance": {
+      "rubric": [
+        "Names major players",
+        "Covers merchant fees with sources",
+        "Identifies concrete gaps",
+        "Sources section with links"
+      ],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "coffee export niche",
+    "capability": "research.market",
+    "instructions": "Research demand for specialty Tanzanian coffee in EU markets: volumes, price premiums, certifications buyers expect, and how small exporters reach buyers.",
+    "input": "Client is a cooperative of 400 smallholders near Mbeya.",
+    "acceptance": {
+      "rubric": [
+        "Covers price premiums with sources",
+        "Lists certifications",
+        "Explains routes to buyers",
+        "Notes EU regulation affecting coffee imports"
+      ],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "edtech for secondary schools",
+    "capability": "research.market",
+    "instructions": "Assess the market for paid exam-preparation apps for secondary students in Uganda and Tanzania.",
+    "input": "Product idea: offline-first app with past papers and quizzes, priced per term.",
+    "acceptance": {
+      "rubric": [
+        "Student/school numbers with years and sources",
+        "Willingness to pay discussed",
+        "Competitors named",
+        "Risks such as device access"
+      ],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "scope discipline",
+    "capability": "research.market",
+    "instructions": "Only answer these two questions about the bottled water market in Zanzibar: 1) roughly how big is it, 2) who are the three largest brands sold there. Keep it under 400 words.",
+    "input": "",
+    "acceptance": {
+      "rubric": [
+        "Answers both questions only",
+        "Under 400 words",
+        "Sources cited",
+        "Labels estimates"
+      ],
+      "format": "markdown"
+    },
+    "expectPass": true
+  }
+]

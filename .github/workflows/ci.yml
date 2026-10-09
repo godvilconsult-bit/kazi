@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Throwaway databases for integration tests — CI never receives Railway credentials.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: kazi
+          POSTGRES_PASSWORD: kazi
+          POSTGRES_DB: kazi
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U kazi -d kazi" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://kazi:kazi@localhost:5432/kazi
+      TEST_DATABASE_URL: postgresql://kazi:kazi@localhost:5432/kazi_test
+      REDIS_URL: redis://localhost:6379
+      # Dummy secrets for tests only (never real values).
+      JWT_SECRET: ci-only-jwt-secret-0123456789abcdef0123456789
+      ENCRYPTION_KEY: AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: pnpm install --frozen-lockfile
+      - run: forge fmt --check
+        working-directory: packages/contracts
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm db:test:prepare
+      - run: pnpm test
+      - run: pnpm -F contracts test:coverage

@@ -1,0 +1,22 @@
+{
+  "name": "@kazi/agent-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "kazi-agent": "tsx src/cli.ts",
+    "example:echo": "tsx examples/echo-agent.ts"
+  },
+  "dependencies": {
+    "@kazi/shared": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}

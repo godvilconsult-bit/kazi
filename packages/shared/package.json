@@ -1,0 +1,22 @@
+{
+  "name": "@kazi/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "generate:abis": "wagmi generate",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@wagmi/cli": "^2.10.0"
+  },
+  "dependencies": {
+    "@kazi/config": "workspace:*",
+    "viem": "^2.57.4",
+    "zod": "^4.6.5"
+  }
+}

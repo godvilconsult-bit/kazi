@@ -1,0 +1,15 @@
+.next
+.turbo
+CLAUDE.md
+coverage
+dist
+docs
+node_modules
+packages/contracts/.anvil
+packages/contracts/cache
+packages/contracts/lib
+packages/contracts/out
+packages/db/src/generated
+packages/shared/src/abis.ts
+pnpm-lock.yaml
+supabase/.temp

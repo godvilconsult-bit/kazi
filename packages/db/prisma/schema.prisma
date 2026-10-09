@@ -1,0 +1,428 @@
+// Kazi database schema — source: docs/04-BACKEND-API.md §2 (Phase 2 additions listed in §8 there).
+// Money: bigint base units stored as decimal strings (never floats). Wallets: lowercase hex.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String             @id @default(cuid())
+  wallet        String             @unique // lowercase 0x address
+  email         String?            @unique
+  displayName   String?
+  roles         Role[]             @default([CLIENT])
+  createdAt     DateTime           @default(now())
+  tasks         Task[]
+  providers     Provider[]
+  freelancer    FreelancerProfile?
+  refreshTokens RefreshToken[]
+  files         FileObject[]
+  notifications Notification[]
+  apiKeys       ApiKey[]
+}
+
+enum Role {
+  CLIENT
+  PROVIDER_OWNER
+  FREELANCER
+  ADMIN
+}
+
+/// Refresh tokens (7 days, rotating). Only a SHA-256 hash of the token is stored.
+/// Reuse of a rotated token revokes the whole family (theft detection).
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  familyId   String
+  authTime   DateTime // original SIWE login time, carried through rotations (admin freshness)
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  replacedBy String?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+}
+
+model Provider {
+  id                String               @id @default(cuid())
+  onchainId         BigInt?              @unique
+  ownerId           String
+  owner             User                 @relation(fields: [ownerId], references: [id])
+  kind              ProviderKind
+  name              String
+  slug              String               @unique
+  description       String
+  capabilities      String[] // capability slugs, see 05-AGENT-SPEC
+  languages         String[]
+  endpointUrl       String? // agents only
+  manifestUrl       String?
+  manifestHash      String?
+  pricing           Json // validated by shared Zod schema
+  payoutAddress     String
+  apiKeyHash        String?
+  webhookSecretEnc  String? // AES-256-GCM, key from ENCRYPTION_KEY
+  status            ProviderStatus       @default(PENDING)
+  isHouse           Boolean              @default(false)
+  hosting           ProviderHosting      @default(SELF) // KAZI = runs on Kazi (docs/11-HOSTED-AGENTS.md)
+  hostedConfig      Json? // hostedConfigSchema: instructions, model, effort, tools, caps
+  aiCost            Json? // aiCostEstimateSchema: per-task AI cost estimates (nano-USD)
+  hostedAdvice      Json? // hostedAdviceSchema: last advice run (score + cost per model)
+  stakeAmount       String               @default("0") // bigint string, mirrored from chain
+  reputation        Float                @default(0) // 0..100 score, not money
+  reviewScore       Float? // 0..100 qualification score (review suite / advice run); gates the exploration boost
+  completedCount    Int                  @default(0)
+  failedCount       Int                  @default(0)
+  avgLatencyMs      Int?
+  createdAt         DateTime             @default(now())
+  subtasks          Subtask[]
+  freelancer        FreelancerProfile?
+  reputationHistory ReputationSnapshot[]
+  offers            Offer[]
+
+  @@index([status, kind])
+}
+
+enum ProviderHosting {
+  SELF
+  KAZI
+}
+
+enum ProviderKind {
+  AGENT
+  HUMAN
+}
+
+enum ProviderStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DELISTED
+}
+
+model FreelancerProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id])
+  providerId     String   @unique
+  provider       Provider @relation(fields: [providerId], references: [id])
+  skills         String[]
+  hourlyRateUsdc String // bigint string, base units
+  portfolio      Json?
+  availability   Boolean  @default(true)
+}
+
+/// Capability registry (05-AGENT-SPEC §2). Seeded from packages/shared; admins may add more.
+model Capability {
+  slug        String   @id
+  description String
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Task {
+  id            String      @id @default(cuid())
+  onchainId     String      @unique // bytes32 hex = keccak256(id)
+  clientId      String
+  client        User        @relation(fields: [clientId], references: [id])
+  title         String
+  description   String
+  attachments   Json        @default("[]") // FileObject ids
+  budgetMax     String? // bigint string, base units
+  deadline      DateTime
+  status        TaskStatus  @default(DRAFT)
+  speed         TaskSpeed   @default(ECONOMY) // hosted agents: ECONOMY = Batch API, EXPRESS = standard
+  quoteVersion  Int         @default(0)
+  quote         Json? // full plan + prices + signature + expiry
+  totalAmount   String?
+  feeBps        Int?
+  fundTxHash    String?
+  deliveredAt   DateTime?
+  reviewUntil   DateTime?
+  approvedAt    DateTime? // client approved delivery; the payout worker then releases milestones
+  rating        Int?
+  ratingComment String?
+  llmCostUsd    Decimal     @default(0) @db.Decimal(12, 6) // internal cost tracking, not money movement
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  subtasks      Subtask[]
+  dispute       Dispute?
+  events        TaskEvent[]
+
+  @@index([clientId, status])
+}
+
+enum TaskSpeed {
+  ECONOMY
+  EXPRESS
+}
+
+enum TaskStatus {
+  DRAFT
+  QUOTED
+  FUNDED
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  DISPUTED
+  RESOLVED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model Subtask {
+  id            String        @id @default(cuid())
+  taskId        String
+  task          Task          @relation(fields: [taskId], references: [id])
+  index         Int // milestone index in escrow
+  kind          SubtaskKind   @default(WORK)
+  title         String
+  instructions  String
+  capability    String
+  dependsOn     Int[]
+  acceptance    Json
+  providerId    String?
+  provider      Provider?     @relation(fields: [providerId], references: [id])
+  amount        String // bigint string
+  aiCost        String? // hosted agents: AI cost (base units) carried in Kazi's milestone for this step
+  status        SubtaskStatus @default(PENDING)
+  attempts      Int           @default(0)
+  revisions     Int           @default(0) // client revision requests (each allows one more attempt)
+  dispatchedAt  DateTime? // current attempt sent to the provider
+  timeoutAt     DateTime? // current attempt counts as timed out after this
+  releaseTxHash String?
+  refundTxHash  String?
+  submissions   Submission[]
+  hostedRuns    HostedRun[]
+  offers        Offer[]
+
+  @@unique([taskId, index])
+}
+
+/// WORK = a step done by an agent/human. SERVICE_FEE = Kazi's router fee milestone, paid to the
+/// treasury and never dispatched (06-ROUTER §3).
+enum SubtaskKind {
+  WORK
+  SERVICE_FEE
+}
+
+enum SubtaskStatus {
+  PENDING
+  DISPATCHED
+  SUBMITTED
+  EVALUATING
+  ACCEPTED
+  REJECTED
+  FAILED
+  RELEASED
+  REFUNDED
+}
+
+model Submission {
+  id         String   @id @default(cuid())
+  subtaskId  String
+  subtask    Subtask  @relation(fields: [subtaskId], references: [id])
+  providerId String
+  attempt    Int
+  output     Json
+  score      Float?
+  evaluation Json?
+  accepted   Boolean?
+  latencyMs  Int?
+  createdAt  DateTime @default(now())
+
+  @@unique([subtaskId, attempt])
+}
+
+model Dispute {
+  id         String        @id @default(cuid())
+  taskId     String        @unique
+  task       Task          @relation(fields: [taskId], references: [id])
+  reason     String
+  evidence   Json          @default("[]")
+  status     DisputeStatus @default(OPEN)
+  resolution Json?
+  resolvedBy String?
+  createdAt  DateTime      @default(now())
+  resolvedAt DateTime?
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+}
+
+/// Append-only audit log.
+model TaskEvent {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id])
+  type      String
+  data      Json
+  createdAt DateTime @default(now())
+
+  @@index([taskId, createdAt])
+}
+
+/// Raw indexed contract events.
+model ChainEvent {
+  id          String  @id @default(cuid())
+  chainId     Int
+  contract    String
+  name        String
+  txHash      String
+  logIndex    Int
+  blockNumber BigInt
+  args        Json
+  processed   Boolean @default(false)
+
+  @@unique([chainId, txHash, logIndex])
+  @@index([processed])
+}
+
+model IndexerCursor {
+  id        String @id
+  lastBlock BigInt
+}
+
+model IdempotencyKey {
+  key       String   @id
+  result    Json?
+  createdAt DateTime @default(now())
+}
+
+/// Uploaded files. A presigned upload creates a PENDING row; the client confirms after upload.
+model FileObject {
+  id        String     @id @default(cuid())
+  ownerId   String
+  owner     User       @relation(fields: [ownerId], references: [id])
+  key       String     @unique // object key in the storage bucket
+  filename  String
+  mime      String
+  size      Int // bytes, ≤ 50 MB
+  sha256    String? // client-declared, or computed by the worker on first use
+  status    FileStatus @default(PENDING)
+  summary   String? // router's text extract/summary, reused across re-quotes (06-ROUTER §1)
+  source    String? // "client" upload or "agent" output copied in by the worker
+  createdAt DateTime   @default(now())
+
+  @@index([ownerId])
+}
+
+enum FileStatus {
+  PENDING
+  UPLOADED
+}
+
+/// One attempt of a Kazi-hosted agent (docs/11-HOSTED-AGENTS.md §4).
+model HostedRun {
+  id         String          @id @default(cuid())
+  subtaskId  String
+  subtask    Subtask         @relation(fields: [subtaskId], references: [id])
+  attempt    Int
+  mode       HostedRunMode
+  status     HostedRunStatus @default(RUNNING)
+  batchId    String? // current Message Batch (Economy)
+  turns      Json            @default("[]") // assistant content carried across pause_turn rounds
+  partial    String          @default("") // text produced in earlier rounds
+  usage      Json? // accumulated token usage
+  costNano   String          @default("0") // actual AI cost so far, nano-USD
+  error      String?
+  createdAt  DateTime        @default(now())
+  finishedAt DateTime?
+
+  @@unique([subtaskId, attempt])
+  @@index([status, mode])
+}
+
+enum HostedRunMode {
+  STANDARD
+  BATCH
+}
+
+enum HostedRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+/// Reputation over time, for charts (06-ROUTER §6). Written on every recompute.
+model ReputationSnapshot {
+  id         String   @id @default(cuid())
+  providerId String
+  provider   Provider @relation(fields: [providerId], references: [id])
+  value      Float // 0..100
+  components Json // judge, rating, onTime, events, penalties
+  createdAt  DateTime @default(now())
+
+  @@index([providerId, createdAt])
+}
+
+/// Work offered to human freelancers (05-AGENT-SPEC §8). Wave 1 = the router's pick; if nobody
+/// accepts in time, wave 2 widens to every qualified freelancer.
+model Offer {
+  id          String      @id @default(cuid())
+  subtaskId   String
+  subtask     Subtask     @relation(fields: [subtaskId], references: [id])
+  attempt     Int
+  providerId  String
+  provider    Provider    @relation(fields: [providerId], references: [id])
+  wave        Int         @default(1)
+  status      OfferStatus @default(OFFERED)
+  expiresAt   DateTime
+  respondedAt DateTime?
+  createdAt   DateTime    @default(now())
+
+  @@unique([subtaskId, attempt, providerId])
+  @@index([providerId, status])
+  @@index([status, expiresAt])
+}
+
+enum OfferStatus {
+  OFFERED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  WITHDRAWN
+}
+
+/// In-app notifications (bell + inbox). Email can be added behind the same writer later.
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+}
+
+/// Keys for the public programmatic API (Phase 5). Only a SHA-256 hash is stored.
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  name       String
+  prefix     String // first characters, shown in the UI to identify the key
+  keyHash    String    @unique
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}

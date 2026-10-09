@@ -1,0 +1,18 @@
+{
+  "name": "@kazi/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@openzeppelin/contracts": "5.6.1"
+  },
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test -vvv",
+    "test:coverage": "forge coverage --report summary --no-match-coverage \"(test|script|mocks)\"",
+    "snapshot": "forge snapshot",
+    "lint": "forge lint src",
+    "fmt": "forge fmt",
+    "deploy:local": "node scripts/deploy-local.mjs",
+    "dev": "anvil --state .anvil/state.json"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@kazi/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/server.ts",
+    "start": "tsx --env-file=../../.env src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@kazi/agent-sdk": "workspace:*",
+    "@kazi/config": "workspace:*",
+    "@kazi/db": "workspace:*",
+    "@kazi/shared": "workspace:*",
+    "bullmq": "6.3.12",
+    "fastify": "5.12.5",
+    "ioredis": "^5.11.1",
+    "jose": "6.2.12",
+    "pdf-lib": "1.17.1",
+    "viem": "^2.57.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "pino-pretty": "13.2.0",
+    "tsx": "4.23.15"
+  }
+}

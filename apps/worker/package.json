@@ -1,0 +1,38 @@
+{
+  "name": "@kazi/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./llm": "./src/llm/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/main.ts",
+    "start": "tsx --env-file=../../.env src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "decompose": "tsx --env-file=../../.env scripts/decompose.ts",
+    "cost-experiment": "tsx --env-file=../../.env scripts/cost-experiment.ts",
+    "setup-providers": "tsx --env-file=../../.env scripts/setup-providers.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0",
+    "@kazi/agent-sdk": "workspace:*",
+    "@kazi/config": "workspace:*",
+    "@kazi/db": "workspace:*",
+    "@kazi/shared": "workspace:*",
+    "bullmq": "6.3.12",
+    "ioredis": "^5.11.1",
+    "mammoth": "1.12.3",
+    "pino": "10.4.0",
+    "viem": "^2.57.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@kazi/contracts": "workspace:*",
+    "@kazi/house-agents": "workspace:*",
+    "pino-pretty": "13.2.0",
+    "tsx": "4.23.15"
+  }
+}

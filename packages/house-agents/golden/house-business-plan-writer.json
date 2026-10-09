@@ -1,0 +1,87 @@
+[
+  {
+    "name": "solar installer loan plan",
+    "capability": "write.business_plan",
+    "instructions": "Write a business plan for a bank loan application. Business: Jua Bora Ltd, rooftop solar installer in Arusha, Tanzania, since 2021; 340 installations; 12 technicians; average job TZS 3.2M. Ask: TZS 80M loan to open a branch in Moshi. Include a 3-year projection.",
+    "input": "Owner notes: margins about 28%. Main competitors are two Nairobi-based firms with local agents. We want the branch open by March.",
+    "acceptance": {
+      "rubric": [
+        "Executive summary states the TZS 80M ask and its use",
+        "Uses the client's figures (340 installs, 12 technicians, TZS 3.2M average job, 28% margin)",
+        "3-year financial projection table with visible arithmetic",
+        "Assumptions labelled as assumptions",
+        "Risks section"
+      ],
+      "format": "markdown",
+      "mustInclude": ["80"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "mobile food kiosk",
+    "capability": "write.business_plan",
+    "instructions": "Write a short business plan (about 1,200 words) for a chapati and tea kiosk near the University of Dodoma, aimed at a SACCO loan of TZS 5M. Keep it simple.",
+    "input": "Startup costs: kiosk TZS 2.5M, equipment TZS 1.5M, first stock TZS 1M. Expected 250 customers a day at TZS 1,500 average.",
+    "acceptance": {
+      "rubric": [
+        "Short plan suited to a SACCO",
+        "Uses the startup costs and customer figures given",
+        "Simple monthly revenue and cost estimate",
+        "Clear repayment discussion"
+      ],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "plan in swahili",
+    "capability": "write.business_plan",
+    "instructions": "Andika mpango wa biashara kwa Kiswahili kwa ajili ya kikundi cha wanawake wanaotengeneza sabuni ya asili mjini Tanga. Wanahitaji TZS 12M kununua mashine.",
+    "input": "Wanachama 15. Wanauza vipande 3,000 kwa mwezi kwa TZS 1,200 kila kimoja.",
+    "acceptance": {
+      "rubric": [
+        "Written in Swahili",
+        "Uses members, volume and price given",
+        "States the TZS 12M need and use",
+        "Includes simple financial projection"
+      ],
+      "format": "markdown",
+      "mustInclude": ["12"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "investor pitch plan for agritech",
+    "capability": "write.business_plan",
+    "instructions": "Write an investor-oriented business plan for MkulimaPay, a mobile app that lets smallholder farmers in Kenya buy inputs on credit repaid at harvest. Seeking USD 250k seed.",
+    "input": "Pilot: 1,800 farmers in Nakuru, 92% repayment, average loan USD 85. Team of 4 (2 engineers, 1 agronomist, 1 ops).",
+    "acceptance": {
+      "rubric": [
+        "Investor framing with the USD 250k ask and use of funds",
+        "Uses pilot metrics (1,800 farmers, 92% repayment, USD 85)",
+        "Market and competition with named alternatives",
+        "Risks including credit risk",
+        "Milestones"
+      ],
+      "format": "markdown",
+      "mustInclude": ["250"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "client-specified structure wins",
+    "capability": "write.business_plan",
+    "instructions": "Write a business plan for a tailoring workshop in Mwanza using exactly these four sections: 1. Overview 2. Customers 3. Money 4. Next steps. Under 800 words.",
+    "input": "Two tailors, sells school uniforms; 600 uniforms last year at TZS 25,000.",
+    "acceptance": {
+      "rubric": [
+        "Exactly the four requested sections in order",
+        "Under 800 words",
+        "Uses the 600 uniforms and TZS 25,000 figures"
+      ],
+      "format": "markdown",
+      "mustInclude": ["Overview", "Customers", "Money", "Next steps"]
+    },
+    "expectPass": true
+  }
+]

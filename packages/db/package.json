@@ -1,0 +1,30 @@
+{
+  "name": "@kazi/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset --force",
+    "db:test:prepare": "tsx scripts/create-test-db.ts"
+  },
+  "dependencies": {
+    "@kazi/shared": "workspace:*",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@kazi/config": "workspace:*",
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.0",
+    "tsx": "4.23.15"
+  }
+}

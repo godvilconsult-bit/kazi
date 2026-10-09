@@ -1,0 +1,19 @@
+{
+  "name": "@kazi/config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./deployments": "./src/deployments.ts",
+    "./secrets": "./src/secrets.ts",
+    "./storage": "./src/storage.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  }
+}
