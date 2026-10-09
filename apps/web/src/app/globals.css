@@ -1,0 +1,207 @@
+@import "tailwindcss";
+
+/*
+ * Kazi design tokens. A warm "market ledger" look: paper, ink, a working orange, lagoon green for
+ * money that has moved. Dark mode swaps the same semantic tokens.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --bg: #f3eee3;
+  --surface: #fbf8f2;
+  --surface-2: #ebe4d6;
+  --ink: #17130f;
+  --muted: #6b6155;
+  --line: #d6ccba;
+  --accent: #f0531c;
+  --accent-soft: #fde3d7;
+  --accent-ink: #ffffff;
+  --ok: #0c7a63;
+  --ok-soft: #d7efe7;
+  --warn: #a8670f;
+  --warn-soft: #f7e7c8;
+  --bad: #bd3128;
+  --bad-soft: #f8dcd8;
+  --info: #2f4fb3;
+  --info-soft: #dfe5f8;
+  --shadow: #17130f;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #110e0b;
+  --surface: #1a1612;
+  --surface-2: #241e18;
+  --ink: #f3eee3;
+  --muted: #a99d8d;
+  --line: #3a3229;
+  --accent: #ff6a33;
+  --accent-soft: #3b1d10;
+  --accent-ink: #110e0b;
+  --ok: #3cc4a0;
+  --ok-soft: #0f2c24;
+  --warn: #e5ac4b;
+  --warn-soft: #33260e;
+  --bad: #f0786d;
+  --bad-soft: #3a1714;
+  --info: #8aa2f0;
+  --info-soft: #18203a;
+  --shadow: #000000;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SFMono-Regular", monospace;
+  --shadow-stamp: 4px 4px 0 0 var(--shadow);
+  --shadow-stamp-sm: 2px 2px 0 0 var(--shadow);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* Receipt edge: a perforated rule used on quotes and receipts. */
+  .perforated {
+    background-image: radial-gradient(circle at 6px 6px, var(--bg) 3px, transparent 3.5px);
+    background-size: 12px 12px;
+    background-repeat: repeat-x;
+    height: 12px;
+  }
+  /* Woven grid pattern for the hero (kanga-like, very low contrast). */
+  .weave {
+    background-image:
+      linear-gradient(45deg, color-mix(in srgb, var(--ink) 6%, transparent) 25%, transparent 25%),
+      linear-gradient(-45deg, color-mix(in srgb, var(--ink) 6%, transparent) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, color-mix(in srgb, var(--ink) 6%, transparent) 75%),
+      linear-gradient(-45deg, transparent 75%, color-mix(in srgb, var(--ink) 6%, transparent) 75%);
+    background-size: 22px 22px;
+    background-position:
+      0 0,
+      0 11px,
+      11px -11px,
+      -11px 0;
+  }
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Untrusted markdown from agents: readable, contained, never wider than its card. */
+  .prose-kazi {
+    overflow-wrap: anywhere;
+    line-height: 1.65;
+  }
+  .prose-kazi h1,
+  .prose-kazi h2,
+  .prose-kazi h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 1.2em 0 0.5em;
+  }
+  .prose-kazi h1 {
+    font-size: 1.5rem;
+  }
+  .prose-kazi h2 {
+    font-size: 1.25rem;
+  }
+  .prose-kazi h3 {
+    font-size: 1.05rem;
+  }
+  .prose-kazi p,
+  .prose-kazi ul,
+  .prose-kazi ol,
+  .prose-kazi table,
+  .prose-kazi pre,
+  .prose-kazi blockquote {
+    margin: 0.7em 0;
+  }
+  .prose-kazi ul {
+    list-style: disc;
+    padding-left: 1.3em;
+  }
+  .prose-kazi ol {
+    list-style: decimal;
+    padding-left: 1.3em;
+  }
+  .prose-kazi a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .prose-kazi code {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background: var(--surface-2);
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+  }
+  .prose-kazi pre {
+    background: var(--surface-2);
+    padding: 0.8em;
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .prose-kazi pre code {
+    background: none;
+    padding: 0;
+  }
+  .prose-kazi blockquote {
+    border-left: 3px solid var(--line);
+    padding-left: 0.8em;
+    color: var(--muted);
+  }
+  .prose-kazi table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+  .prose-kazi th,
+  .prose-kazi td {
+    border: 1px solid var(--line);
+    padding: 0.35em 0.6em;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

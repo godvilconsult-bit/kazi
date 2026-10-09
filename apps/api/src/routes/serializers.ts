@@ -13,7 +13,11 @@ export function serializeUser(u: User) {
   };
 }
 
-export function serializeTask(t: Task & { subtasks?: Subtask[] }) {
+type SubtaskView = Subtask & {
+  provider?: { name: string; slug: string; kind: string; hosting: string } | null;
+};
+
+export function serializeTask(t: Task & { subtasks?: SubtaskView[] }) {
   return {
     id: t.id,
     onchainId: t.onchainId,
@@ -38,10 +42,11 @@ export function serializeTask(t: Task & { subtasks?: Subtask[] }) {
   };
 }
 
-export function serializeSubtask(st: Subtask) {
+export function serializeSubtask(st: SubtaskView) {
   return {
     id: st.id,
     index: st.index,
+    kind: st.kind,
     title: st.title,
     capability: st.capability,
     dependsOn: st.dependsOn,
@@ -49,6 +54,8 @@ export function serializeSubtask(st: Subtask) {
     amount: st.amount,
     status: st.status,
     attempts: st.attempts,
+    revisions: st.revisions,
+    provider: st.provider ?? null,
     releaseTxHash: st.releaseTxHash,
     refundTxHash: st.refundTxHash,
   };

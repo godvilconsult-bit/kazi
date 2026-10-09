@@ -67,6 +67,20 @@ export const createTaskSchema = z.object({
 });
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 
+/** Edit an unfunded task that has no live signed quote (DRAFT, or an expired quote). Re-quotes by default. */
+export const updateTaskSchema = z
+  .object({
+    title: z.string().trim().min(3).max(120).optional(),
+    description: z.string().trim().min(10).max(20_000).optional(),
+    attachments: z.array(idSchema).max(20).optional(),
+    budgetMax: baseUnitsSchema.nullable().optional(),
+    deadline: z.iso.datetime({ offset: true }).optional(),
+    speed: z.enum(TASK_SPEEDS).optional(),
+    requote: z.boolean().default(true),
+  })
+  .strict();
+export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
+
 export const listTasksQuerySchema = cursorQuerySchema.extend({
   status: z
     .enum([

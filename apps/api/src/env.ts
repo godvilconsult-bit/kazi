@@ -26,6 +26,8 @@ export const apiEnvSchema = runtimeEnvSchema
     COOKIE_DOMAIN: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
     /** Free quotes per wallet per day: each new quote costs Kazi a router call (06-ROUTER §8). */
     QUOTE_DAILY_LIMIT: z.coerce.number().int().min(1).default(30),
+    /** RPC URL handed to browsers via GET /config. Defaults to the network's public RPC, never ARC_RPC_URL (it may carry a key). */
+    PUBLIC_RPC_URL: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
   });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

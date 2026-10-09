@@ -11,6 +11,7 @@ import {
   rateTaskSchema,
   storedQuoteSchema,
   TASK_SPEEDS,
+  updateTaskSchema,
   taskOnchainId,
   transition,
   IllegalTransitionError,
@@ -47,7 +48,14 @@ export function taskRoutes(s: AppServices) {
     const { id } = parse(idParams, req.params);
     const task = await s.prisma.task.findUnique({
       where: { id },
-      include: { subtasks: withSubtasks ? { orderBy: { index: "asc" } } : false },
+      include: {
+        subtasks: withSubtasks
+          ? {
+              orderBy: { index: "asc" },
+              include: { provider: { select: { name: true, slug: true, kind: true, hosting: true } } },
+            }
+          : false,
+      },
     });
     if (!task || (task.clientId !== auth.userId && !auth.roles.includes("ADMIN")))
       throw notFound("Task");
@@ -143,6 +151,67 @@ export function taskRoutes(s: AppServices) {
     app.get("/tasks/:id", async (req) => {
       const { task } = await loadOwnTask(req, true);
       return { task: serializeTask(task) };
+    });
+
+    /**
+     * Edit before funding. Never while a signed quote is live: it stays fundable onchain until it
+     * expires, so the web app duplicates the task instead (the old one keeps its own description).
+     */
+    app.patch("/tasks/:id", async (req) => {
+      const { auth, task } = await loadOwnTask(req);
+      const body = parse(updateTaskSchema, req.body);
+      const current = task.quote ? storedQuoteSchema.safeParse(task.quote) : undefined;
+      const liveQuote =
+        current?.success && current.data.outcome === "QUOTED" && new Date(current.data.expiresAt) > new Date();
+      if (!["DRAFT", "QUOTED", "EXPIRED"].includes(task.status) || (task.status === "QUOTED" && liveQuote)) {
+        throw invalidState(
+          task.status === "QUOTED"
+            ? "This quote can still be funded until it expires; duplicate the task to change it"
+            : `A ${task.status} task can't be edited`,
+        );
+      }
+      if (body.deadline !== undefined) {
+        const delta = new Date(body.deadline).getTime() - Date.now();
+        if (delta < MIN_DEADLINE_MS || delta > MAX_DEADLINE_MS) {
+          throw badRequest("deadline must be between 1 hour and 90 days from now");
+        }
+      }
+      if (body.attachments !== undefined && body.attachments.length > 0) {
+        const owned = await s.prisma.fileObject.count({
+          where: { id: { in: body.attachments }, ownerId: auth.userId, status: "UPLOADED" },
+        });
+        if (owned !== new Set(body.attachments).size) {
+          throw badRequest("attachments must be your own uploaded files");
+        }
+      }
+      // An expired QUOTED task is EXPIRED from here on (the old signature is dead).
+      const status = task.status === "QUOTED" ? transition("task", "QUOTED", "EXPIRE_QUOTE") : task.status;
+      const updated = await s.prisma.task.updateMany({
+        where: { id: task.id, status: task.status, quoteVersion: task.quoteVersion },
+        data: {
+          status,
+          ...(body.title !== undefined ? { title: body.title } : {}),
+          ...(body.description !== undefined ? { description: body.description } : {}),
+          ...(body.attachments !== undefined ? { attachments: [...new Set(body.attachments)] } : {}),
+          ...(body.budgetMax !== undefined ? { budgetMax: body.budgetMax } : {}),
+          ...(body.deadline !== undefined ? { deadline: new Date(body.deadline) } : {}),
+          ...(body.speed !== undefined ? { speed: body.speed } : {}),
+        },
+      });
+      if (updated.count === 0) throw invalidState("Task changed concurrently, retry");
+      await s.prisma.taskEvent.create({ data: { taskId: task.id, type: "EDITED", data: {} } });
+      let quoteStatus: "queued" | null = null;
+      if (body.requote) {
+        await s.jobs.enqueue(
+          "router",
+          "quote",
+          { taskId: task.id },
+          jobIds.quote(task.id, task.quoteVersion + 1),
+        );
+        quoteStatus = "queued";
+      }
+      const fresh = await s.prisma.task.findUniqueOrThrow({ where: { id: task.id } });
+      return { task: serializeTask(fresh), quote: quoteStatus };
     });
 
     /** Ask the router for a quote (06-ROUTER). Returns at once; poll GET /tasks/:id/quote or the SSE stream. */
