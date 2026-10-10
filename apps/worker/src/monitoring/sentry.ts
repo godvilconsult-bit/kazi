@@ -7,12 +7,26 @@ export interface ErrorReporter {
   message(message: string, severity: Severity, context?: Record<string, unknown>): void;
 }
 
-export function initSentry(opts: { dsn?: string | undefined; environment: string; service: string }): ErrorReporter {
+export function initSentry(opts: {
+  dsn?: string | undefined;
+  environment: string;
+  service: string;
+}): ErrorReporter {
   if (!opts.dsn) return { exception: () => undefined, message: () => undefined };
-  Sentry.init({ dsn: opts.dsn, environment: opts.environment, sendDefaultPii: false, tracesSampleRate: 0, initialScope: { tags: { service: opts.service } } });
+  Sentry.init({
+    dsn: opts.dsn,
+    environment: opts.environment,
+    sendDefaultPii: false,
+    tracesSampleRate: 0,
+    initialScope: { tags: { service: opts.service } },
+  });
   return {
-    exception: (err, context) => void Sentry.captureException(err, context ? { extra: context } : undefined),
+    exception: (err, context) =>
+      void Sentry.captureException(err, context ? { extra: context } : undefined),
     message: (message, severity, context) =>
-      void Sentry.captureMessage(message, { level: severity === "critical" ? "fatal" : severity === "warning" ? "warning" : "info", ...(context ? { extra: context } : {}) }),
+      void Sentry.captureMessage(message, {
+        level: severity === "critical" ? "fatal" : severity === "warning" ? "warning" : "info",
+        ...(context ? { extra: context } : {}),
+      }),
   };
 }

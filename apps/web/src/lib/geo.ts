@@ -22,7 +22,10 @@ export function parseCountryList(raw: string | undefined | null): string[] {
     .filter((c) => /^[A-Z][A-Z0-9]$/.test(c));
 }
 
-export function geoFor(countryHeader: string | null | undefined, restrictedList: readonly string[]): Geo {
+export function geoFor(
+  countryHeader: string | null | undefined,
+  restrictedList: readonly string[],
+): Geo {
   const raw = countryHeader?.trim().toUpperCase() ?? "";
   // Two characters: ISO 3166-1 alpha-2, plus CDN codes such as Cloudflare's T1 (Tor). "XX" = unknown.
   const country = /^[A-Z][A-Z0-9]$/.test(raw) && raw !== "XX" ? raw : null;
@@ -30,7 +33,10 @@ export function geoFor(countryHeader: string | null | undefined, restrictedList:
 }
 
 /** Server side: read the configured header from the incoming request. */
-export function geoFromHeaders(headers: { get(name: string): string | null }, env: Record<string, string | undefined> = process.env): Geo {
+export function geoFromHeaders(
+  headers: { get(name: string): string | null },
+  env: Record<string, string | undefined> = process.env,
+): Geo {
   const header = (env["GEO_COUNTRY_HEADER"] || DEFAULT_COUNTRY_HEADER).toLowerCase();
   return geoFor(headers.get(header), parseCountryList(env["GEO_RESTRICTED_COUNTRIES"]));
 }

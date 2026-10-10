@@ -15,7 +15,8 @@ export function createE2eMockLlm(): MockLlm {
         index: 0,
         title: "Write the business plan",
         capability: "write.business_plan",
-        instructions: "Write a concise business plan for the client's business, covering market, operations and finances.",
+        instructions:
+          "Write a concise business plan for the client's business, covering market, operations and finances.",
         dependsOn: [],
         estimatedUnits: 1,
         acceptance: {

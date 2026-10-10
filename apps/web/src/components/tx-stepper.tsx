@@ -7,7 +7,13 @@ import type { TxStep } from "@/lib/tx-steps";
 import { TxLink } from "./money";
 
 /** Vertical list of wallet transactions with their live state (docs/07-FRONTEND.md §1). */
-export function TxStepper({ steps, labels }: { steps: TxStep[]; labels: Record<string, ReactNode> }) {
+export function TxStepper({
+  steps,
+  labels,
+}: {
+  steps: TxStep[];
+  labels: Record<string, ReactNode>;
+}) {
   return (
     <ol className="space-y-3">
       {steps.map((s, i) => (
@@ -18,7 +24,8 @@ export function TxStepper({ steps, labels }: { steps: TxStep[]; labels: Record<s
               s.status === "done" && "border-ok bg-ok text-white",
               s.status === "skipped" && "border-line bg-surface-2 text-muted",
               s.status === "error" && "border-bad bg-bad-soft text-bad",
-              (s.status === "wallet" || s.status === "pending") && "border-accent bg-accent-soft text-accent",
+              (s.status === "wallet" || s.status === "pending") &&
+                "border-accent bg-accent-soft text-accent",
               s.status === "idle" && "border-line bg-surface text-muted",
             )}
             aria-hidden
@@ -38,7 +45,14 @@ export function TxStepper({ steps, labels }: { steps: TxStep[]; labels: Record<s
             )}
           </span>
           <div className="min-w-0 pt-0.5">
-            <p className={cn("text-sm font-semibold", s.status === "skipped" && "text-muted line-through")}>{labels[s.key]}</p>
+            <p
+              className={cn(
+                "text-sm font-semibold",
+                s.status === "skipped" && "text-muted line-through",
+              )}
+            >
+              {labels[s.key]}
+            </p>
             {s.hash ? <TxLink hash={s.hash} className="mt-0.5" /> : null}
             {s.error ? <p className="mt-1 text-sm text-bad">{s.error}</p> : null}
           </div>

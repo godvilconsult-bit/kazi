@@ -19,7 +19,11 @@ export function publicRoutes(s: AppServices) {
     if (kaziDecimalsCache !== null || !token || !s.publicClient) return kaziDecimalsCache;
     try {
       kaziDecimalsCache = Number(
-        await s.publicClient.readContract({ address: token, abi: kaziTokenAbi, functionName: "decimals" }),
+        await s.publicClient.readContract({
+          address: token,
+          abi: kaziTokenAbi,
+          functionName: "decimals",
+        }),
       );
     } catch {
       return null;
@@ -45,7 +49,8 @@ export function publicRoutes(s: AppServices) {
         name: s.chain.name,
         // Server RPC URLs may carry provider keys: browsers get a public endpoint.
         rpcUrl:
-          s.env.PUBLIC_RPC_URL ?? (s.chain.network === "local" ? s.chain.rpcUrl : (s.chain.rpcUrls[0] ?? s.chain.rpcUrl)),
+          s.env.PUBLIC_RPC_URL ??
+          (s.chain.network === "local" ? s.chain.rpcUrl : (s.chain.rpcUrls[0] ?? s.chain.rpcUrl)),
         explorerUrl: s.chain.explorerUrl ?? null,
         nativeCurrency: s.chain.nativeCurrency,
         /** Arc drops transactions priced below this floor (wei). */
@@ -75,7 +80,9 @@ export function publicRoutes(s: AppServices) {
       if (statsCache && Date.now() - statsCache.at < STATS_CACHE_MS) return statsCache.body;
       const [completed, agents, volume, topAgents] = await Promise.all([
         s.prisma.task.count({ where: { status: "COMPLETED" } }),
-        s.prisma.provider.count({ where: { status: "ACTIVE", kind: "AGENT", slug: { not: "kazi-service-fee" } } }),
+        s.prisma.provider.count({
+          where: { status: "ACTIVE", kind: "AGENT", slug: { not: "kazi-service-fee" } },
+        }),
         s.prisma.task.findMany({
           where: { status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "RESOLVED"] } },
           select: { totalAmount: true },
@@ -111,7 +118,10 @@ export function publicRoutes(s: AppServices) {
     /** Reputation history for the profile chart (06-ROUTER §6). */
     app.get("/providers/:slug/reputation", async (req) => {
       const { slug } = parse(slugParams, req.params);
-      const p = await s.prisma.provider.findUnique({ where: { slug }, select: { id: true, status: true } });
+      const p = await s.prisma.provider.findUnique({
+        where: { slug },
+        select: { id: true, status: true },
+      });
       if (!p || p.status === "PENDING") throw notFound("Provider");
       const since = new Date(Date.now() - 180 * 86_400_000);
       const points = await s.prisma.reputationSnapshot.findMany({
@@ -126,7 +136,10 @@ export function publicRoutes(s: AppServices) {
     /** Recent client ratings of tasks this provider worked on (no client identities). */
     app.get("/providers/:slug/reviews", async (req) => {
       const { slug } = parse(slugParams, req.params);
-      const p = await s.prisma.provider.findUnique({ where: { slug }, select: { id: true, status: true } });
+      const p = await s.prisma.provider.findUnique({
+        where: { slug },
+        select: { id: true, status: true },
+      });
       if (!p || p.status === "PENDING") throw notFound("Provider");
       const tasks = await s.prisma.task.findMany({
         where: { rating: { not: null }, subtasks: { some: { providerId: p.id, kind: "WORK" } } },
@@ -135,7 +148,11 @@ export function publicRoutes(s: AppServices) {
         select: { rating: true, ratingComment: true, updatedAt: true },
       });
       return {
-        reviews: tasks.map((t) => ({ rating: t.rating, comment: t.ratingComment, at: t.updatedAt })),
+        reviews: tasks.map((t) => ({
+          rating: t.rating,
+          comment: t.ratingComment,
+          at: t.updatedAt,
+        })),
       };
     });
   };

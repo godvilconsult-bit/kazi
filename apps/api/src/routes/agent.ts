@@ -88,7 +88,9 @@ export function agentRoutes(s: AppServices) {
         const raw = await s.redis.get(key);
         const state = raw ? providerTestStateSchema.safeParse(JSON.parse(raw)) : null;
         if (!state?.success) throw notFound("Test run");
-        const provider = await s.prisma.provider.findUnique({ where: { id: state.data.providerId } });
+        const provider = await s.prisma.provider.findUnique({
+          where: { id: state.data.providerId },
+        });
         if (!provider?.webhookSecretEnc) throw notFound("Test run");
         const rawBody = typeof req.body === "string" ? req.body : "";
         const header = req.headers[SIGNATURE_HEADER];

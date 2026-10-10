@@ -15,6 +15,8 @@ export default getRequestConfig(async () => {
   let locale: Locale = "en";
   if (isLocale(fromCookie)) locale = fromCookie;
   else if (/(^|[,\s])sw\b/i.test((await headers()).get("accept-language") ?? "")) locale = "sw";
-  const messages = (await import(`../messages/${locale}.json`)) as { default: Record<string, unknown> };
+  const messages = (await import(`../messages/${locale}.json`)) as {
+    default: Record<string, unknown>;
+  };
   return { locale, messages: messages.default, timeZone: "Africa/Nairobi" };
 });

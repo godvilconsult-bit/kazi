@@ -20,7 +20,9 @@ async function load(slug: string) {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const res = await load((await params).slug);
-  return res ? { title: res.provider.name, description: res.provider.description.slice(0, 160) } : {};
+  return res
+    ? { title: res.provider.name, description: res.provider.description.slice(0, 160) }
+    : {};
 }
 
 export default async function AgentPage({ params }: { params: Params }) {
@@ -29,20 +31,32 @@ export default async function AgentPage({ params }: { params: Params }) {
   const locale = await getLocale();
   const [res, rep, reviews, cfg] = await Promise.all([
     load(slug),
-    serverGet<{ points: { value: number; createdAt: string }[] }>(`/providers/${encodeURIComponent(slug)}/reputation`, 300),
-    serverGet<{ reviews: { rating: number; comment: string | null; at: string }[] }>(`/providers/${encodeURIComponent(slug)}/reviews`, 120),
+    serverGet<{ points: { value: number; createdAt: string }[] }>(
+      `/providers/${encodeURIComponent(slug)}/reputation`,
+      300,
+    ),
+    serverGet<{ reviews: { rating: number; comment: string | null; at: string }[] }>(
+      `/providers/${encodeURIComponent(slug)}/reviews`,
+      120,
+    ),
     getPublicConfig(),
   ]);
   if (!res) notFound();
   const p = res.provider;
   const names = new Intl.DisplayNames([locale], { type: "language" });
-  const registryLink = p.onchainId && cfg?.contracts.agentRegistry ? explorerUrl(cfg.chain.explorerUrl, "address", cfg.contracts.agentRegistry) : null;
+  const registryLink =
+    p.onchainId && cfg?.contracts.agentRegistry
+      ? explorerUrl(cfg.chain.explorerUrl, "address", cfg.contracts.agentRegistry)
+      : null;
   const bond = BigInt(p.stakeAmount || "0");
   const latency = p.avgLatencyMs ?? null;
 
   return (
     <PageBody>
-      <Link href="/agents" className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
+      <Link
+        href="/agents"
+        className="mb-6 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"
+      >
         <ArrowLeft className="size-4" />
         {t("back")}
       </Link>
@@ -52,16 +66,28 @@ export default async function AgentPage({ params }: { params: Params }) {
           <header>
             <div className="flex flex-wrap items-center gap-2">
               <KindBadge kind={p.kind} hosting={p.hosting} />
-              {p.isHouse ? <span className="font-mono text-[11px] uppercase tracking-wider text-muted">Kazi</span> : null}
+              {p.isHouse ? (
+                <span className="font-mono text-[11px] uppercase tracking-wider text-muted">
+                  Kazi
+                </span>
+              ) : null}
             </div>
-            <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight break-words sm:text-5xl">{p.name}</h1>
-            <p className="mt-3 max-w-2xl whitespace-pre-line text-lg text-ink/80">{p.description}</p>
+            <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight break-words sm:text-5xl">
+              {p.name}
+            </h1>
+            <p className="mt-3 max-w-2xl whitespace-pre-line text-lg text-ink/80">
+              {p.description}
+            </p>
           </header>
 
           <Card>
             <h2 className="font-display text-lg font-bold">{t("history")}</h2>
             <div className="mt-3">
-              <ReputationChart points={rep?.points ?? []} emptyLabel={t("historyEmpty")} ariaLabel={t("historyAria")} />
+              <ReputationChart
+                points={rep?.points ?? []}
+                emptyLabel={t("historyEmpty")}
+                ariaLabel={t("historyAria")}
+              />
             </div>
           </Card>
 
@@ -74,10 +100,16 @@ export default async function AgentPage({ params }: { params: Params }) {
                     <div className="flex items-center gap-2">
                       <span className="flex text-accent" aria-label={`${r.rating}/5`}>
                         {Array.from({ length: 5 }, (_, s) => (
-                          <Star key={s} className="size-4" fill={s < r.rating ? "currentColor" : "none"} />
+                          <Star
+                            key={s}
+                            className="size-4"
+                            fill={s < r.rating ? "currentColor" : "none"}
+                          />
                         ))}
                       </span>
-                      <span className="font-mono text-xs text-muted">{relativeTime(r.at, locale)}</span>
+                      <span className="font-mono text-xs text-muted">
+                        {relativeTime(r.at, locale)}
+                      </span>
                     </div>
                     {r.comment ? <p className="mt-1 text-sm">{r.comment}</p> : null}
                   </li>
@@ -92,7 +124,9 @@ export default async function AgentPage({ params }: { params: Params }) {
         <aside className="space-y-4">
           <Card className="space-y-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("reputation")}</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+                {t("reputation")}
+              </p>
               <div className="mt-1 flex items-center gap-3">
                 <span className="num text-4xl font-bold">{p.reputation.toFixed(0)}</span>
                 <ReputationMeter value={p.reputation} />
@@ -101,24 +135,43 @@ export default async function AgentPage({ params }: { params: Params }) {
             </div>
             <Row label={t("pricing")}>
               <span className="num font-semibold">{priceLabel(p.pricing)}</span>
-              {p.pricing.minimum ? <span className="block text-xs text-muted">{t("minimum", { amount: p.pricing.minimum })}</span> : null}
+              {p.pricing.minimum ? (
+                <span className="block text-xs text-muted">
+                  {t("minimum", { amount: p.pricing.minimum })}
+                </span>
+              ) : null}
             </Row>
             <Row label={t("tasksDone")}>
               <span className="num">{p.completedCount}</span>
             </Row>
             {latency !== null ? (
               <Row label={t("typicalTime")}>
-                {latency >= 60_000 ? t("minutes", { count: Math.round(latency / 60_000) }) : t("seconds", { count: Math.max(1, Math.round(latency / 1000)) })}
+                {latency >= 60_000
+                  ? t("minutes", { count: Math.round(latency / 60_000) })
+                  : t("seconds", { count: Math.max(1, Math.round(latency / 1000)) })}
               </Row>
             ) : null}
-            <Row label={t("hosting")}>{p.kind === "HUMAN" ? t("hostingHuman") : p.hosting === "KAZI" ? t("hostingKazi") : t("hostingSelf")}</Row>
+            <Row label={t("hosting")}>
+              {p.kind === "HUMAN"
+                ? t("hostingHuman")
+                : p.hosting === "KAZI"
+                  ? t("hostingKazi")
+                  : t("hostingSelf")}
+            </Row>
             <Row label={t("bond")}>
-              {bond > 0n && cfg?.kaziDecimals != null ? t("bondValue", { amount: tokenAmount(bond, cfg.kaziDecimals, 0) }) : t("noBond")}
+              {bond > 0n && cfg?.kaziDecimals != null
+                ? t("bondValue", { amount: tokenAmount(bond, cfg.kaziDecimals, 0) })
+                : t("noBond")}
             </Row>
             <Row label={t("onchain")}>
               {p.onchainId ? (
                 registryLink ? (
-                  <a href={registryLink} target="_blank" rel="noopener noreferrer" className="num text-accent hover:underline">
+                  <a
+                    href={registryLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="num text-accent hover:underline"
+                  >
                     #{p.onchainId}
                   </a>
                 ) : (
@@ -134,7 +187,10 @@ export default async function AgentPage({ params }: { params: Params }) {
             <Row label={t("capabilities")}>
               <div className="flex flex-wrap gap-1">
                 {p.capabilities.map((c) => (
-                  <span key={c} className="rounded border border-line px-1.5 py-0.5 font-mono text-[11px]">
+                  <span
+                    key={c}
+                    className="rounded border border-line px-1.5 py-0.5 font-mono text-[11px]"
+                  >
                     {c}
                   </span>
                 ))}

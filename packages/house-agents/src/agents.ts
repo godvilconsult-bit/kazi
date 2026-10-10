@@ -50,10 +50,22 @@ const SPECS: Record<string, AgentSpec> = {
     maxTokens: 64_000,
     webSearch: { maxUses: 8 },
   },
-  "house-pitch-outline": { promptFile: "pitch-outline/prompt.md", effort: "medium", maxTokens: 32_000 },
+  "house-pitch-outline": {
+    promptFile: "pitch-outline/prompt.md",
+    effort: "medium",
+    maxTokens: 32_000,
+  },
   "house-social-pack": { promptFile: "social-pack/prompt.md", effort: "medium", maxTokens: 16_000 },
-  "house-statement-reviewer": { promptFile: "statement-reviewer/prompt.md", effort: "high", maxTokens: 64_000 },
-  "house-bookkeeping-draft": { promptFile: "bookkeeping-draft/prompt.md", effort: "high", maxTokens: 64_000 },
+  "house-statement-reviewer": {
+    promptFile: "statement-reviewer/prompt.md",
+    effort: "high",
+    maxTokens: 64_000,
+  },
+  "house-bookkeeping-draft": {
+    promptFile: "bookkeeping-draft/prompt.md",
+    effort: "high",
+    maxTokens: 64_000,
+  },
   "house-tz-tax-draft": {
     promptFile: "tz-tax-draft/prompt.md",
     effort: "high",
@@ -67,13 +79,20 @@ const SPECS: Record<string, AgentSpec> = {
     maxTokens: 64_000,
     prefix: NOT_AN_AUDIT,
   },
-  "house-csv-cleaner": { promptFile: "csv-cleaner/prompt.md", effort: "medium", maxTokens: 8_000, kind: "csv" },
+  "house-csv-cleaner": {
+    promptFile: "csv-cleaner/prompt.md",
+    effort: "medium",
+    maxTokens: 8_000,
+    kind: "csv",
+  },
 };
 
 /** CSV input: the request text, or the first CSV-like file (fetched with a size cap). */
 const MAX_CSV_BYTES = 2_000_000;
 async function readCsvInput(req: AgentRequest, doFetch: typeof fetch): Promise<string> {
-  const file = (req.input.files ?? []).find((f) => /csv|text\/plain|excel/i.test(f.mime)) ?? req.input.files?.[0];
+  const file =
+    (req.input.files ?? []).find((f) => /csv|text\/plain|excel/i.test(f.mime)) ??
+    req.input.files?.[0];
   if (file) {
     const res = await doFetch(file.url, { redirect: "error", signal: AbortSignal.timeout(60_000) });
     if (!res.ok) throw new Error(`could not download the CSV (HTTP ${res.status})`);
@@ -168,13 +187,24 @@ export function buildHouseAgents(deps: HouseAgentsDeps): Map<string, KaziAgent> 
 }
 
 /** Claude plans the cleaning from the header and a sample; code applies it to every row. */
-async function cleanCsv(ctx: AgentContext, deps: HouseAgentsDeps, system: string, spec: AgentSpec, slug: string) {
-  const raw = await readCsvInput(ctx.request, deps.fetch ?? globalThis.fetch).catch((err: unknown) =>
-    ctx.fail("INPUT_UNREADABLE", err instanceof Error ? err.message : "the CSV could not be read"),
+async function cleanCsv(
+  ctx: AgentContext,
+  deps: HouseAgentsDeps,
+  system: string,
+  spec: AgentSpec,
+  slug: string,
+) {
+  const raw = await readCsvInput(ctx.request, deps.fetch ?? globalThis.fetch).catch(
+    (err: unknown) =>
+      ctx.fail(
+        "INPUT_UNREADABLE",
+        err instanceof Error ? err.message : "the CSV could not be read",
+      ),
   );
   const { rows } = parseCsv(raw);
   const [header, ...body] = rows;
-  if (!header || header.length === 0 || body.length === 0) ctx.fail("INPUT_UNREADABLE", "no CSV rows found in the input");
+  if (!header || header.length === 0 || body.length === 0)
+    ctx.fail("INPUT_UNREADABLE", "no CSV rows found in the input");
   if (body.length > 50_000) ctx.fail("INPUT_TOO_LARGE", "the CSV has more than 50,000 rows");
   const sample = toCsv([header, ...body.slice(0, 25)]);
   const { data: plan, usage } = await deps.llm.structured({
@@ -189,7 +219,9 @@ async function cleanCsv(ctx: AgentContext, deps: HouseAgentsDeps, system: string
   });
   await ctx.progress(0.6, "Cleaning rows");
   const result = applyPlan(header, body, plan);
-  const invalidLines = Object.entries(result.invalid).map(([col, n]) => `- \`${col}\`: ${n} value(s) could not be converted and were kept as-is`);
+  const invalidLines = Object.entries(result.invalid).map(
+    ([col, n]) => `- \`${col}\`: ${n} value(s) could not be converted and were kept as-is`,
+  );
   const text = [
     "# Cleaned CSV",
     "",
@@ -199,7 +231,10 @@ async function cleanCsv(ctx: AgentContext, deps: HouseAgentsDeps, system: string
     "",
     "| Source | Clean column | Type |",
     "|---|---|---|",
-    ...plan.columns.map((c) => `| ${c.source.replace(/\|/g, "\\|")} | ${c.type === "drop" ? "*(dropped)*" : c.target} | ${c.type}${c.dateFormat ? ` (${c.dateFormat})` : ""} |`),
+    ...plan.columns.map(
+      (c) =>
+        `| ${c.source.replace(/\|/g, "\\|")} | ${c.type === "drop" ? "*(dropped)*" : c.target} | ${c.type}${c.dateFormat ? ` (${c.dateFormat})` : ""} |`,
+    ),
     ...(invalidLines.length ? ["", "## Values to check", "", ...invalidLines] : []),
     ...(plan.notes.length ? ["", "## Notes", "", ...plan.notes.map((n) => `- ${n}`)] : []),
     "",
@@ -209,5 +244,8 @@ async function cleanCsv(ctx: AgentContext, deps: HouseAgentsDeps, system: string
     toCsv(result.rows),
     "```",
   ].join("\n");
-  return { text, meta: { agent: slug, model: usage.model, rowsIn: result.rowsIn, rowsOut: result.rowsOut } };
+  return {
+    text,
+    meta: { agent: slug, model: usage.model, rowsIn: result.rowsIn, rowsOut: result.rowsOut },
+  };
 }

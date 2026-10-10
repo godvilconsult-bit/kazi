@@ -53,7 +53,9 @@ export function HeroComposer() {
         </button>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="font-mono text-[11px] uppercase tracking-widest text-muted">{t("examples")}</span>
+        <span className="font-mono text-[11px] uppercase tracking-widest text-muted">
+          {t("examples")}
+        </span>
         {examples.map((ex) => (
           <Chip key={ex} onClick={() => setText(ex)} className="text-xs">
             {ex}

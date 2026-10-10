@@ -27,7 +27,9 @@ export const invalidState = (message: string) => new AppError("INVALID_STATE", m
 export const unavailable = (message: string) => new AppError("UNAVAILABLE", message, 503);
 /** ROUTER_DISABLED (docs/runbooks/incident-response.md): funded work continues, new quotes wait. */
 export const quotesPaused = () =>
-  unavailable("New quotes are paused for maintenance. Tasks already funded keep going — please try again later.");
+  unavailable(
+    "New quotes are paused for maintenance. Tasks already funded keep going — please try again later.",
+  );
 
 /** Validate untrusted input; throws a 400 with the Zod issues. */
 export function parse<T extends ZodType>(schema: T, data: unknown): T["_output"] {
@@ -41,7 +43,10 @@ export function parse<T extends ZodType>(schema: T, data: unknown): T["_output"]
   return result.data;
 }
 
-export function registerErrorHandling(app: FastifyInstance, report?: (err: unknown, context: Record<string, unknown>) => void): void {
+export function registerErrorHandling(
+  app: FastifyInstance,
+  report?: (err: unknown, context: Record<string, unknown>) => void,
+): void {
   app.setNotFoundHandler((_req, reply) => {
     void reply.status(404).send({ error: { code: "NOT_FOUND", message: "Route not found" } });
   });
@@ -71,7 +76,11 @@ export function registerErrorHandling(app: FastifyInstance, report?: (err: unkno
         .send({ error: { code: "VALIDATION_ERROR", message: err.message } });
     }
     req.log.error({ err }, "unhandled error");
-    report?.(err, { method: req.method, route: req.routeOptions.url ?? "unmatched", reqId: req.id });
+    report?.(err, {
+      method: req.method,
+      route: req.routeOptions.url ?? "unmatched",
+      reqId: req.id,
+    });
     return reply
       .status(500)
       .send({ error: { code: "INTERNAL", message: "Internal server error" } });

@@ -14,7 +14,12 @@ import {
 } from "viem";
 import { privateKeyToAccount, sign } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { createKmsAccount, parseDerSignature, uncompressedPublicKey, type KmsKey } from "../src/chain/kms";
+import {
+  createKmsAccount,
+  parseDerSignature,
+  uncompressedPublicKey,
+  type KmsKey,
+} from "../src/chain/kms";
 import { loadSigners, plaintextAllowed } from "../src/chain/signers";
 import { KEYS, startLocalChain, type LocalChain } from "./anvil";
 
@@ -64,25 +69,52 @@ describe("KMS account", () => {
       const account = await createKmsAccount(fakeKms(key, highS));
       const signature = await account.signMessage({ message: "Sign in to Kazi" });
       expect(signature).toBe(await local.signMessage({ message: "Sign in to Kazi" })); // RFC 6979: identical
-      expect(await verifyMessage({ address: local.address, message: "Sign in to Kazi", signature })).toBe(true);
+      expect(
+        await verifyMessage({ address: local.address, message: "Sign in to Kazi", signature }),
+      ).toBe(true);
 
       const typed = {
-        domain: { name: "Kazi", version: "1", chainId: 31337, verifyingContract: "0x0000000000000000000000000000000000000001" },
-        types: { Quote: [{ name: "taskId", type: "bytes32" }, { name: "expiry", type: "uint64" }] },
+        domain: {
+          name: "Kazi",
+          version: "1",
+          chainId: 31337,
+          verifyingContract: "0x0000000000000000000000000000000000000001",
+        },
+        types: {
+          Quote: [
+            { name: "taskId", type: "bytes32" },
+            { name: "expiry", type: "uint64" },
+          ],
+        },
         primaryType: "Quote",
         message: { taskId: numberToHex(1n, { size: 32 }), expiry: 1_800_000_000n },
       } as const;
       const typedSig = await account.signTypedData(typed);
-      expect(await verifyTypedData({ address: local.address, ...typed, signature: typedSig })).toBe(true);
+      expect(await verifyTypedData({ address: local.address, ...typed, signature: typedSig })).toBe(
+        true,
+      );
     }
   });
 
   it("signs transactions exactly like the local key", async () => {
     const account = await createKmsAccount(fakeKms(key, true));
-    const tx = { chainId: 31337, nonce: 3, to: local.address, value: parseEther("1"), gas: 21_000n, maxFeePerGas: 2_000_000_000n, maxPriorityFeePerGas: 1n, type: "eip1559" } as const;
+    const tx = {
+      chainId: 31337,
+      nonce: 3,
+      to: local.address,
+      value: parseEther("1"),
+      gas: 21_000n,
+      maxFeePerGas: 2_000_000_000n,
+      maxPriorityFeePerGas: 1n,
+      type: "eip1559",
+    } as const;
     const serialized = await account.signTransaction(tx);
     expect(serialized).toBe(await local.signTransaction(tx));
-    expect(await recoverTransactionAddress({ serializedTransaction: serialized as TransactionSerialized })).toBe(local.address);
+    expect(
+      await recoverTransactionAddress({
+        serializedTransaction: serialized as TransactionSerialized,
+      }),
+    ).toBe(local.address);
   });
 
   it("rejects malformed KMS responses", () => {
@@ -93,15 +125,44 @@ describe("KMS account", () => {
 });
 
 describe("signer policy", () => {
-  const base = { NODE_ENV: "development", KAZI_NETWORK: "local", SIGNER_BACKEND: "env", ALLOW_PLAINTEXT_KEYS: false } as const;
+  const base = {
+    NODE_ENV: "development",
+    KAZI_NETWORK: "local",
+    SIGNER_BACKEND: "env",
+    ALLOW_PLAINTEXT_KEYS: false,
+  } as const;
 
   it("uses dev keys locally, refuses them in production unless allowed, and never on mainnet", async () => {
-    const accounts = await loadSigners({ ...base, OPERATOR_PRIVATE_KEY: KEYS.operator, QUOTER_PRIVATE_KEY: KEYS.quoter });
+    const accounts = await loadSigners({
+      ...base,
+      OPERATOR_PRIVATE_KEY: KEYS.operator,
+      QUOTER_PRIVATE_KEY: KEYS.quoter,
+    });
     expect(accounts.operator.address).toBe(privateKeyToAccount(KEYS.operator).address);
-    expect(() => plaintextAllowed({ NODE_ENV: "production", KAZI_NETWORK: "testnet", ALLOW_PLAINTEXT_KEYS: false })).toThrow(/refused in production/);
-    expect(() => plaintextAllowed({ NODE_ENV: "production", KAZI_NETWORK: "testnet", ALLOW_PLAINTEXT_KEYS: true })).not.toThrow();
-    expect(() => plaintextAllowed({ NODE_ENV: "production", KAZI_NETWORK: "mainnet", ALLOW_PLAINTEXT_KEYS: true })).toThrow(/KMS/);
-    await expect(loadSigners({ ...base, SIGNER_BACKEND: "aws-kms" })).rejects.toThrow(/OPERATOR_KMS_KEY_ID/);
+    expect(() =>
+      plaintextAllowed({
+        NODE_ENV: "production",
+        KAZI_NETWORK: "testnet",
+        ALLOW_PLAINTEXT_KEYS: false,
+      }),
+    ).toThrow(/refused in production/);
+    expect(() =>
+      plaintextAllowed({
+        NODE_ENV: "production",
+        KAZI_NETWORK: "testnet",
+        ALLOW_PLAINTEXT_KEYS: true,
+      }),
+    ).not.toThrow();
+    expect(() =>
+      plaintextAllowed({
+        NODE_ENV: "production",
+        KAZI_NETWORK: "mainnet",
+        ALLOW_PLAINTEXT_KEYS: true,
+      }),
+    ).toThrow(/KMS/);
+    await expect(loadSigners({ ...base, SIGNER_BACKEND: "aws-kms" })).rejects.toThrow(
+      /OPERATOR_KMS_KEY_ID/,
+    );
   });
 });
 

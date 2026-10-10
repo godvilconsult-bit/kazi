@@ -15,7 +15,10 @@ describe("parseCsv", () => {
   });
 
   it("round-trips through toCsv", () => {
-    const rows = [["name", "note"], ["Asha", 'says "hi", ok']];
+    const rows = [
+      ["name", "note"],
+      ["Asha", 'says "hi", ok'],
+    ];
     expect(parseCsv(toCsv(rows)).rows).toEqual(rows);
   });
 });
@@ -45,8 +48,20 @@ describe("applyPlan", () => {
     ];
     const r = applyPlan(header, body, plan);
     expect(r.rows[0]).toEqual(["customer_name", "phone", "joined", "email", "amount"]);
-    expect(r.rows[1]).toEqual(["Amina Juma", "+255754123456", "2024-02-03", "amina@example.com", "1250000.50"]);
-    expect(r.rows[2]).toEqual(["John Mushi", "+255713222333", "2023-11-15", "john@example.com", "980500"]);
+    expect(r.rows[1]).toEqual([
+      "Amina Juma",
+      "+255754123456",
+      "2024-02-03",
+      "amina@example.com",
+      "1250000.50",
+    ]);
+    expect(r.rows[2]).toEqual([
+      "John Mushi",
+      "+255713222333",
+      "2023-11-15",
+      "john@example.com",
+      "980500",
+    ]);
     // Invalid values are kept as-is and counted, never silently "fixed".
     expect(r.rows[3]).toEqual(["Rehema K", "+255713444555", "31/02/2025", "rehema(at)mail", "abc"]);
     expect(r.invalid).toEqual({ joined: 1, email: 1, amount: 1 });
@@ -54,7 +69,12 @@ describe("applyPlan", () => {
   });
 
   it("reads month-first dates when the plan says so", () => {
-    const us = cleaningPlanSchema.parse({ columns: [{ source: "d", target: "d", type: "date", dateFormat: "MDY" }] });
-    expect(applyPlan(["d"], [["12/31/2024"], ["01/15/25"]], us).rows.slice(1)).toEqual([["2024-12-31"], ["2025-01-15"]]);
+    const us = cleaningPlanSchema.parse({
+      columns: [{ source: "d", target: "d", type: "date", dateFormat: "MDY" }],
+    });
+    expect(applyPlan(["d"], [["12/31/2024"], ["01/15/25"]], us).rows.slice(1)).toEqual([
+      ["2024-12-31"],
+      ["2025-01-15"],
+    ]);
   });
 });

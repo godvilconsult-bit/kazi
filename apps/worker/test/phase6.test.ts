@@ -5,7 +5,15 @@ import { createTestClient, http, type Address, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { createPrismaClient, type PrismaClient } from "@kazi/db";
-import { airdropLeaf, holderKey, kaziAirdropAbi, kaziTokenAbi, stakingVaultAbi, taskOnchainId, verifyMerkleProof } from "@kazi/shared";
+import {
+  airdropLeaf,
+  holderKey,
+  kaziAirdropAbi,
+  kaziTokenAbi,
+  stakingVaultAbi,
+  taskOnchainId,
+  verifyMerkleProof,
+} from "@kazi/shared";
 import { createEscrowOperator } from "../src/chain/operator";
 import { maturedStakeKeys } from "../src/payouts/fees";
 import { clientFeeBps } from "../src/router/quote";
@@ -40,10 +48,13 @@ describe("airdrop plan", () => {
     expect(byWallet.has(c)).toBe(false);
     expect(byWallet.has(d)).toBe(false);
     expect(plan.allocated + plan.unallocated).toBe(1_000n);
-    for (const x of plan.allocations) expect(verifyMerkleProof(x.proof, plan.root, airdropLeaf(x.wallet, x.amount))).toBe(true);
+    for (const x of plan.allocations)
+      expect(verifyMerkleProof(x.proof, plan.root, airdropLeaf(x.wallet, x.amount))).toBe(true);
     // A proof doesn't work for another amount.
     const first = plan.allocations[0]!;
-    expect(verifyMerkleProof(first.proof, plan.root, airdropLeaf(first.wallet, first.amount + 1n))).toBe(false);
+    expect(
+      verifyMerkleProof(first.proof, plan.root, airdropLeaf(first.wallet, first.amount + 1n)),
+    ).toBe(false);
   });
 
   it("caps each wallet and re-splits the excess; leftover stays unallocated when everyone is capped", () => {
@@ -57,10 +68,19 @@ describe("airdrop plan", () => {
       total: 1_000n,
       maxPerWallet: 400n,
     });
-    const amounts = Object.fromEntries(capped.allocations.map((x) => [x.wallet.toLowerCase(), x.amount]));
+    const amounts = Object.fromEntries(
+      capped.allocations.map((x) => [x.wallet.toLowerCase(), x.amount]),
+    );
     expect(amounts).toEqual({ [whale]: 400n, [b]: 300n, [c]: 300n });
 
-    const allCapped = planAirdrop({ holders: [{ wallet: b, points: 10n }, { wallet: c, points: 10n }], total: 1_000n, maxPerWallet: 100n });
+    const allCapped = planAirdrop({
+      holders: [
+        { wallet: b, points: 10n },
+        { wallet: c, points: 10n },
+      ],
+      total: 1_000n,
+      maxPerWallet: 100n,
+    });
     expect(allCapped.allocated).toBe(200n);
     expect(allCapped.unallocated).toBe(800n);
   });
@@ -73,29 +93,45 @@ describe("airdrop plan", () => {
       { wallet: b, points: 100n },
     ];
     const plan = planAirdrop({ holders, total: 1_000n, fixed: [{ wallet: e, amount: 200n }] });
-    const amounts = Object.fromEntries(plan.allocations.map((x) => [x.wallet.toLowerCase(), x.amount]));
+    const amounts = Object.fromEntries(
+      plan.allocations.map((x) => [x.wallet.toLowerCase(), x.amount]),
+    );
     expect(amounts).toEqual({ [a]: 400n, [b]: 400n, [e]: 200n });
-    const again = planAirdrop({ holders: [...holders].reverse(), total: 1_000n, fixed: [{ wallet: e, amount: 200n }] });
+    const again = planAirdrop({
+      holders: [...holders].reverse(),
+      total: 1_000n,
+      fixed: [{ wallet: e, amount: 200n }],
+    });
     expect(again.root).toBe(plan.root);
   });
 
   it("rejects impossible plans", () => {
-    expect(() => planAirdrop({ holders: [], total: 100n, fixed: [{ wallet: wallet(), amount: 101n }] })).toThrow(/exceed/);
-    expect(() => planAirdrop({ holders: [{ wallet: wallet(), points: 5n }], total: 100n, minPoints: 10n })).toThrow(/nobody/);
+    expect(() =>
+      planAirdrop({ holders: [], total: 100n, fixed: [{ wallet: wallet(), amount: 101n }] }),
+    ).toThrow(/exceed/);
+    expect(() =>
+      planAirdrop({ holders: [{ wallet: wallet(), points: 5n }], total: 100n, minPoints: 10n }),
+    ).toThrow(/nobody/);
   });
 });
 
 describe("onchain", () => {
   let chain: LocalChain;
   let prisma: PrismaClient;
-  const test = () => createTestClient({ chain: foundry, mode: "anvil", transport: http(chain.rpcUrl) });
+  const test = () =>
+    createTestClient({ chain: foundry, mode: "anvil", transport: http(chain.rpcUrl) });
   const timeTravel = async (seconds: number) => {
     await test().increaseTime({ seconds });
     await test().mine({ blocks: 1 });
   };
   const now = async () => Number((await chain.publicClient.getBlock()).timestamp);
   const balanceOf = (who: Address) =>
-    chain.publicClient.readContract({ address: chain.deployment.kaziToken, abi: kaziTokenAbi, functionName: "balanceOf", args: [who] });
+    chain.publicClient.readContract({
+      address: chain.deployment.kaziToken,
+      abi: kaziTokenAbi,
+      functionName: "balanceOf",
+      args: [who],
+    });
 
   beforeAll(async () => {
     chain = await startLocalChain();
@@ -123,15 +159,28 @@ describe("onchain", () => {
     const hash = await admin.deployContract({
       abi: kaziAirdropAbi,
       bytecode: artifact("KaziAirdrop"),
-      args: [admin.account!.address, chain.deployment.kaziToken, plan.root, start, vesting, 2_500, start + vesting + BigInt(365 * DAY)],
+      args: [
+        admin.account!.address,
+        chain.deployment.kaziToken,
+        plan.root,
+        start,
+        vesting,
+        2_500,
+        start + vesting + BigInt(365 * DAY),
+      ],
       account: admin.account!,
       chain: foundry,
     });
-    const airdrop = (await chain.publicClient.waitForTransactionReceipt({ hash })).contractAddress as Address;
-    await sendTx(chain, KEYS.admin, chain.deployment.kaziToken, kaziTokenAbi, "transfer", [airdrop, plan.allocated]);
+    const airdrop = (await chain.publicClient.waitForTransactionReceipt({ hash }))
+      .contractAddress as Address;
+    await sendTx(chain, KEYS.admin, chain.deployment.kaziToken, kaziTokenAbi, "transfer", [
+      airdrop,
+      plan.allocated,
+    ]);
 
     const mine = plan.allocations.find((x) => x.wallet === client)!;
-    const claim = (key: Hex, amount: bigint, proof: Hex[]) => sendTx(chain, key, airdrop, kaziAirdropAbi, "claim", [amount, proof]);
+    const claim = (key: Hex, amount: bigint, proof: Hex[]) =>
+      sendTx(chain, key, airdrop, kaziAirdropAbi, "claim", [amount, proof]);
 
     await claim(KEYS.client, mine.amount, mine.proof);
     const afterFirst = await balanceOf(client);
@@ -150,7 +199,14 @@ describe("onchain", () => {
     await timeTravel(91 * DAY);
     await claim(KEYS.client, mine.amount, mine.proof);
     expect(await balanceOf(client)).toBe(1_000n * KAZI);
-    expect(await chain.publicClient.readContract({ address: airdrop, abi: kaziAirdropAbi, functionName: "claimed", args: [client] })).toBe(1_000n * KAZI);
+    expect(
+      await chain.publicClient.readContract({
+        address: airdrop,
+        abi: kaziAirdropAbi,
+        functionName: "claimed",
+        args: [client],
+      }),
+    ).toBe(1_000n * KAZI);
     await expect(claim(KEYS.client, mine.amount, mine.proof)).rejects.toThrow(); // nothing left
   });
 
@@ -159,10 +215,17 @@ describe("onchain", () => {
     const holder = privateKeyToAccount(KEYS.client).address;
     const amount = 5_000n * KAZI;
     await sendTx(chain, KEYS.admin, d.kaziToken, kaziTokenAbi, "transfer", [holder, amount]);
-    await sendTx(chain, KEYS.client, d.kaziToken, kaziTokenAbi, "approve", [d.stakingVault, amount]);
-    const receipt = await sendTx(chain, KEYS.client, d.stakingVault, stakingVaultAbi, "stake", [amount]);
+    await sendTx(chain, KEYS.client, d.kaziToken, kaziTokenAbi, "approve", [
+      d.stakingVault,
+      amount,
+    ]);
+    const receipt = await sendTx(chain, KEYS.client, d.stakingVault, stakingVaultAbi, "stake", [
+      amount,
+    ]);
     // anvil is deterministic: a rerun produces the same tx hash, so clear any row from a previous run.
-    await prisma.chainEvent.deleteMany({ where: { chainId: foundry.id, txHash: receipt.transactionHash } });
+    await prisma.chainEvent.deleteMany({
+      where: { chainId: foundry.id, txHash: receipt.transactionHash },
+    });
     await prisma.chainEvent.create({
       data: {
         chainId: foundry.id,
@@ -191,7 +254,12 @@ describe("onchain", () => {
       log,
     });
     await operator.pokeStakes(d.stakingVault, keys);
-    const account = await chain.publicClient.readContract({ address: d.stakingVault, abi: stakingVaultAbi, functionName: "getAccount", args: [holderKey(holder)] });
+    const account = await chain.publicClient.readContract({
+      address: d.stakingVault,
+      abi: stakingVaultAbi,
+      functionName: "getAccount",
+      args: [holderKey(holder)],
+    });
     expect(account.active).toBe(amount);
     expect(account.pending).toBe(0n);
     expect(await maturedStakeKeys(deps)).toEqual([]);
@@ -241,8 +309,28 @@ describe("points", () => {
         feeBps: 1_200,
         subtasks: {
           create: [
-            { index: 0, title: "House plan", instructions: "Write", capability: "write.business_plan", dependsOn: [], acceptance: {}, providerId: house.id, amount: "10000000", status: "RELEASED" },
-            { index: 1, title: "Indie plan", instructions: "Write", capability: "write.business_plan", dependsOn: [], acceptance: {}, providerId: indie.id, amount: "10000000", status: "RELEASED" },
+            {
+              index: 0,
+              title: "House plan",
+              instructions: "Write",
+              capability: "write.business_plan",
+              dependsOn: [],
+              acceptance: {},
+              providerId: house.id,
+              amount: "10000000",
+              status: "RELEASED",
+            },
+            {
+              index: 1,
+              title: "Indie plan",
+              instructions: "Write",
+              capability: "write.business_plan",
+              dependsOn: [],
+              acceptance: {},
+              providerId: indie.id,
+              amount: "10000000",
+              status: "RELEASED",
+            },
           ],
         },
       },
@@ -279,7 +367,9 @@ describe("staker fee discount", () => {
   });
 
   it("falls back to the standard fee when the chain can't be read or has no token", async () => {
-    expect(await clientFeeBps({ chain: chainWith(new Error("rpc down")), fees, log }, client)).toBe(1_200);
+    expect(await clientFeeBps({ chain: chainWith(new Error("rpc down")), fees, log }, client)).toBe(
+      1_200,
+    );
     const { earningStake: _e, kaziDecimals: _k, ...noToken } = chainWith(0n);
     expect(await clientFeeBps({ chain: noToken, fees, log }, client)).toBe(1_200);
   });

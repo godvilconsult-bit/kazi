@@ -2,7 +2,8 @@ import type { Redis } from "ioredis";
 import { LlmError, type LlmClient } from "../llm";
 
 /** Hourly LLM spend counter (UTC hour), read by the monitor for LLM_COST_SPIKE. */
-export const llmHourKey = (prefix: string, at: Date) => `${prefix}:llm:usd:${at.toISOString().slice(0, 13)}`;
+export const llmHourKey = (prefix: string, at: Date) =>
+  `${prefix}:llm:usd:${at.toISOString().slice(0, 13)}`;
 
 /** Wraps an LlmClient so every call's cost (including failed calls that still cost money) is recorded. */
 export function trackLlmSpend(llm: LlmClient, record: (usd: number) => void): LlmClient {
@@ -33,7 +34,11 @@ export function trackLlmSpend(llm: LlmClient, record: (usd: number) => void): Ll
   };
 }
 
-export function redisSpendRecorder(redis: Pick<Redis, "incrbyfloat" | "expire">, prefix: string, onCost?: (usd: number) => void) {
+export function redisSpendRecorder(
+  redis: Pick<Redis, "incrbyfloat" | "expire">,
+  prefix: string,
+  onCost?: (usd: number) => void,
+) {
   return (usd: number) => {
     onCost?.(usd);
     const key = llmHourKey(prefix, new Date());

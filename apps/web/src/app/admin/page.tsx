@@ -17,7 +17,20 @@ import { AddressPill, CopyButton, TxLink, Usdc } from "@/components/money";
 import { Markdown } from "@/components/output-viewer";
 import { RequireAuth } from "@/components/require-auth";
 import { StepStatusBadge } from "@/components/status";
-import { Badge, Button, Card, Chip, EmptyState, Field, Input, Notice, PageHeader, Skeleton, Tabs, Textarea } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  Field,
+  Input,
+  Notice,
+  PageHeader,
+  Skeleton,
+  Tabs,
+  Textarea,
+} from "@/components/ui";
 
 type Tab = "providers" | "disputes" | "queues" | "reconciliation" | "token" | "settings";
 
@@ -66,7 +79,12 @@ function CalldataActions({ txs, signer }: { txs: CalldataTx[]; signer: string })
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const batch = JSON.stringify(
-    { version: "1.0", chainId: String(cfg.chain.id), meta: { name: "Kazi admin action" }, transactions: txs.map((x) => ({ to: x.to, value: x.value, data: x.data })) },
+    {
+      version: "1.0",
+      chainId: String(cfg.chain.id),
+      meta: { name: "Kazi admin action" },
+      transactions: txs.map((x) => ({ to: x.to, value: x.value, data: x.data })),
+    },
     null,
     2,
   );
@@ -116,18 +134,25 @@ function Providers() {
   const [status, setStatus] = useState<"PENDING" | "ACTIVE" | "SUSPENDED">("PENDING");
   const q = useQuery({
     queryKey: ["admin", "providers", status],
-    queryFn: () => api<{ providers: (ProviderOwner & { ownerWallet: string; reviewScore: number | null })[] }>(`/admin/providers?status=${status}`).then((r) => r.providers),
+    queryFn: () =>
+      api<{ providers: (ProviderOwner & { ownerWallet: string; reviewScore: number | null })[] }>(
+        `/admin/providers?status=${status}`,
+      ).then((r) => r.providers),
   });
-  const [calldata, setCalldata] = useState<Record<string, { txs: CalldataTx[]; signer: string }>>({});
+  const [calldata, setCalldata] = useState<Record<string, { txs: CalldataTx[]; signer: string }>>(
+    {},
+  );
   const [scores, setScores] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const action = useMutation({
-    mutationFn: ({ id, kind }: { id: string; kind: "activate" | "suspend" }) => api<{ tx: CalldataTx; signer: string }>(`/admin/providers/${id}/${kind}`, { method: "POST" }),
+    mutationFn: ({ id, kind }: { id: string; kind: "activate" | "suspend" }) =>
+      api<{ tx: CalldataTx; signer: string }>(`/admin/providers/${id}/${kind}`, { method: "POST" }),
     onSuccess: (r, v) => setCalldata((c) => ({ ...c, [v.id]: { txs: [r.tx], signer: r.signer } })),
     onError: (err) => setError(errorMessage(err)),
   });
   const review = useMutation({
-    mutationFn: ({ id, score }: { id: string; score: number }) => api(`/admin/providers/${id}/review`, { method: "POST", body: { reviewScore: score } }),
+    mutationFn: ({ id, score }: { id: string; score: number }) =>
+      api(`/admin/providers/${id}/review`, { method: "POST", body: { reviewScore: score } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "providers"] }),
     onError: (err) => setError(errorMessage(err)),
   });
@@ -152,7 +177,11 @@ function Providers() {
               <div className="min-w-0">
                 <div className="flex flex-wrap gap-2">
                   <KindBadge kind={p.kind} hosting={p.hosting} />
-                  {p.onchainId ? <Badge>#{p.onchainId}</Badge> : <Badge tone="warn">offchain</Badge>}
+                  {p.onchainId ? (
+                    <Badge>#{p.onchainId}</Badge>
+                  ) : (
+                    <Badge tone="warn">offchain</Badge>
+                  )}
                 </div>
                 <h3 className="mt-2 font-display text-lg font-bold">{p.name}</h3>
                 <p className="mt-1 line-clamp-3 text-sm text-muted">{p.description}</p>
@@ -160,7 +189,9 @@ function Providers() {
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
                   {t("owner")} <AddressPill address={p.ownerWallet} />
                 </div>
-                {p.endpointUrl ? <p className="mt-1 break-all font-mono text-xs text-muted">{p.endpointUrl}</p> : null}
+                {p.endpointUrl ? (
+                  <p className="mt-1 break-all font-mono text-xs text-muted">{p.endpointUrl}</p>
+                ) : null}
               </div>
               <div className="flex items-end gap-2">
                 <Field label={t("reviewScore")} htmlFor={`score-${p.id}`}>
@@ -168,7 +199,7 @@ function Providers() {
                     id={`score-${p.id}`}
                     className="w-20"
                     inputMode="numeric"
-                    value={scores[p.id] ?? (p.reviewScore?.toString() ?? "")}
+                    value={scores[p.id] ?? p.reviewScore?.toString() ?? ""}
                     onChange={(e) => setScores((s) => ({ ...s, [p.id]: e.target.value }))}
                   />
                 </Field>
@@ -178,7 +209,8 @@ function Providers() {
                   className="mb-0.5"
                   onClick={() => {
                     const n = Number(scores[p.id]);
-                    if (Number.isInteger(n) && n >= 0 && n <= 100) review.mutate({ id: p.id, score: n });
+                    if (Number.isInteger(n) && n >= 0 && n <= 100)
+                      review.mutate({ id: p.id, score: n });
                   }}
                 >
                   {t("saveScore")}
@@ -187,12 +219,23 @@ function Providers() {
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {p.status !== "ACTIVE" ? (
-                <Button variant="ok" size="sm" disabled={!p.onchainId} loading={action.isPending && action.variables?.id === p.id} onClick={() => action.mutate({ id: p.id, kind: "activate" })}>
+                <Button
+                  variant="ok"
+                  size="sm"
+                  disabled={!p.onchainId}
+                  loading={action.isPending && action.variables?.id === p.id}
+                  onClick={() => action.mutate({ id: p.id, kind: "activate" })}
+                >
                   {t("activate")}
                 </Button>
               ) : null}
               {p.status !== "SUSPENDED" ? (
-                <Button variant="danger" size="sm" disabled={!p.onchainId} onClick={() => action.mutate({ id: p.id, kind: "suspend" })}>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  disabled={!p.onchainId}
+                  onClick={() => action.mutate({ id: p.id, kind: "suspend" })}
+                >
                   {t("suspend")}
                 </Button>
               ) : null}
@@ -208,7 +251,10 @@ function Providers() {
 function Disputes() {
   const t = useTranslations("admin");
   const locale = useLocale();
-  const q = useQuery({ queryKey: ["admin", "disputes"], queryFn: () => api<{ disputes: AdminDispute[] }>("/admin/disputes").then((r) => r.disputes) });
+  const q = useQuery({
+    queryKey: ["admin", "disputes"],
+    queryFn: () => api<{ disputes: AdminDispute[] }>("/admin/disputes").then((r) => r.disputes),
+  });
   if (q.isLoading) return <Skeleton className="h-40" />;
   const list = q.data ?? [];
   if (list.length === 0) return <EmptyState title={t("noDisputes")} />;
@@ -224,13 +270,20 @@ function Disputes() {
 function DisputeCard({ d, locale }: { d: AdminDispute; locale: string }) {
   const t = useTranslations("admin");
   const open = d.task.steps.filter((s) => !["RELEASED", "REFUNDED"].includes(s.status));
-  const [shares, setShares] = useState<Record<number, number>>(() => Object.fromEntries(open.map((s) => [s.index, 5000])));
+  const [shares, setShares] = useState<Record<number, number>>(() =>
+    Object.fromEntries(open.map((s) => [s.index, 5000])),
+  );
   const [result, setResult] = useState<{ txs: CalldataTx[]; signer: string } | null>(null);
   const resolve = useMutation({
     mutationFn: () =>
       api<{ txs: CalldataTx[]; signer: string }>(`/admin/disputes/${d.id}/resolve`, {
         method: "POST",
-        body: { resolutions: open.map((s) => ({ index: s.index, clientShareBps: shares[s.index] ?? 5000 })) },
+        body: {
+          resolutions: open.map((s) => ({
+            index: s.index,
+            clientShareBps: shares[s.index] ?? 5000,
+          })),
+        },
       }),
     onSuccess: setResult,
   });
@@ -240,16 +293,21 @@ function DisputeCard({ d, locale }: { d: AdminDispute; locale: string }) {
         <div>
           <h3 className="font-display text-lg font-bold">{d.task.title}</h3>
           <p className="font-mono text-xs text-muted">
-            {relativeTime(d.createdAt, locale)} · {shortAddress(d.task.clientWallet)} · <Usdc value={d.task.totalAmount} />
+            {relativeTime(d.createdAt, locale)} · {shortAddress(d.task.clientWallet)} ·{" "}
+            <Usdc value={d.task.totalAmount} />
           </p>
         </div>
         <Badge tone={d.status === "OPEN" ? "bad" : "warn"}>{d.status}</Badge>
       </div>
-      <h4 className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted">{t("disputeReason")}</h4>
+      <h4 className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted">
+        {t("disputeReason")}
+      </h4>
       <p className="mt-1 whitespace-pre-line text-sm">{d.reason}</p>
       {d.evidence.length > 0 ? (
         <>
-          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">{t("evidence")}</h4>
+          <h4 className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">
+            {t("evidence")}
+          </h4>
           <ul className="mt-1 list-disc pl-5 text-sm break-all">
             {d.evidence.map((e) => (
               <li key={e}>{e}</li>
@@ -294,7 +352,9 @@ function DisputeCard({ d, locale }: { d: AdminDispute; locale: string }) {
                 onChange={(e) => setShares((x) => ({ ...x, [s.index]: Number(e.target.value) }))}
                 className="flex-1 accent-[var(--accent)]"
               />
-              <span className="num w-14 text-right">{((shares[s.index] ?? 5000) / 100).toFixed(0)}%</span>
+              <span className="num w-14 text-right">
+                {((shares[s.index] ?? 5000) / 100).toFixed(0)}%
+              </span>
             </label>
           ))}
           {resolve.error ? <Notice tone="bad">{errorMessage(resolve.error)}</Notice> : null}
@@ -312,12 +372,21 @@ function Queues() {
   const t = useTranslations("admin");
   const q = useQuery({
     queryKey: ["admin", "queues"],
-    queryFn: () => api<{ queues: Record<string, Record<string, number>> }>("/admin/queues").then((r) => r.queues),
+    queryFn: () =>
+      api<{ queues: Record<string, Record<string, number>> }>("/admin/queues").then(
+        (r) => r.queues,
+      ),
     refetchInterval: 10_000,
   });
   if (!q.data) return <Skeleton className="h-40" />;
   const cols = ["waiting", "active", "delayed", "failed", "completed"] as const;
-  const label = { waiting: t("waiting"), active: t("activeJobs"), delayed: t("delayed"), failed: t("failedJobs"), completed: t("completedJobs") };
+  const label = {
+    waiting: t("waiting"),
+    active: t("activeJobs"),
+    delayed: t("delayed"),
+    failed: t("failedJobs"),
+    completed: t("completedJobs"),
+  };
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
       <table className="w-full text-left text-sm">
@@ -336,7 +405,10 @@ function Queues() {
             <tr key={name} className="border-b border-dashed border-line last:border-0">
               <td className="px-4 py-2 font-sans font-semibold">{name}</td>
               {cols.map((c) => (
-                <td key={c} className={`px-4 py-2 text-right ${c === "failed" && (counts[c] ?? 0) > 0 ? "text-bad font-bold" : ""}`}>
+                <td
+                  key={c}
+                  className={`px-4 py-2 text-right ${c === "failed" && (counts[c] ?? 0) > 0 ? "text-bad font-bold" : ""}`}
+                >
                   {counts[c] ?? 0}
                 </td>
               ))}
@@ -357,7 +429,8 @@ function EscrowStatus() {
   });
   const [result, setResult] = useState<{ txs: CalldataTx[]; signer: string } | null>(null);
   const prepare = useMutation({
-    mutationFn: (action: "pause" | "unpause") => api<{ tx: CalldataTx; signer: string }>(`/admin/escrow/${action}`, { method: "POST" }),
+    mutationFn: (action: "pause" | "unpause") =>
+      api<{ tx: CalldataTx; signer: string }>(`/admin/escrow/${action}`, { method: "POST" }),
     onSuccess: (r) => setResult({ txs: [r.tx], signer: r.signer }),
   });
   if (!q.data) return null;
@@ -366,19 +439,26 @@ function EscrowStatus() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-bold">{t("escrowTitle")}</h2>
-          <p className="mt-1 text-sm text-muted">{q.data.paused ? t("escrowPaused") : t("escrowActive")}</p>
+          <p className="mt-1 text-sm text-muted">
+            {q.data.paused ? t("escrowPaused") : t("escrowActive")}
+          </p>
         </div>
         <Button
           variant={q.data.paused ? "outline" : "danger"}
           loading={prepare.isPending}
           onClick={() => {
-            if (q.data.paused || window.confirm(t("pauseConfirm"))) prepare.mutate(q.data.paused ? "unpause" : "pause");
+            if (q.data.paused || window.confirm(t("pauseConfirm")))
+              prepare.mutate(q.data.paused ? "unpause" : "pause");
           }}
         >
           {q.data.paused ? t("unpause") : t("pause")}
         </Button>
       </div>
-      {prepare.error ? <Notice tone="bad" className="mt-3">{errorMessage(prepare.error)}</Notice> : null}
+      {prepare.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(prepare.error)}
+        </Notice>
+      ) : null}
       {result ? <CalldataActions txs={result.txs} signer={result.signer} /> : null}
     </Card>
   );
@@ -390,7 +470,16 @@ function Reconciliation() {
   const q = useQuery({
     queryKey: ["admin", "reconciliation"],
     queryFn: () =>
-      api<{ reconciliation: { checkedAt: string; block: string; onchainBalance: string; expectedBalance: string; difference: string; ok: boolean } | null }>("/admin/reconciliation").then((r) => r.reconciliation),
+      api<{
+        reconciliation: {
+          checkedAt: string;
+          block: string;
+          onchainBalance: string;
+          expectedBalance: string;
+          difference: string;
+          ok: boolean;
+        } | null;
+      }>("/admin/reconciliation").then((r) => r.reconciliation),
     refetchInterval: 30_000,
   });
   if (q.isLoading) return <Skeleton className="h-32" />;
@@ -424,15 +513,20 @@ const LAUNCH_SPLIT: FeeSplit = { treasuryBps: 5_000, stakerBps: 3_000, buybackBp
 
 function TokenAdmin() {
   const t = useTranslations("admin");
-  const q = useQuery({ queryKey: ["admin", "fee-split"], queryFn: () => api<{ split: FeeSplit; stakingVault: string }>("/admin/fee-split") });
+  const q = useQuery({
+    queryKey: ["admin", "fee-split"],
+    queryFn: () => api<{ split: FeeSplit; stakingVault: string }>("/admin/fee-split"),
+  });
   const [draft, setDraft] = useState<FeeSplit | null>(null);
   const [result, setResult] = useState<{ txs: CalldataTx[]; signer: string } | null>(null);
   const propose = useMutation({
-    mutationFn: (split: FeeSplit) => api<{ tx: CalldataTx; signer: string }>("/admin/fee-split", { method: "POST", body: split }),
+    mutationFn: (split: FeeSplit) =>
+      api<{ tx: CalldataTx; signer: string }>("/admin/fee-split", { method: "POST", body: split }),
     onSuccess: (r) => setResult({ txs: [r.tx], signer: r.signer }),
   });
   if (q.isLoading) return <Skeleton className="h-40" />;
-  if (!q.data) return <Notice tone="bad">{q.error ? errorMessage(q.error) : t("noFeeSplit")}</Notice>;
+  if (!q.data)
+    return <Notice tone="bad">{q.error ? errorMessage(q.error) : t("noFeeSplit")}</Notice>;
   const current = q.data.split;
   const split = draft ?? current;
   const sum = split.treasuryBps + split.stakerBps + split.buybackBps;
@@ -442,7 +536,9 @@ function TokenAdmin() {
         id={`split-${key}`}
         inputMode="numeric"
         value={String(split[key])}
-        onChange={(e) => setDraft({ ...split, [key]: Number(e.target.value.replace(/\D/g, "")) || 0 })}
+        onChange={(e) =>
+          setDraft({ ...split, [key]: Number(e.target.value.replace(/\D/g, "")) || 0 })
+        }
       />
     </Field>
   );
@@ -453,10 +549,18 @@ function TokenAdmin() {
         <p className="mt-1 text-sm text-muted">{t("feeSplitHint")}</p>
       </div>
       <p className="num text-sm">
-        {t("currentSplit", { treasury: sharePct(current.treasuryBps), stakers: sharePct(current.stakerBps), buyback: sharePct(current.buybackBps) })}
+        {t("currentSplit", {
+          treasury: sharePct(current.treasuryBps),
+          stakers: sharePct(current.stakerBps),
+          buyback: sharePct(current.buybackBps),
+        })}
       </p>
       {current.stakerBps === 0 ? (
-        <Button variant="accent" loading={propose.isPending && draft === null} onClick={() => propose.mutate(LAUNCH_SPLIT)}>
+        <Button
+          variant="accent"
+          loading={propose.isPending && draft === null}
+          onClick={() => propose.mutate(LAUNCH_SPLIT)}
+        >
           {t("enableStakers")}
         </Button>
       ) : null}
@@ -467,7 +571,12 @@ function TokenAdmin() {
       </div>
       {sum !== 10_000 ? <p className="text-sm text-bad">{t("splitSum", { sum })}</p> : null}
       {propose.error ? <Notice tone="bad">{errorMessage(propose.error)}</Notice> : null}
-      <Button variant="outline" disabled={sum !== 10_000 || draft === null} loading={propose.isPending && draft !== null} onClick={() => draft && propose.mutate(draft)}>
+      <Button
+        variant="outline"
+        disabled={sum !== 10_000 || draft === null}
+        loading={propose.isPending && draft !== null}
+        onClick={() => draft && propose.mutate(draft)}
+      >
         {t("proposeSplit")}
       </Button>
       {result ? <CalldataActions txs={result.txs} signer={result.signer} /> : null}
@@ -478,20 +587,44 @@ function TokenAdmin() {
 function Settings() {
   const t = useTranslations("admin");
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["admin", "settings"], queryFn: () => api<{ settings: { announcement?: string | null } }>("/admin/settings").then((r) => r.settings) });
+  const q = useQuery({
+    queryKey: ["admin", "settings"],
+    queryFn: () =>
+      api<{ settings: { announcement?: string | null } }>("/admin/settings").then(
+        (r) => r.settings,
+      ),
+  });
   const [announcement, setAnnouncement] = useState<string | null>(null);
   const save = useMutation({
-    mutationFn: () => api("/admin/settings", { method: "PATCH", body: { announcement: (announcement ?? "").trim() || null } }),
+    mutationFn: () =>
+      api("/admin/settings", {
+        method: "PATCH",
+        body: { announcement: (announcement ?? "").trim() || null },
+      }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["admin", "settings"] }),
   });
   if (!q.data) return <Skeleton className="h-32" />;
   return (
     <Card className="max-w-2xl">
       <Field label={t("announcement")} hint={t("announcementHint")} htmlFor="announcement">
-        <Textarea id="announcement" rows={2} maxLength={500} value={announcement ?? q.data.announcement ?? ""} onChange={(e) => setAnnouncement(e.target.value)} />
+        <Textarea
+          id="announcement"
+          rows={2}
+          maxLength={500}
+          value={announcement ?? q.data.announcement ?? ""}
+          onChange={(e) => setAnnouncement(e.target.value)}
+        />
       </Field>
-      {save.error ? <Notice tone="bad" className="mt-3">{errorMessage(save.error)}</Notice> : null}
-      {save.isSuccess ? <Notice tone="ok" className="mt-3">{t("saved")}</Notice> : null}
+      {save.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(save.error)}
+        </Notice>
+      ) : null}
+      {save.isSuccess ? (
+        <Notice tone="ok" className="mt-3">
+          {t("saved")}
+        </Notice>
+      ) : null}
       <Button className="mt-4" loading={save.isPending} onClick={() => save.mutate()}>
         {t("saveSettings")}
       </Button>

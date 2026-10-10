@@ -78,13 +78,18 @@ const OPEN_ESCROW: TaskStatus[] = ["FUNDED", "IN_PROGRESS", "DELIVERED", "DISPUT
  * stake (docs/08-TOKENOMICS.md §2.4). Warm-up stake doesn't count, so a stake can't be opened just to
  * buy one cheaper quote. If the chain can't be read, the standard fee applies.
  */
-export async function clientFeeBps(deps: Pick<QuoteDeps, "chain" | "fees" | "log">, wallet: Address): Promise<number> {
+export async function clientFeeBps(
+  deps: Pick<QuoteDeps, "chain" | "fees" | "log">,
+  wallet: Address,
+): Promise<number> {
   const base = deps.fees.takeRateBps;
   const chain = deps.chain;
   if (!chain.earningStake || !chain.kaziDecimals) return base;
   try {
     const [stake, decimals] = await Promise.all([chain.earningStake(wallet), chain.kaziDecimals()]);
-    return stake >= parseUnits(STAKER_DISCOUNT_MIN_KAZI, decimals) ? Math.max(0, base - STAKER_DISCOUNT_BPS) : base;
+    return stake >= parseUnits(STAKER_DISCOUNT_MIN_KAZI, decimals)
+      ? Math.max(0, base - STAKER_DISCOUNT_BPS)
+      : base;
   } catch (err) {
     deps.log.warn({ err }, "stake lookup failed; quoting the standard fee");
     return base;
@@ -189,7 +194,11 @@ export async function quoteTask(deps: QuoteDeps, taskId: string): Promise<Stored
 
   // ── Match ──
   const allowlist = deps.limits?.providerAllowlist ?? [];
-  const providers = await loadCandidates(deps.prisma, decimals, allowlist.length > 0 ? new Set(allowlist) : null);
+  const providers = await loadCandidates(
+    deps.prisma,
+    decimals,
+    allowlist.length > 0 ? new Set(allowlist) : null,
+  );
   // Economy needs room for a worst-case 24 h batch (docs/11-HOSTED-AGENTS.md §3).
   const speed =
     task.speed === "ECONOMY" && task.deadline.getTime() - now.getTime() >= ECONOMY_MIN_HEADROOM_MS
@@ -216,7 +225,10 @@ export async function quoteTask(deps: QuoteDeps, taskId: string): Promise<Stored
 
   // ── Price ── best-scored first; if over budget, fall back to the cheapest candidates.
   const fees = {
-    feeBps: await clientFeeBps({ chain: deps.chain, fees: deps.fees, log }, task.client.wallet as Address),
+    feeBps: await clientFeeBps(
+      { chain: deps.chain, fees: deps.fees, log },
+      task.client.wallet as Address,
+    ),
     publishedFeeBps: await deps.chain.publishedFeeBps(),
     serviceFeeBps: deps.fees.serviceFeeBps,
     minServiceFee: parseUnits(deps.fees.minServiceFee, decimals),
@@ -259,11 +271,20 @@ export async function quoteTask(deps: QuoteDeps, taskId: string): Promise<Stored
     );
   }
   if (limits?.maxOpenEscrowUsdc) {
-    const open = await deps.prisma.task.findMany({ where: { status: { in: OPEN_ESCROW } }, select: { totalAmount: true } });
+    const open = await deps.prisma.task.findMany({
+      where: { status: { in: OPEN_ESCROW } },
+      select: { totalAmount: true },
+    });
     const locked = open.reduce((sum, t) => sum + BigInt(t.totalAmount ?? "0"), 0n);
     if (locked + pricing.total > parseUnits(limits.maxOpenEscrowUsdc, decimals)) {
-      log.warn({ locked: locked.toString(), cap: limits.maxOpenEscrowUsdc }, "open escrow cap reached");
-      return reject("Kazi is at its launch capacity right now. Please try again in a few hours.", plan);
+      log.warn(
+        { locked: locked.toString(), cap: limits.maxOpenEscrowUsdc },
+        "open escrow cap reached",
+      );
+      return reject(
+        "Kazi is at its launch capacity right now. Please try again in a few hours.",
+        plan,
+      );
     }
   }
 
@@ -442,7 +463,10 @@ async function persistUnsigned(
   deps.log.info({ taskId, outcome: quote.outcome }, "task not quoted");
   await notifyTaskClient(deps.prisma, taskId, {
     type: quote.outcome,
-    title: quote.outcome === "INFEASIBLE" ? "We can't quote this task" : "A few questions before we quote",
+    title:
+      quote.outcome === "INFEASIBLE"
+        ? "We can't quote this task"
+        : "A few questions before we quote",
     body: quote.outcome === "INFEASIBLE" ? quote.reason : quote.questions.join(" "),
   });
   return quote;
@@ -474,7 +498,11 @@ async function loadAttachments(
   return files.map((f) => ({ filename: f.filename, mime: f.mime, size: f.size }));
 }
 
-async function loadCandidates(prisma: PrismaClient, decimals: number, allowlist: ReadonlySet<string> | null): Promise<Candidate[]> {
+async function loadCandidates(
+  prisma: PrismaClient,
+  decimals: number,
+  allowlist: ReadonlySet<string> | null,
+): Promise<Candidate[]> {
   const rows = await prisma.provider.findMany({
     where: {
       status: "ACTIVE",

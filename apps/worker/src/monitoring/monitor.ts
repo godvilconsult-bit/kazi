@@ -61,10 +61,16 @@ export async function monitorTick(deps: MonitorDeps): Promise<{ retriedPayouts: 
   await check("queues", async () => {
     for (const [name, queue] of Object.entries(deps.queues)) {
       const counts = await queue.getJobCounts("waiting", "active", "delayed", "failed");
-      for (const [state, n] of Object.entries(counts)) deps.metrics?.queueJobs.set({ queue: name, state }, n);
+      for (const [state, n] of Object.entries(counts))
+        deps.metrics?.queueJobs.set({ queue: name, state }, n);
       const waiting = counts["waiting"] ?? 0;
       if (waiting > deps.thresholds.queueBacklog) {
-        await deps.alerter.send("QUEUE_BACKLOG", `${waiting} jobs waiting in ${name}`, { queue: name, ...counts }, { key: name, dedupeSec: 30 * 60 });
+        await deps.alerter.send(
+          "QUEUE_BACKLOG",
+          `${waiting} jobs waiting in ${name}`,
+          { queue: name, ...counts },
+          { key: name, dedupeSec: 30 * 60 },
+        );
       }
       // New failures since the last check (failed jobs are kept as a dead-letter list).
       const failed = counts["failed"] ?? 0;
@@ -72,7 +78,12 @@ export async function monitorTick(deps: MonitorDeps): Promise<{ retriedPayouts: 
       const seen = Number((await deps.redis.get(seenKey)) ?? failed);
       await deps.redis.set(seenKey, String(failed));
       if (failed > seen) {
-        await deps.alerter.send("JOB_FAILURES", `${failed - seen} new failed jobs in ${name} (${failed} total)`, { queue: name, failed }, { key: name, dedupeSec: 30 * 60 });
+        await deps.alerter.send(
+          "JOB_FAILURES",
+          `${failed - seen} new failed jobs in ${name} (${failed} total)`,
+          { queue: name, failed },
+          { key: name, dedupeSec: 30 * 60 },
+        );
       }
     }
   });
@@ -82,7 +93,12 @@ export async function monitorTick(deps: MonitorDeps): Promise<{ retriedPayouts: 
     if (!payouts) return;
     for (const job of await payouts.getFailed(0, 100)) {
       if (retriedPayouts >= 25) break;
-      if (!["release", "refund"].includes(job.name) || !job.finishedOn || now.getTime() - job.finishedOn < PAYOUT_RETRY_AFTER_MS) continue;
+      if (
+        !["release", "refund"].includes(job.name) ||
+        !job.finishedOn ||
+        now.getTime() - job.finishedOn < PAYOUT_RETRY_AFTER_MS
+      )
+        continue;
       const key = `${deps.prefix}:monitor:payout-retries:${job.id ?? job.name}`;
       const tries = await deps.redis.incr(key);
       await deps.redis.expire(key, 7 * 24 * 3_600);
@@ -108,7 +124,11 @@ export async function monitorTick(deps: MonitorDeps): Promise<{ retriedPayouts: 
 
   await check("release-volume", async () => {
     const rows = await deps.prisma.chainEvent.findMany({
-      where: { contract: deps.escrow.toLowerCase(), name: "MilestoneReleased", indexedAt: { gte: new Date(now.getTime() - 86_400_000) } },
+      where: {
+        contract: deps.escrow.toLowerCase(),
+        name: "MilestoneReleased",
+        indexedAt: { gte: new Date(now.getTime() - 86_400_000) },
+      },
       select: { args: true },
     });
     const total = rows.reduce((sum, r) => {
@@ -117,7 +137,10 @@ export async function monitorTick(deps: MonitorDeps): Promise<{ retriedPayouts: 
     }, 0n);
     const decimals = await deps.usdcDecimals();
     deps.metrics?.releases24hUsdc.set(Number(formatUnits(total, decimals)));
-    if (deps.thresholds.dailyReleaseUsdc !== null && total > parseUnits(deps.thresholds.dailyReleaseUsdc, decimals)) {
+    if (
+      deps.thresholds.dailyReleaseUsdc !== null &&
+      total > parseUnits(deps.thresholds.dailyReleaseUsdc, decimals)
+    ) {
       await deps.alerter.send(
         "DAILY_RELEASE_VOLUME",
         `${formatUnits(total, decimals)} USDC released in the last 24 h (alert above ${deps.thresholds.dailyReleaseUsdc})`,
@@ -131,7 +154,12 @@ export async function monitorTick(deps: MonitorDeps): Promise<{ retriedPayouts: 
     const usd = Number((await deps.redis.get(llmHourKey(deps.prefix, now))) ?? 0);
     deps.metrics?.llmCostThisHourUsd.set(usd);
     if (deps.thresholds.llmHourlyUsd !== null && usd > deps.thresholds.llmHourlyUsd) {
-      await deps.alerter.send("LLM_COST_SPIKE", `$${usd.toFixed(2)} of LLM spend this hour (alert above $${deps.thresholds.llmHourlyUsd})`, { usd }, { dedupeSec: 3_600 });
+      await deps.alerter.send(
+        "LLM_COST_SPIKE",
+        `$${usd.toFixed(2)} of LLM spend this hour (alert above $${deps.thresholds.llmHourlyUsd})`,
+        { usd },
+        { dedupeSec: 3_600 },
+      );
     }
   });
 

@@ -202,8 +202,13 @@ describe("reputation (06-ROUTER §6)", () => {
     expect(reputationScore([...tenGood, bad, bad], none, now).value).toBeLessThan(hi);
     // An old failure (> 180 days) hurts less than a recent one.
     const old = { ...bad, at: new Date("2026-01-01T00:00:00Z") };
-    expect(reputationScore([...tenGood, old], none, now).value).toBeGreaterThan(reputationScore([...tenGood, bad], none, now).value);
-    expect(reputationScore(tenGood, { disputesLost: 1, slashes: 1 }, now).value).toBeCloseTo(hi - 30, 0);
+    expect(reputationScore([...tenGood, old], none, now).value).toBeGreaterThan(
+      reputationScore([...tenGood, bad], none, now).value,
+    );
+    expect(reputationScore(tenGood, { disputesLost: 1, slashes: 1 }, now).value).toBeCloseTo(
+      hi - 30,
+      0,
+    );
     expect(reputationScore([bad, bad], { disputesLost: 0, slashes: 5 }, now).value).toBe(0); // clamped
   });
 });

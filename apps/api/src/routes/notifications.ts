@@ -12,7 +12,10 @@ const listQuery = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 const readSchema = z
-  .object({ ids: z.array(z.string().min(1).max(64)).min(1).max(100).optional(), all: z.literal(true).optional() })
+  .object({
+    ids: z.array(z.string().min(1).max(64)).min(1).max(100).optional(),
+    all: z.literal(true).optional(),
+  })
   .strict()
   .refine((v) => v.ids !== undefined || v.all === true, "ids or all is required");
 
@@ -27,7 +30,15 @@ export function notificationRoutes(s: AppServices) {
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           take: q.limit + 1,
           ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
-          select: { id: true, type: true, title: true, body: true, link: true, readAt: true, createdAt: true },
+          select: {
+            id: true,
+            type: true,
+            title: true,
+            body: true,
+            link: true,
+            readAt: true,
+            createdAt: true,
+          },
         }),
         s.prisma.notification.count({ where: { userId: auth.userId, readAt: null } }),
       ]);
@@ -40,7 +51,11 @@ export function notificationRoutes(s: AppServices) {
       const auth = requireAuth(req);
       const body = parse(readSchema, req.body);
       const { count } = await s.prisma.notification.updateMany({
-        where: { userId: auth.userId, readAt: null, ...(body.all ? {} : { id: { in: body.ids ?? [] } }) },
+        where: {
+          userId: auth.userId,
+          readAt: null,
+          ...(body.all ? {} : { id: { in: body.ids ?? [] } }),
+        },
         data: { readAt: new Date() },
       });
       return { marked: count };

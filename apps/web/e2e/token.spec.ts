@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /** The stat card whose label is `label` (label and value are siblings inside the card). */
-const stat = (page: Page, label: string) => page.getByText(label, { exact: true }).first().locator("..");
+const stat = (page: Page, label: string) =>
+  page.getByText(label, { exact: true }).first().locator("..");
 
 /**
  * $KAZI pages (docs/10-BUILD-PLAN.md Phase 6) on the e2e stack, where DeployTokenLaunch has run and
@@ -11,12 +12,17 @@ const stat = (page: Page, label: string) => page.getByText(label, { exact: true 
  */
 
 async function connect(page: Page) {
-  await page.getByRole("button", { name: /connect wallet/i }).first().click();
+  await page
+    .getByRole("button", { name: /connect wallet/i })
+    .first()
+    .click();
   await page.getByRole("button", { name: /mock connector/i }).click();
   await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
 }
 
-test("claims the airdrop, stakes, starts an unstake and sees it on the token page", async ({ page }) => {
+test("claims the airdrop, stakes, starts an unstake and sees it on the token page", async ({
+  page,
+}) => {
   test.setTimeout(720_000); // first visits compile each page in `next dev`
   await page.goto("/airdrop");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Airdrop");
@@ -47,7 +53,11 @@ test("claims the airdrop, stakes, starts an unstake and sees it on the token pag
   await expect(stat(page, "Unstaking")).toContainText("400.00");
   await expect(stat(page, "Unstaking")).toContainText(/ready /);
   await expect(stat(page, "Warming up")).toContainText("600.00"); // unstaking takes warming stake first
-  await expect(page.getByText("You're already unstaking 400.00 KAZI. Unstaking more restarts the cooldown for all of it.")).toBeVisible();
+  await expect(
+    page.getByText(
+      "You're already unstaking 400.00 KAZI. Unstaking more restarts the cooldown for all of it.",
+    ),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: /^withdraw 400\.00 kazi$/i })).toBeDisabled();
 
   // Token metrics: launched, with vesting and the airdrop.
@@ -61,11 +71,16 @@ test("claims the airdrop, stakes, starts an unstake and sees it on the token pag
   await page.screenshot({ path: "test-results/token-metrics.png", fullPage: true });
 });
 
-test("visitors from a restricted country can't add stake or claim tokens", async ({ browser, baseURL }) => {
+test("visitors from a restricted country can't add stake or claim tokens", async ({
+  browser,
+  baseURL,
+}) => {
   const context = await browser.newContext();
   // A CDN adds the country header to requests for the web app only (not to the API, where a
   // browser-sent custom header would trigger a CORS preflight).
-  await context.route(`${baseURL}/**`, (route) => route.continue({ headers: { ...route.request().headers(), "cf-ipcountry": "US" } }));
+  await context.route(`${baseURL}/**`, (route) =>
+    route.continue({ headers: { ...route.request().headers(), "cf-ipcountry": "US" } }),
+  );
   const page = await context.newPage();
   await page.goto("/stake");
   await expect(page.getByText(/aren't available in your region/)).toBeVisible();

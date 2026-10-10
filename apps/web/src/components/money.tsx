@@ -22,7 +22,10 @@ export function Usdc({
   const cfg = useKaziConfig();
   const v = usdc(value, cfg.usdcDecimals);
   return (
-    <span className={cn("num whitespace-nowrap", strong && "font-bold", className)} title={`${v.exact} USDC`}>
+    <span
+      className={cn("num whitespace-nowrap", strong && "font-bold", className)}
+      title={`${v.exact} USDC`}
+    >
       {v.display}
       {unit ? <span className="ml-1 text-[0.8em] font-medium text-muted">USDC</span> : null}
     </span>
@@ -53,9 +56,20 @@ export function AddressPill({ address, className }: { address: string; className
   const cfg = useKaziConfig();
   const link = explorerUrl(cfg.chain.explorerUrl, "address", address);
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-0.5 font-mono text-xs", className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md border border-line bg-surface-2 px-2 py-0.5 font-mono text-xs",
+        className,
+      )}
+    >
       {link ? (
-        <a href={link} target="_blank" rel="noopener noreferrer" className="hover:text-accent" title={address}>
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-accent"
+          title={address}
+        >
           {shortAddress(address)}
         </a>
       ) : (
@@ -66,12 +80,29 @@ export function AddressPill({ address, className }: { address: string; className
   );
 }
 
-export function TxLink({ hash, label, className }: { hash: string; label?: string; className?: string }) {
+export function TxLink({
+  hash,
+  label,
+  className,
+}: {
+  hash: string;
+  label?: string;
+  className?: string;
+}) {
   const cfg = useKaziConfig();
   const link = explorerUrl(cfg.chain.explorerUrl, "tx", hash);
   const text = label ?? shortHash(hash);
   return link ? (
-    <a href={link} target="_blank" rel="noopener noreferrer" className={cn("inline-flex items-center gap-1 font-mono text-xs text-accent hover:underline", className)} title={hash}>
+    <a
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "inline-flex items-center gap-1 font-mono text-xs text-accent hover:underline",
+        className,
+      )}
+      title={hash}
+    >
       {text}
       <ExternalLink className="size-3" aria-hidden />
     </a>

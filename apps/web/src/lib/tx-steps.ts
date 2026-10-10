@@ -25,7 +25,10 @@ export function initSteps(keys: readonly string[]): TxStep[] {
 }
 
 export function stepsReducer(steps: TxStep[], action: StepAction): TxStep[] {
-  if (action.type === "reset") return steps.map((s) => (s.status === "done" || s.status === "skipped" ? s : { key: s.key, status: "idle" }));
+  if (action.type === "reset")
+    return steps.map((s) =>
+      s.status === "done" || s.status === "skipped" ? s : { key: s.key, status: "idle" },
+    );
   return steps.map((s) => {
     if (s.key !== action.key) return s;
     switch (action.type) {

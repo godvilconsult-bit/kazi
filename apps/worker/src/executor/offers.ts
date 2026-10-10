@@ -20,11 +20,25 @@ export async function createDirectOffer(
   st: { id: string; attempts: number; title: string; timeoutAt: Date | null; providerId: string },
   now: Date,
 ): Promise<void> {
-  const expiresAt = new Date(Math.min(now.getTime() + OFFER_WINDOW_MS, (st.timeoutAt ?? now).getTime()));
+  const expiresAt = new Date(
+    Math.min(now.getTime() + OFFER_WINDOW_MS, (st.timeoutAt ?? now).getTime()),
+  );
   const offer = await prisma.offer.upsert({
-    where: { subtaskId_attempt_providerId: { subtaskId: st.id, attempt: st.attempts, providerId: st.providerId } },
+    where: {
+      subtaskId_attempt_providerId: {
+        subtaskId: st.id,
+        attempt: st.attempts,
+        providerId: st.providerId,
+      },
+    },
     update: {},
-    create: { subtaskId: st.id, attempt: st.attempts, providerId: st.providerId, wave: 1, expiresAt },
+    create: {
+      subtaskId: st.id,
+      attempt: st.attempts,
+      providerId: st.providerId,
+      wave: 1,
+      expiresAt,
+    },
     include: { provider: { select: { ownerId: true } } },
   });
   await notify(prisma, offer.provider.ownerId, {
@@ -36,7 +50,11 @@ export async function createDirectOffer(
 }
 
 /** Expire, widen or fail offers for human subtasks that are waiting for a taker. */
-export async function offersTick(deps: { prisma: PrismaClient; log: Logger; now?: () => Date }): Promise<number> {
+export async function offersTick(deps: {
+  prisma: PrismaClient;
+  log: Logger;
+  now?: () => Date;
+}): Promise<number> {
   const now = deps.now?.() ?? new Date();
   const waiting = await deps.prisma.subtask.findMany({
     where: { status: "DISPATCHED", provider: { kind: "HUMAN" } },
@@ -48,7 +66,11 @@ export async function offersTick(deps: { prisma: PrismaClient; log: Logger; now?
     const accepted = current.find((o) => o.status === "ACCEPTED");
     if (accepted) {
       // Someone is working on it: remind them once when the deadline gets close.
-      if (st.timeoutAt && st.timeoutAt.getTime() - now.getTime() < DUE_SOON_MS && st.timeoutAt > now) {
+      if (
+        st.timeoutAt &&
+        st.timeoutAt.getTime() - now.getTime() < DUE_SOON_MS &&
+        st.timeoutAt > now
+      ) {
         if (await remindOnce(deps.prisma, st, accepted.providerId)) changed++;
       }
       continue;
@@ -65,15 +87,28 @@ export async function offersTick(deps: { prisma: PrismaClient; log: Logger; now?
       // Widen to every qualified freelancer who hasn't seen this attempt yet.
       const seen = new Set(current.map((o) => o.providerId));
       const others = await deps.prisma.provider.findMany({
-        where: { kind: "HUMAN", status: "ACTIVE", capabilities: { has: st.capability }, onchainId: { not: null } },
+        where: {
+          kind: "HUMAN",
+          status: "ACTIVE",
+          capabilities: { has: st.capability },
+          onchainId: { not: null },
+        },
         select: { id: true, ownerId: true },
       });
       const fresh = others.filter((p) => !seen.has(p.id));
       if (fresh.length > 0) {
-        const expiresAt = new Date(Math.min(now.getTime() + OFFER_WINDOW_MS, (st.timeoutAt ?? now).getTime()));
+        const expiresAt = new Date(
+          Math.min(now.getTime() + OFFER_WINDOW_MS, (st.timeoutAt ?? now).getTime()),
+        );
         if (expiresAt > now) {
           await deps.prisma.offer.createMany({
-            data: fresh.map((p) => ({ subtaskId: st.id, attempt: st.attempts, providerId: p.id, wave: 2, expiresAt })),
+            data: fresh.map((p) => ({
+              subtaskId: st.id,
+              attempt: st.attempts,
+              providerId: p.id,
+              wave: 2,
+              expiresAt,
+            })),
             skipDuplicates: true,
           });
           for (const p of fresh) {
@@ -85,17 +120,28 @@ export async function offersTick(deps: { prisma: PrismaClient; log: Logger; now?
             });
           }
           await deps.prisma.taskEvent.create({
-            data: { taskId: st.taskId, type: "OFFER_WIDENED", data: { subtaskId: st.id, freelancers: fresh.length } },
+            data: {
+              taskId: st.taskId,
+              type: "OFFER_WIDENED",
+              data: { subtaskId: st.id, freelancers: fresh.length },
+            },
           });
           changed++;
           continue;
         }
       }
     }
-    await recordFailedAttempt(deps, st.id, st.attempts, "AGENT_ERROR", {
-      code: "NO_TAKER",
-      message: "No freelancer accepted this work in time.",
-    }, null);
+    await recordFailedAttempt(
+      deps,
+      st.id,
+      st.attempts,
+      "AGENT_ERROR",
+      {
+        code: "NO_TAKER",
+        message: "No freelancer accepted this work in time.",
+      },
+      null,
+    );
     changed++;
   }
   return changed;
@@ -107,15 +153,26 @@ async function remindOnce(
   providerId: string,
 ): Promise<boolean> {
   const already = await prisma.taskEvent.findFirst({
-    where: { taskId: st.taskId, type: "FREELANCER_REMINDED", data: { path: ["subtaskId"], equals: st.id } },
+    where: {
+      taskId: st.taskId,
+      type: "FREELANCER_REMINDED",
+      data: { path: ["subtaskId"], equals: st.id },
+    },
     select: { data: true },
     orderBy: { createdAt: "desc" },
   });
   if ((already?.data as { attempt?: number } | null)?.attempt === st.attempts) return false;
-  const provider = await prisma.provider.findUnique({ where: { id: providerId }, select: { ownerId: true } });
+  const provider = await prisma.provider.findUnique({
+    where: { id: providerId },
+    select: { ownerId: true },
+  });
   if (!provider) return false;
   await prisma.taskEvent.create({
-    data: { taskId: st.taskId, type: "FREELANCER_REMINDED", data: { subtaskId: st.id, attempt: st.attempts } },
+    data: {
+      taskId: st.taskId,
+      type: "FREELANCER_REMINDED",
+      data: { subtaskId: st.id, attempt: st.attempts },
+    },
   });
   await notify(prisma, provider.ownerId, {
     type: "DUE_SOON",
@@ -141,13 +198,20 @@ export async function applyAcceptedOffer(
   if (!offer || offer.status !== "ACCEPTED") return "stale";
   const st = offer.subtask;
   if (st.providerId === offer.providerId) return "unchanged";
-  if (offer.provider.onchainId === null) throw new Error(`provider ${offer.providerId} is not registered onchain`);
+  if (offer.provider.onchainId === null)
+    throw new Error(`provider ${offer.providerId} is not registered onchain`);
   const taskId = st.task.onchainId as Hex;
   const onchain = await deps.operator.milestone(taskId, st.index);
   if (onchain.providerId !== offer.provider.onchainId) {
     await deps.operator.reassign(taskId, st.index, offer.provider.onchainId);
   }
-  await deps.prisma.subtask.update({ where: { id: st.id }, data: { providerId: offer.providerId } });
-  deps.log.info({ subtaskId: st.id, providerId: offer.providerId }, "subtask reassigned to accepting freelancer");
+  await deps.prisma.subtask.update({
+    where: { id: st.id },
+    data: { providerId: offer.providerId },
+  });
+  deps.log.info(
+    { subtaskId: st.id, providerId: offer.providerId },
+    "subtask reassigned to accepting freelancer",
+  );
   return "reassigned";
 }

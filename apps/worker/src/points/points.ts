@@ -49,7 +49,18 @@ export async function recomputePoints(
     orderBy: { updatedAt: "asc" },
     include: {
       client: { select: { id: true, wallet: true } },
-      subtasks: { include: { provider: { select: { ownerId: true, payoutAddress: true, isHouse: true, owner: { select: { wallet: true } } } } } },
+      subtasks: {
+        include: {
+          provider: {
+            select: {
+              ownerId: true,
+              payoutAddress: true,
+              isHouse: true,
+              owner: { select: { wallet: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -86,7 +97,9 @@ export async function recomputePoints(
     let repeat = false;
     for (const ownerId of providerFees.keys()) {
       const key = `${t.client.id}|${ownerId}`;
-      const recent = (pairHistory.get(key) ?? []).filter((at) => t.updatedAt.getTime() - at < 30 * DAY);
+      const recent = (pairHistory.get(key) ?? []).filter(
+        (at) => t.updatedAt.getTime() - at < 30 * DAY,
+      );
       recent.push(t.updatedAt.getTime());
       pairHistory.set(key, recent);
       if (recent.length > POINTS_REPEAT_PAIR_LIMIT) {
@@ -114,7 +127,15 @@ export async function recomputePoints(
     });
     for (const [ownerId, pf] of providerFees) {
       const flag = pf.flag ?? (total < minTask ? "below-minimum" : null);
-      entries.push({ userId: ownerId, taskId: t.id, role: "PROVIDER", feeUnits: pf.fees, points: toPoints(pf.fees, PROVIDER_POINTS_PER_USDC, flag), flag, day });
+      entries.push({
+        userId: ownerId,
+        taskId: t.id,
+        role: "PROVIDER",
+        feeUnits: pf.fees,
+        points: toPoints(pf.fees, PROVIDER_POINTS_PER_USDC, flag),
+        flag,
+        day,
+      });
     }
   }
 
@@ -134,7 +155,14 @@ export async function recomputePoints(
     await deps.prisma.pointsEntry.upsert({
       where: { userId_taskId_role: { userId: e.userId, taskId: e.taskId, role: e.role } },
       update: { feeUnits: e.feeUnits.toString(), points: e.points, flag: e.flag },
-      create: { userId: e.userId, taskId: e.taskId, role: e.role, feeUnits: e.feeUnits.toString(), points: e.points, flag: e.flag },
+      create: {
+        userId: e.userId,
+        taskId: e.taskId,
+        role: e.role,
+        feeUnits: e.feeUnits.toString(),
+        points: e.points,
+        flag: e.flag,
+      },
     });
   }
   deps.log.info({ tasks: tasks.length, entries: entries.length }, "points recomputed");

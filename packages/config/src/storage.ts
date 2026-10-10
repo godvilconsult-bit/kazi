@@ -90,7 +90,8 @@ export class SupabaseStorage implements ObjectStorage {
   async download(key: string, maxBytes: number) {
     const info = await this.stat(key);
     if (!info) throw new StorageError("object not found");
-    if (info.size > maxBytes) throw new StorageError(`object is ${info.size} bytes (max ${maxBytes})`);
+    if (info.size > maxBytes)
+      throw new StorageError(`object is ${info.size} bytes (max ${maxBytes})`);
     const res = await this.fetchImpl(
       `${this.baseUrl}/storage/v1/object/authenticated/${this.bucket}/${encodeKey(key)}`,
       { headers: this.headers },

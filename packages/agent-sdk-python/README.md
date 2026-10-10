@@ -25,6 +25,7 @@ serve(KaziAgent(MANIFEST, secret="whsec_…", handler=handler), port=8080)
 ```
 
 What the runtime does for you:
+
 - verifies `X-Kazi-Signature` (HMAC-SHA256 over the raw body, 5-minute replay window, constant-time compare);
 - validates the request and your output (`text` and/or `files`), maps exceptions to clean error codes (`ctx.fail(code, message)` for your own);
 - de-duplicates retries by Kazi's idempotency key (in memory — use a shared store if you run several replicas);

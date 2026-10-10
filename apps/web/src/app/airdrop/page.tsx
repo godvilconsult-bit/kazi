@@ -60,16 +60,29 @@ function Live({ airdrop, decimals }: { airdrop: Address; decimals: number }) {
   });
   const s = schedule.data;
   if (schedule.isLoading || !s) return <Skeleton className="h-48" />;
-  if (s.some((x) => x.status !== "success")) return <ErrorState title={t("notLive")} onRetry={() => void schedule.refetch()} />;
+  if (s.some((x) => x.status !== "success"))
+    return <ErrorState title={t("notLive")} onRetry={() => void schedule.refetch()} />;
   const start = Number(s[0].result as bigint);
   const duration = Number(s[1].result as bigint);
   const immediateBps = Number(s[2].result as number);
   const deadline = Number(s[3].result as bigint);
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted">{t("schedule", { immediate: sharePct(immediateBps), duration: durationLabel(duration, locale) })}</p>
+      <p className="text-sm text-muted">
+        {t("schedule", {
+          immediate: sharePct(immediateBps),
+          duration: durationLabel(duration, locale),
+        })}
+      </p>
       {address ? (
-        <Allocation airdrop={airdrop} account={address} decimals={decimals} start={start} end={start + duration} deadline={deadline} />
+        <Allocation
+          airdrop={airdrop}
+          account={address}
+          decimals={decimals}
+          start={start}
+          end={start + duration}
+          deadline={deadline}
+        />
       ) : (
         <Card>
           <p className="font-semibold">{t("connect")}</p>
@@ -115,9 +128,17 @@ function Allocation({
   });
 
   if (proof.isLoading) return <Skeleton className="h-40" />;
-  if (proof.error instanceof ApiError && proof.error.status === 404) return <Notice tone="info">{t("notEligible")}</Notice>;
+  if (proof.error instanceof ApiError && proof.error.status === 404)
+    return <Notice tone="info">{t("notEligible")}</Notice>;
   if (proof.error || !proof.data) {
-    return <ErrorState title={tc("error")} message={proof.error ? errorMessage(proof.error) : undefined} onRetry={() => void proof.refetch()} retryLabel={tc("retry")} />;
+    return (
+      <ErrorState
+        title={tc("error")}
+        message={proof.error ? errorMessage(proof.error) : undefined}
+        onRetry={() => void proof.refetch()}
+        retryLabel={tc("retry")}
+      />
+    );
   }
   const r = reads.data;
   if (reads.isLoading || !r) return <Skeleton className="h-40" />;
@@ -144,7 +165,17 @@ function Allocation({
         <TxButton
           variant="accent"
           disabled={geo.restricted || claimable === 0n || now < start}
-          run={(onHash) => write({ address: airdrop, abi: kaziAirdropAbi, functionName: "claim", args: [amount, data.proof] }, onHash)}
+          run={(onHash) =>
+            write(
+              {
+                address: airdrop,
+                abi: kaziAirdropAbi,
+                functionName: "claim",
+                args: [amount, data.proof],
+              },
+              onHash,
+            )
+          }
           onDone={() => void reads.refetch()}
         >
           {t("claimCta", { amount: kazi(claimable) })}

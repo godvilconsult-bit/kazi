@@ -87,12 +87,16 @@ function cleanNumber(raw: string, integer: boolean): string | null {
   const dots = (s.match(/\./g) ?? []).length;
   if (commas > 0 && dots > 0) {
     // "1.234,56" vs "1,234.56": with both present, the last separator is the decimal one.
-    s = s.lastIndexOf(",") > s.lastIndexOf(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+    s =
+      s.lastIndexOf(",") > s.lastIndexOf(".")
+        ? s.replace(/\./g, "").replace(",", ".")
+        : s.replace(/,/g, "");
   } else if (commas + dots > 0) {
     const sep = commas > 0 ? "," : ".";
     const count = commas + dots;
     // One separator followed by exactly 3 digits ("980,500") or several ("1.250.000") = thousands.
-    const thousands = count > 1 || (s.length - s.indexOf(sep) - 1 === 3 && /^-?\d+$/.test(s.replace(sep, "")));
+    const thousands =
+      count > 1 || (s.length - s.indexOf(sep) - 1 === 3 && /^-?\d+$/.test(s.replace(sep, "")));
     s = thousands ? s.split(sep).join("") : s.replace(sep, ".");
   }
   if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
@@ -115,7 +119,8 @@ function cleanDate(raw: string, format: "YMD" | "DMY" | "MDY"): string | null {
   else [m, d, y] = [a, b, c];
   if (y < 100) y += y < 70 ? 2000 : 1900;
   const date = new Date(Date.UTC(y, m - 1, d));
-  if (Number.isNaN(date.getTime()) || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null;
+  if (Number.isNaN(date.getTime()) || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d)
+    return null;
   return date.toISOString().slice(0, 10);
 }
 
@@ -166,7 +171,14 @@ export function applyPlan(header: string[], body: string[][], plan: CleaningPlan
           cleaned = v === "" ? "" : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v.toLowerCase() : null;
           break;
         default:
-          cleaned = c.case === "lower" ? v.toLowerCase() : c.case === "upper" ? v.toUpperCase() : c.case === "title" ? titleCase(v) : v;
+          cleaned =
+            c.case === "lower"
+              ? v.toLowerCase()
+              : c.case === "upper"
+                ? v.toUpperCase()
+                : c.case === "title"
+                  ? titleCase(v)
+                  : v;
       }
       if (cleaned === null) {
         invalid[c.target] = (invalid[c.target] ?? 0) + 1;
@@ -188,5 +200,12 @@ export function applyPlan(header: string[], body: string[][], plan: CleaningPlan
     }
     out.push(row);
   }
-  return { rows: out, rowsIn: body.length, rowsOut: out.length - 1, duplicatesRemoved, emptyRemoved, invalid };
+  return {
+    rows: out,
+    rowsIn: body.length,
+    rowsOut: out.length - 1,
+    duplicatesRemoved,
+    emptyRemoved,
+    invalid,
+  };
 }

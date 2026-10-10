@@ -46,11 +46,21 @@ export default function GetUsdcPage() {
               {t("addNetwork", { name: cfg.chain.name })}
             </Button>
           ) : null}
-          {done ? <Notice tone="ok" className="mt-3">{t("networkAdded")}</Notice> : null}
-          {error ? <Notice tone="bad" className="mt-3">{error}</Notice> : null}
+          {done ? (
+            <Notice tone="ok" className="mt-3">
+              {t("networkAdded")}
+            </Notice>
+          ) : null}
+          {error ? (
+            <Notice tone="bad" className="mt-3">
+              {error}
+            </Notice>
+          ) : null}
         </Card>
         <Card>
-          <h2 className="font-display text-lg font-bold">{testnet ? t("testnetTitle") : t("mainnetTitle")}</h2>
+          <h2 className="font-display text-lg font-bold">
+            {testnet ? t("testnetTitle") : t("mainnetTitle")}
+          </h2>
           <p className="mt-1 text-sm text-muted">{testnet ? t("testnetBody") : t("mainnetBody")}</p>
           {address ? <AddressPill address={address} className="mt-3" /> : null}
           {testnet && cfg.chain.faucetUrl ? (

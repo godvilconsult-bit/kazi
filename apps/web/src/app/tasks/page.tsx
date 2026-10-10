@@ -49,13 +49,19 @@ function TaskList() {
   const q = useInfiniteQuery({
     queryKey: ["tasks"],
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => api<{ tasks: TaskView[]; nextCursor: string | null }>(`/tasks?limit=50${pageParam ? `&cursor=${pageParam}` : ""}`),
+    queryFn: ({ pageParam }) =>
+      api<{ tasks: TaskView[]; nextCursor: string | null }>(
+        `/tasks?limit=50${pageParam ? `&cursor=${pageParam}` : ""}`,
+      ),
     getNextPageParam: (last) => last.nextCursor,
   });
   const all = q.data?.pages.flatMap((p) => p.tasks) ?? [];
   const allowed = FILTERS[filter] as readonly string[];
   const tasks = allowed.length === 0 ? all : all.filter((x) => allowed.includes(x.status));
-  const count = (f: Filter) => (FILTERS[f].length === 0 ? all.length : all.filter((x) => (FILTERS[f] as readonly string[]).includes(x.status)).length);
+  const count = (f: Filter) =>
+    FILTERS[f].length === 0
+      ? all.length
+      : all.filter((x) => (FILTERS[f] as readonly string[]).includes(x.status)).length;
 
   if (q.isLoading) return <Skeleton className="h-64" />;
   if (all.length === 0) {
@@ -93,7 +99,8 @@ function TaskList() {
               <div className="min-w-0">
                 <p className="truncate font-semibold">{task.title}</p>
                 <p className="font-mono text-xs text-muted">
-                  {t("created", { date: formatDate(task.createdAt, locale) })} · {t("due", { date: formatDate(task.deadline, locale) })}
+                  {t("created", { date: formatDate(task.createdAt, locale) })} ·{" "}
+                  {t("due", { date: formatDate(task.deadline, locale) })}
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
@@ -106,7 +113,11 @@ function TaskList() {
       </ul>
       {q.hasNextPage ? (
         <div className="mt-4 text-center">
-          <Button variant="outline" loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+          <Button
+            variant="outline"
+            loading={q.isFetchingNextPage}
+            onClick={() => void q.fetchNextPage()}
+          >
             {t("loadMore")}
           </Button>
         </div>

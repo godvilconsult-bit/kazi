@@ -20,8 +20,17 @@ export async function renderInvoice(input: {
   const ink = rgb(0.1, 0.1, 0.12);
   const muted = rgb(0.42, 0.42, 0.46);
   let y = 790;
-  const line = (text: string, opts: { size?: number; f?: typeof font; color?: typeof ink; x?: number } = {}) => {
-    page.drawText(text, { x: opts.x ?? 50, y, size: opts.size ?? 10, font: opts.f ?? font, color: opts.color ?? ink });
+  const line = (
+    text: string,
+    opts: { size?: number; f?: typeof font; color?: typeof ink; x?: number } = {},
+  ) => {
+    page.drawText(text, {
+      x: opts.x ?? 50,
+      y,
+      size: opts.size ?? 10,
+      font: opts.f ?? font,
+      color: opts.color ?? ink,
+    });
   };
   // pdf-lib's standard fonts only cover WinAnsi; keep text printable.
   const safe = (t: string) => t.replace(/[^\x20-\x7E\xA0-\xFF]/g, "?").slice(0, 90);
@@ -35,7 +44,9 @@ export async function renderInvoice(input: {
   y -= 14;
   line(`Client wallet ${input.clientWallet}`, { color: muted });
   y -= 14;
-  line(`Status ${task.status}  ·  Created ${task.createdAt.toISOString().slice(0, 10)}`, { color: muted });
+  line(`Status ${task.status}  ·  Created ${task.createdAt.toISOString().slice(0, 10)}`, {
+    color: muted,
+  });
   y -= 30;
 
   line("Step", { f: bold });
@@ -55,11 +66,16 @@ export async function renderInvoice(input: {
   page.drawLine({ start: { x: 50, y }, end: { x: 545, y }, thickness: 0.5, color: muted });
   y -= 18;
   const total = BigInt(task.totalAmount ?? "0");
-  const fees = input.subtasks.reduce((a, st) => a + (BigInt(st.amount) - providerPayout(BigInt(st.amount), task.feeBps ?? 0)), 0n);
+  const fees = input.subtasks.reduce(
+    (a, st) => a + (BigInt(st.amount) - providerPayout(BigInt(st.amount), task.feeBps ?? 0)),
+    0n,
+  );
   line("Total paid into escrow", { f: bold });
   line(usdc(total), { f: bold, x: 470 });
   y -= 16;
-  line(`of which platform fees (${((task.feeBps ?? 0) / 100).toFixed(2)}% per payment)`, { color: muted });
+  line(`of which platform fees (${((task.feeBps ?? 0) / 100).toFixed(2)}% per payment)`, {
+    color: muted,
+  });
   line(usdc(fees), { color: muted, x: 470 });
   y -= 30;
   if (task.fundTxHash) {
@@ -67,7 +83,8 @@ export async function renderInvoice(input: {
     y -= 14;
     line(task.fundTxHash, { color: muted, size: 8 });
     y -= 12;
-    if (input.explorerUrl) line(`${input.explorerUrl}/tx/${task.fundTxHash}`.slice(0, 110), { color: muted, size: 8 });
+    if (input.explorerUrl)
+      line(`${input.explorerUrl}/tx/${task.fundTxHash}`.slice(0, 110), { color: muted, size: 8 });
   }
   page.drawText("Paid in USDC on Arc. Amounts are held in escrow and paid to providers per step.", {
     x: 50,

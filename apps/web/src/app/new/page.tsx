@@ -79,12 +79,22 @@ function Composer() {
     }
   }, [fromId]);
 
-  const deadline = useMemo(() => (preset === "custom" ? new Date(custom) : new Date(Date.now() + preset)), [preset, custom]);
-  const deadlineOk = !Number.isNaN(deadline.getTime()) && deadline.getTime() - Date.now() >= HOUR && deadline.getTime() - Date.now() <= 90 * 24 * HOUR;
+  const deadline = useMemo(
+    () => (preset === "custom" ? new Date(custom) : new Date(Date.now() + preset)),
+    [preset, custom],
+  );
+  const deadlineOk =
+    !Number.isNaN(deadline.getTime()) &&
+    deadline.getTime() - Date.now() >= HOUR &&
+    deadline.getTime() - Date.now() <= 90 * 24 * HOUR;
   const budgetUnits = budget.trim() ? parseUsdcInput(budget, cfg.usdcDecimals) : null;
   const budgetInvalid = budget.trim() !== "" && budgetUnits === null;
-  const economyTooClose = speed === "ECONOMY" && deadlineOk && deadline.getTime() - Date.now() < ECONOMY_MIN_HEADROOM_MS;
-  const derivedTitle = (title.trim() || description.trim().split(/\n|(?<=[.!?])\s/)[0] || "").slice(0, 120);
+  const economyTooClose =
+    speed === "ECONOMY" && deadlineOk && deadline.getTime() - Date.now() < ECONOMY_MIN_HEADROOM_MS;
+  const derivedTitle = (title.trim() || description.trim().split(/\n|(?<=[.!?])\s/)[0] || "").slice(
+    0,
+    120,
+  );
 
   async function submit() {
     setError(null);
@@ -117,7 +127,11 @@ function Composer() {
       <PageHeader kicker={t("kicker")} title={t("title")}>
         {t("intro")}
       </PageHeader>
-      {fromId ? <Notice tone="info" className="mb-6">{t("duplicateNote")}</Notice> : null}
+      {fromId ? (
+        <Notice tone="info" className="mb-6">
+          {t("duplicateNote")}
+        </Notice>
+      ) : null}
 
       <form
         className="space-y-6"
@@ -139,7 +153,13 @@ function Composer() {
         </Field>
 
         <Field label={t("titleLabel")} hint={t("titleHint")} htmlFor="title">
-          <Input id="title" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} placeholder={derivedTitle} />
+          <Input
+            id="title"
+            maxLength={120}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={derivedTitle}
+          />
         </Field>
 
         <Field label={t("files")} hint={t("filesHint")}>
@@ -159,11 +179,27 @@ function Composer() {
               </Chip>
             </div>
             {preset === "custom" ? (
-              <Input type="datetime-local" className="mt-2" value={custom} onChange={(e) => setCustom(e.target.value)} />
+              <Input
+                type="datetime-local"
+                className="mt-2"
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+              />
             ) : null}
           </Field>
-          <Field label={`${t("budget")} (USDC)`} hint={t("budgetHint")} error={budgetInvalid ? t("budgetHint") : undefined} htmlFor="budget">
-            <Input id="budget" inputMode="decimal" placeholder="25.00" value={budget} onChange={(e) => setBudget(e.target.value)} />
+          <Field
+            label={`${t("budget")} (USDC)`}
+            hint={t("budgetHint")}
+            error={budgetInvalid ? t("budgetHint") : undefined}
+            htmlFor="budget"
+          >
+            <Input
+              id="budget"
+              inputMode="decimal"
+              placeholder="25.00"
+              value={budget}
+              onChange={(e) => setBudget(e.target.value)}
+            />
           </Field>
         </div>
 
@@ -175,23 +211,44 @@ function Composer() {
                 key={s}
                 className={cn(
                   "cursor-pointer rounded-xl border p-4 transition-colors",
-                  speed === s ? "border-ink bg-surface shadow-stamp-sm" : "border-line bg-surface/60 hover:border-ink/60",
+                  speed === s
+                    ? "border-ink bg-surface shadow-stamp-sm"
+                    : "border-line bg-surface/60 hover:border-ink/60",
                 )}
               >
-                <input type="radio" name="speed" value={s} checked={speed === s} onChange={() => setSpeed(s)} className="sr-only" />
-                <span className="font-display text-lg font-bold">{s === "ECONOMY" ? t("economy") : t("express")}</span>
-                <span className="mt-1 block text-sm text-muted">{s === "ECONOMY" ? t("economyHint") : t("expressHint")}</span>
+                <input
+                  type="radio"
+                  name="speed"
+                  value={s}
+                  checked={speed === s}
+                  onChange={() => setSpeed(s)}
+                  className="sr-only"
+                />
+                <span className="font-display text-lg font-bold">
+                  {s === "ECONOMY" ? t("economy") : t("express")}
+                </span>
+                <span className="mt-1 block text-sm text-muted">
+                  {s === "ECONOMY" ? t("economyHint") : t("expressHint")}
+                </span>
               </label>
             ))}
           </div>
-          {economyTooClose ? <p className="mt-2 text-sm text-warn">{t("economyTooClose")}</p> : null}
+          {economyTooClose ? (
+            <p className="mt-2 text-sm text-warn">{t("economyTooClose")}</p>
+          ) : null}
         </fieldset>
 
         {error ? <Notice tone="bad">{error}</Notice> : null}
 
         <div className="border-t border-dashed border-line pt-5">
           {user ? (
-            <Button type="submit" variant="accent" size="lg" loading={submitting} className="w-full sm:w-auto">
+            <Button
+              type="submit"
+              variant="accent"
+              size="lg"
+              loading={submitting}
+              className="w-full sm:w-auto"
+            >
               {submitting ? t("submitting") : t("submit")}
             </Button>
           ) : (

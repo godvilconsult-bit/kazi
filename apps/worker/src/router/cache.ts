@@ -17,7 +17,12 @@ export const PLAN_CACHE_TTL_SEC = 3_600;
 export function planCacheKey(parts: {
   title: string;
   description: string;
-  attachments: readonly { filename: string; mime: string; size: number; summary?: string | undefined }[];
+  attachments: readonly {
+    filename: string;
+    mime: string;
+    size: number;
+    summary?: string | undefined;
+  }[];
   budget?: string | undefined;
   deadline: Date;
   capabilities: readonly string[];

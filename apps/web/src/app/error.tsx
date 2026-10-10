@@ -4,7 +4,12 @@ import { useTranslations } from "next-intl";
 import { PageBody } from "@/components/container";
 import { ErrorState } from "@/components/ui";
 
-export default function ErrorPage({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function ErrorPage({
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   const t = useTranslations("errorPage");
   const tc = useTranslations("common");
   return (

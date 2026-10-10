@@ -15,7 +15,10 @@ import { createPrismaClient } from "@kazi/db";
 const env = loadEnv(
   dbEnvSchema.extend({ ENCRYPTION_KEY: authEnvSchema.shape.ENCRYPTION_KEY }).extend({
     NEW_ENCRYPTION_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
-    NEW_HOUSE_AGENTS_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(32).optional()),
+    NEW_HOUSE_AGENTS_SECRET: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.string().min(32).optional(),
+    ),
   }),
 );
 if (!env.NEW_ENCRYPTION_KEY && !env.NEW_HOUSE_AGENTS_SECRET) {
@@ -34,13 +37,22 @@ try {
     if (!p.webhookSecretEnc) return [];
     const rederive = p.isHouse && env.NEW_HOUSE_AGENTS_SECRET;
     if (!rederive && !env.NEW_ENCRYPTION_KEY) return [];
-    const plain = rederive ? deriveHouseAgentSecret(env.NEW_HOUSE_AGENTS_SECRET ?? "", p.slug) : current.decrypt(p.webhookSecretEnc);
-    return [prisma.provider.update({ where: { id: p.id }, data: { webhookSecretEnc: next.encrypt(plain) } })];
+    const plain = rederive
+      ? deriveHouseAgentSecret(env.NEW_HOUSE_AGENTS_SECRET ?? "", p.slug)
+      : current.decrypt(p.webhookSecretEnc);
+    return [
+      prisma.provider.update({
+        where: { id: p.id },
+        data: { webhookSecretEnc: next.encrypt(plain) },
+      }),
+    ];
   });
   await prisma.$transaction(updates);
   console.log(`Rotated ${updates.length} of ${providers.length} stored webhook secrets.`);
-  if (env.NEW_ENCRYPTION_KEY) console.log("Now set ENCRYPTION_KEY to the new key in the API and worker, then restart them.");
-  if (env.NEW_HOUSE_AGENTS_SECRET) console.log("Now set HOUSE_AGENTS_SECRET in the house agents and worker, then restart them.");
+  if (env.NEW_ENCRYPTION_KEY)
+    console.log("Now set ENCRYPTION_KEY to the new key in the API and worker, then restart them.");
+  if (env.NEW_HOUSE_AGENTS_SECRET)
+    console.log("Now set HOUSE_AGENTS_SECRET in the house agents and worker, then restart them.");
 } finally {
   await prisma.$disconnect();
 }

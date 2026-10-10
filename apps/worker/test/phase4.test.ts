@@ -5,7 +5,13 @@ import { Redis } from "ioredis";
 import { SecretBox } from "@kazi/config/secrets";
 import { createPrismaClient, type PrismaClient } from "@kazi/db";
 import { verifySignature } from "@kazi/agent-sdk";
-import { SIGNATURE_HEADER, agentRequestSchema, providerTestKey, providerTestStateSchema, taskOnchainId } from "@kazi/shared";
+import {
+  SIGNATURE_HEADER,
+  agentRequestSchema,
+  providerTestKey,
+  providerTestStateSchema,
+  taskOnchainId,
+} from "@kazi/shared";
 import { runProviderTest } from "../src/executor/provider-test";
 import { dispatchSubtask } from "../src/executor/dispatch";
 
@@ -55,7 +61,14 @@ async function queuedTest(providerId: string) {
   const now = new Date().toISOString();
   await redis.set(
     providerTestKey(prefix, testId),
-    JSON.stringify({ testId, providerId, capability: "translate.en-sw", status: "QUEUED", createdAt: now, updatedAt: now }),
+    JSON.stringify({
+      testId,
+      providerId,
+      capability: "translate.en-sw",
+      status: "QUEUED",
+      createdAt: now,
+      updatedAt: now,
+    }),
   );
   const job = {
     providerId,
@@ -65,7 +78,8 @@ async function queuedTest(providerId: string) {
     text: "We sell 120 solar lamps a month.",
     rubric: ["Complete translation"],
   };
-  const state = async () => providerTestStateSchema.parse(JSON.parse((await redis.get(providerTestKey(prefix, testId)))!));
+  const state = async () =>
+    providerTestStateSchema.parse(JSON.parse((await redis.get(providerTestKey(prefix, testId)))!));
   return { testId, job, state };
 }
 
@@ -81,11 +95,21 @@ describe("self-hosted agent dry run", () => {
       const headers = init?.headers as Record<string, string>;
       expect(verifySignature(body, headers[SIGNATURE_HEADER], SECRET).ok).toBe(true);
       seen.push(agentRequestSchema.parse(JSON.parse(body)));
-      return Response.json({ status: "completed", output: { text: "Tunauza taa 120 za sola kwa mwezi." } });
+      return Response.json({
+        status: "completed",
+        output: { text: "Tunauza taa 120 za sola kwa mwezi." },
+      });
     };
-    const out = await runProviderTest({ prisma, secrets, redis, keyPrefix: prefix, config, log, fetch: fakeFetch as typeof fetch }, job);
+    const out = await runProviderTest(
+      { prisma, secrets, redis, keyPrefix: prefix, config, log, fetch: fakeFetch as typeof fetch },
+      job,
+    );
     expect(out).toBe("COMPLETED");
-    expect(seen[0]).toMatchObject({ subtaskId: `test_${testId}`, budget: "0", callbackUrl: `https://api.kazi.test/agent/test-callback/${testId}` });
+    expect(seen[0]).toMatchObject({
+      subtaskId: `test_${testId}`,
+      budget: "0",
+      callbackUrl: `https://api.kazi.test/agent/test-callback/${testId}`,
+    });
     expect(await state()).toMatchObject({ status: "COMPLETED", http: 200, checks: [] });
   });
 
@@ -97,7 +121,12 @@ describe("self-hosted agent dry run", () => {
     }) as unknown as typeof fetch;
     const internal = await agent("https://10.0.0.5/run");
     const t1 = await queuedTest(internal.id);
-    expect(await runProviderTest({ prisma, secrets, redis, keyPrefix: prefix, config, log, fetch: ack }, t1.job)).toBe("FAILED");
+    expect(
+      await runProviderTest(
+        { prisma, secrets, redis, keyPrefix: prefix, config, log, fetch: ack },
+        t1.job,
+      ),
+    ).toBe("FAILED");
     expect(calls).toBe(0);
     expect((await t1.state()).error?.code).toBe("BAD_ENDPOINT");
 
@@ -106,9 +135,20 @@ describe("self-hosted agent dry run", () => {
     const now = new Date().toISOString();
     await redis.set(
       providerTestKey(prefix, t2.testId),
-      JSON.stringify({ ...(await t2.state()), status: "COMPLETED", output: { text: "x" }, checks: [], updatedAt: now }),
+      JSON.stringify({
+        ...(await t2.state()),
+        status: "COMPLETED",
+        output: { text: "x" },
+        checks: [],
+        updatedAt: now,
+      }),
     );
-    expect(await runProviderTest({ prisma, secrets, redis, keyPrefix: prefix, config, log, fetch: ack }, t2.job)).toBe("SENT");
+    expect(
+      await runProviderTest(
+        { prisma, secrets, redis, keyPrefix: prefix, config, log, fetch: ack },
+        t2.job,
+      ),
+    ).toBe("SENT");
     expect((await t2.state()).status).toBe("COMPLETED");
   });
 });
@@ -119,7 +159,12 @@ describe("dispatch", () => {
     secrets,
     jobs: { add: async () => {} },
     usdcDecimals: async () => 6,
-    config: { maxAttempts: 3, attemptTimeoutSec: 900, syncResponseTimeoutMs: 5_000, apiUrl: "https://api.kazi.test" },
+    config: {
+      maxAttempts: 3,
+      attemptTimeoutSec: 900,
+      syncResponseTimeoutMs: 5_000,
+      apiUrl: "https://api.kazi.test",
+    },
     log,
     fetch,
   });
@@ -128,14 +173,28 @@ describe("dispatch", () => {
     const id = randomUUID();
     const task = await prisma.task.create({
       data: {
-        id, onchainId: taskOnchainId(id), clientId: ownerId, title: "T", description: "D",
-        deadline: new Date(Date.now() + 86_400_000), status: "IN_PROGRESS", feeBps: 500,
+        id,
+        onchainId: taskOnchainId(id),
+        clientId: ownerId,
+        title: "T",
+        description: "D",
+        deadline: new Date(Date.now() + 86_400_000),
+        status: "IN_PROGRESS",
+        feeBps: 500,
       },
     });
     return prisma.subtask.create({
       data: {
-        taskId: task.id, index: 0, title: "S", instructions: "Translate", capability: "translate.en-sw", dependsOn: [],
-        acceptance: { rubric: ["ok"], format: "markdown" }, providerId, amount: "1000000", ...over,
+        taskId: task.id,
+        index: 0,
+        title: "S",
+        instructions: "Translate",
+        capability: "translate.en-sw",
+        dependsOn: [],
+        acceptance: { rubric: ["ok"], format: "markdown" },
+        providerId,
+        amount: "1000000",
+        ...over,
       },
     });
   }
@@ -150,7 +209,9 @@ describe("dispatch", () => {
     const st = await subtask(p.id);
     expect(await dispatchSubtask(deps(fakeFetch), st.id, 1)).toBe("sent");
     expect(calls).toBe(0);
-    const sub = await prisma.submission.findUnique({ where: { subtaskId_attempt: { subtaskId: st.id, attempt: 1 } } });
+    const sub = await prisma.submission.findUnique({
+      where: { subtaskId_attempt: { subtaskId: st.id, attempt: 1 } },
+    });
     const after = await prisma.subtask.findUniqueOrThrow({ where: { id: st.id } });
     expect(after.status).toBe("REJECTED");
     expect(JSON.stringify(sub?.evaluation ?? after)).toContain("BAD_ENDPOINT");
@@ -165,12 +226,22 @@ describe("dispatch", () => {
     const p = await agent("https://93.184.215.14/run");
     const st = await subtask(p.id, { status: "REJECTED", attempts: 3, revisions: 1 });
     await prisma.submission.create({
-      data: { subtaskId: st.id, providerId: p.id, attempt: 3, output: { text: "v3" }, accepted: true, evaluation: { feedback: "The client asked for a revision: keep the heading." } },
+      data: {
+        subtaskId: st.id,
+        providerId: p.id,
+        attempt: 3,
+        output: { text: "v3" },
+        accepted: true,
+        evaluation: { feedback: "The client asked for a revision: keep the heading." },
+      },
     });
     expect(await dispatchSubtask(deps(fakeFetch), st.id, 4)).toBe("sent");
     const after = await prisma.subtask.findUniqueOrThrow({ where: { id: st.id } });
     expect(after).toMatchObject({ status: "DISPATCHED", attempts: 4, providerId: p.id });
-    expect(JSON.parse(bodies[0]!)).toMatchObject({ attempt: 4, feedback: expect.stringContaining("keep the heading") });
+    expect(JSON.parse(bodies[0]!)).toMatchObject({
+      attempt: 4,
+      feedback: expect.stringContaining("keep the heading"),
+    });
     expect(createHash("sha256").update(bodies[0]!).digest("hex")).toHaveLength(64);
   });
 });

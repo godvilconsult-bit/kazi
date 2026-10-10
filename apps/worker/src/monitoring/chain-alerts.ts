@@ -35,29 +35,57 @@ export interface ChainAlertDeps {
 export function chainEventAlerts(deps: ChainAlertDeps) {
   return async (ev: ChainEvent, kind: ContractKind): Promise<void> => {
     const args = ev.args as Record<string, unknown>;
-    const where = { contract: kind, address: ev.contract, txHash: ev.txHash, block: ev.blockNumber.toString() };
+    const where = {
+      contract: kind,
+      address: ev.contract,
+      txHash: ev.txHash,
+      block: ev.blockNumber.toString(),
+    };
     const once = { key: `${ev.txHash}:${ev.logIndex}`, dedupeSec: 7 * 24 * 3_600 };
 
     if (ev.name === "RoleGranted" || ev.name === "RoleRevoked") {
-      await deps.alerter.send("ROLE_CHANGED", `${ev.name} on ${kind} for ${String(args["account"])}`, { ...where, role: args["role"], account: args["account"], sender: args["sender"] }, once);
+      await deps.alerter.send(
+        "ROLE_CHANGED",
+        `${ev.name} on ${kind} for ${String(args["account"])}`,
+        { ...where, role: args["role"], account: args["account"], sender: args["sender"] },
+        once,
+      );
       return;
     }
     if (ev.name === "Paused" || ev.name === "Unpaused") {
       const paused = ev.name === "Paused";
-      await deps.alerter.send(paused ? "ESCROW_PAUSED" : "ESCROW_UNPAUSED", `${kind} ${paused ? "paused" : "unpaused"} by ${String(args["account"])}`, { ...where, by: args["account"] }, once);
+      await deps.alerter.send(
+        paused ? "ESCROW_PAUSED" : "ESCROW_UNPAUSED",
+        `${kind} ${paused ? "paused" : "unpaused"} by ${String(args["account"])}`,
+        { ...where, by: args["account"] },
+        once,
+      );
       return;
     }
     if (ADMIN_SETTINGS.has(ev.name)) {
-      await deps.alerter.send("ADMIN_SETTING_CHANGED", `${ev.name} on ${kind}`, { ...where, args }, once);
+      await deps.alerter.send(
+        "ADMIN_SETTING_CHANGED",
+        `${ev.name} on ${kind}`,
+        { ...where, args },
+        once,
+      );
       return;
     }
     if (ev.name === "PayoutChangeRequested") {
       const providerId = BigInt(String(args["providerId"]));
-      const provider = await deps.prisma.provider.findFirst({ where: { onchainId: providerId }, select: { id: true, name: true, ownerId: true } });
+      const provider = await deps.prisma.provider.findFirst({
+        where: { onchainId: providerId },
+        select: { id: true, name: true, ownerId: true },
+      });
       await deps.alerter.send(
         "PAYOUT_CHANGE_REQUESTED",
         `payout change requested for provider #${providerId}${provider ? ` (${provider.name})` : ""} → ${String(args["newPayout"])}`,
-        { ...where, providerId: providerId.toString(), newPayout: args["newPayout"], effectiveAt: args["effectiveAt"] },
+        {
+          ...where,
+          providerId: providerId.toString(),
+          newPayout: args["newPayout"],
+          effectiveAt: args["effectiveAt"],
+        },
         once,
       );
       // docs/09 §1: the owner hears about every payout change, so a hijacked key is noticed within the delay.
@@ -73,10 +101,16 @@ export function chainEventAlerts(deps: ChainAlertDeps) {
     }
     if (ev.name === "MilestoneReleased" && deps.largeReleaseUsdc !== null) {
       const decimals = await deps.usdcDecimals();
-      const total = BigInt(String(args["providerAmount"] ?? "0")) + BigInt(String(args["fee"] ?? "0"));
+      const total =
+        BigInt(String(args["providerAmount"] ?? "0")) + BigInt(String(args["fee"] ?? "0"));
       const threshold = parseUnits(deps.largeReleaseUsdc, decimals);
       if (total >= threshold) {
-        await deps.alerter.send("LARGE_RELEASE", `${formatUnits(total, decimals)} USDC released (task ${String(args["taskId"])}, step ${String(args["index"])})`, { ...where, amount: total.toString() }, once);
+        await deps.alerter.send(
+          "LARGE_RELEASE",
+          `${formatUnits(total, decimals)} USDC released (task ${String(args["taskId"])}, step ${String(args["index"])})`,
+          { ...where, amount: total.toString() },
+          once,
+        );
       }
     }
   };

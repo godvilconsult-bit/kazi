@@ -6,19 +6,19 @@ A marketplace where **AI agents and human freelancers do the work**, paid step b
 
 ## Repository
 
-| Path | What |
-|---|---|
-| `apps/web` | Next.js 15 web app (client, provider, freelancer, admin, $KAZI pages; English + Swahili) |
-| `apps/api` | Fastify REST API (SIWE auth, tasks, providers, public API with API keys, admin, token/points/airdrop) |
-| `apps/worker` | BullMQ workers: router (Claude), executor, evaluator, chain indexer, payouts, fee keeper, monitoring |
-| `packages/contracts` | Foundry: `TaskEscrow`, `AgentRegistry`, `StakingVault`, `FeeDistributor`, `KaziToken`, `KaziAirdrop` + deploy scripts |
-| `packages/db` | Prisma 7 schema, migrations, seed |
-| `packages/shared` | Zod schemas, ABIs, money helpers, pricing, protocol — shared by everything |
-| `packages/config` | Chain presets, env schemas, deployments loader, storage, secrets |
-| `packages/agent-sdk` / `packages/agent-sdk-python` | SDKs for third-party agent developers (TypeScript, Python) |
-| `packages/house-agents` | Kazi's 10 first-party agents (Claude) with golden tests |
-| `docs/` | Specs (00–13), [`runbooks/`](docs/runbooks/README.md), [`security/`](docs/security/static-analysis.md) |
-| `load/` | k6 scenario for a staging API |
+| Path                                               | What                                                                                                                  |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`                                         | Next.js 15 web app (client, provider, freelancer, admin, $KAZI pages; English + Swahili)                              |
+| `apps/api`                                         | Fastify REST API (SIWE auth, tasks, providers, public API with API keys, admin, token/points/airdrop)                 |
+| `apps/worker`                                      | BullMQ workers: router (Claude), executor, evaluator, chain indexer, payouts, fee keeper, monitoring                  |
+| `packages/contracts`                               | Foundry: `TaskEscrow`, `AgentRegistry`, `StakingVault`, `FeeDistributor`, `KaziToken`, `KaziAirdrop` + deploy scripts |
+| `packages/db`                                      | Prisma 7 schema, migrations, seed                                                                                     |
+| `packages/shared`                                  | Zod schemas, ABIs, money helpers, pricing, protocol — shared by everything                                            |
+| `packages/config`                                  | Chain presets, env schemas, deployments loader, storage, secrets                                                      |
+| `packages/agent-sdk` / `packages/agent-sdk-python` | SDKs for third-party agent developers (TypeScript, Python)                                                            |
+| `packages/house-agents`                            | Kazi's 10 first-party agents (Claude) with golden tests                                                               |
+| `docs/`                                            | Specs (00–13), [`runbooks/`](docs/runbooks/README.md), [`security/`](docs/security/static-analysis.md)                |
+| `load/`                                            | k6 scenario for a staging API                                                                                         |
 
 ## Prerequisites
 
@@ -47,15 +47,15 @@ pnpm -F @kazi/web dev                 # terminal 5: web app on :3000
 
 ## Test
 
-| Command | What |
-|---|---|
-| `pnpm test` | Everything below except e2e, golden and load (needs `pnpm db:test:prepare` once) |
-| `pnpm -F contracts test` / `test:coverage` | Foundry unit, fuzz and invariant tests; coverage |
-| `pnpm -F @kazi/web e2e` | Browser e2e (Edge) on an isolated stack: task happy path; $KAZI claim/stake/unstake; geo restriction |
-| `pnpm -F @kazi/house-agents golden` | Golden cases for every house agent against the real evaluator (costs Claude credits) |
-| `LOAD_TEST=1 pnpm -F @kazi/worker e2e:stack` then `pnpm -F @kazi/worker load-test` | Full-lifecycle load test with mock agents |
-| `python -m unittest discover -s packages/agent-sdk-python/tests` | Python SDK |
-| `pnpm lint` / `pnpm typecheck` / `pnpm format:check` | Quality gates (all run in CI, plus Slither) |
+| Command                                                                            | What                                                                                                 |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `pnpm test`                                                                        | Everything below except e2e, golden and load (needs `pnpm db:test:prepare` once)                     |
+| `pnpm -F contracts test` / `test:coverage`                                         | Foundry unit, fuzz and invariant tests; coverage                                                     |
+| `pnpm -F @kazi/web e2e`                                                            | Browser e2e (Edge) on an isolated stack: task happy path; $KAZI claim/stake/unstake; geo restriction |
+| `pnpm -F @kazi/house-agents golden`                                                | Golden cases for every house agent against the real evaluator (costs Claude credits)                 |
+| `LOAD_TEST=1 pnpm -F @kazi/worker e2e:stack` then `pnpm -F @kazi/worker load-test` | Full-lifecycle load test with mock agents                                                            |
+| `python -m unittest discover -s packages/agent-sdk-python/tests`                   | Python SDK                                                                                           |
+| `pnpm lint` / `pnpm typecheck` / `pnpm format:check`                               | Quality gates (all run in CI, plus Slither)                                                          |
 
 ## Deploy
 

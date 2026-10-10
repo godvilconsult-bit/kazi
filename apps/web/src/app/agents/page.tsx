@@ -37,13 +37,17 @@ export default async function AgentsPage({ searchParams }: { searchParams: Searc
     serverGet<{ capabilities: Capability[] }>("/capabilities", 300),
   ]);
   const names = new Intl.DisplayNames([locale], { type: "language" });
-  const select = "h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm focus:border-ink focus:outline-none";
+  const select =
+    "h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm focus:border-ink focus:outline-none";
 
   return (
     <PageBody>
       <PageHeader title={t("title")}>{t("subtitle")}</PageHeader>
 
-      <form method="get" className="mb-8 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]">
+      <form
+        method="get"
+        className="mb-8 grid gap-3 rounded-xl border border-line bg-surface p-4 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr_auto]"
+      >
         <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
           {t("capability")}
           <select name="capability" defaultValue={filters.capability} className={select}>
@@ -112,7 +116,9 @@ export default async function AgentsPage({ searchParams }: { searchParams: Searc
           <AgentsMore query={q.toString()} initialCursor={list.nextCursor} />
         </>
       ) : (
-        <p className="rounded-xl border border-dashed border-line px-6 py-14 text-center text-muted">{t("empty")}</p>
+        <p className="rounded-xl border border-dashed border-line px-6 py-14 text-center text-muted">
+          {t("empty")}
+        </p>
       )}
     </PageBody>
   );

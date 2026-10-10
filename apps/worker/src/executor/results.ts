@@ -62,23 +62,38 @@ export async function applyAgentResult(
 
   const latencyMs = st.dispatchedAt ? now.getTime() - st.dispatchedAt.getTime() : null;
   if (result.status === "completed" && result.output.files?.length && deps.storage) {
-    const task = await deps.prisma.task.findUniqueOrThrow({ where: { id: st.taskId }, select: { clientId: true } });
+    const task = await deps.prisma.task.findUniqueOrThrow({
+      where: { id: st.taskId },
+      select: { clientId: true },
+    });
     try {
       result = {
         status: "completed",
         output: {
           ...result.output,
           files: await importAgentFiles(
-            { prisma: deps.prisma, storage: deps.storage, ...(deps.fetch ? { fetch: deps.fetch } : {}) },
+            {
+              prisma: deps.prisma,
+              storage: deps.storage,
+              ...(deps.fetch ? { fetch: deps.fetch } : {}),
+            },
             { taskId: st.taskId, clientId: task.clientId, subtaskId, attempt },
             result.output.files,
           ),
         },
       };
     } catch (err) {
-      const message = err instanceof FileImportError ? err.message : "a returned file could not be downloaded";
+      const message =
+        err instanceof FileImportError ? err.message : "a returned file could not be downloaded";
       deps.log.warn({ err, subtaskId, attempt }, "agent output file import failed");
-      return (await recordFailedAttempt(deps, st.id, attempt, "AGENT_ERROR", { code: "FILE_UNAVAILABLE", message }, latencyMs))
+      return (await recordFailedAttempt(
+        deps,
+        st.id,
+        attempt,
+        "AGENT_ERROR",
+        { code: "FILE_UNAVAILABLE", message },
+        latencyMs,
+      ))
         ? "applied"
         : "stale";
     }

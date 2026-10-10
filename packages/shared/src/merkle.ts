@@ -7,7 +7,11 @@ import { concat, encodeAbiParameters, keccak256, type Address, type Hex } from "
  */
 
 export function airdropLeaf(account: Address, amount: bigint): Hex {
-  return keccak256(concat([keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [account, amount]))]));
+  return keccak256(
+    concat([
+      keccak256(encodeAbiParameters([{ type: "address" }, { type: "uint256" }], [account, amount])),
+    ]),
+  );
 }
 
 function hashPair(a: Hex, b: Hex): Hex {

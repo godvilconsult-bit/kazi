@@ -8,7 +8,13 @@ import { AgentCard } from "./agent-card";
 import { Button } from "./ui";
 
 /** Appends further directory pages (cursor pagination) under the server-rendered first page. */
-export function AgentsMore({ query, initialCursor }: { query: string; initialCursor: string | null }) {
+export function AgentsMore({
+  query,
+  initialCursor,
+}: {
+  query: string;
+  initialCursor: string | null;
+}) {
   const t = useTranslations("agents");
   const [pages, setPages] = useState<ProviderPublic[]>([]);
   const [cursor, setCursor] = useState(initialCursor);
@@ -33,7 +39,9 @@ export function AgentsMore({ query, initialCursor }: { query: string; initialCur
               try {
                 const q = new URLSearchParams(query);
                 q.set("cursor", cursor);
-                const res = await api<{ providers: ProviderPublic[]; nextCursor: string | null }>(`/providers?${q}`);
+                const res = await api<{ providers: ProviderPublic[]; nextCursor: string | null }>(
+                  `/providers?${q}`,
+                );
                 setPages((prev) => [...prev, ...res.providers]);
                 setCursor(res.nextCursor);
               } finally {

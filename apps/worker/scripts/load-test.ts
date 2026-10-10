@@ -14,7 +14,15 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { createPublicClient, createTestClient, createWalletClient, http, parseEther, type Address, type Hex } from "viem";
+import {
+  createPublicClient,
+  createTestClient,
+  createWalletClient,
+  http,
+  parseEther,
+  type Address,
+  type Hex,
+} from "viem";
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { createSiweMessage } from "viem/siwe";
@@ -36,13 +44,30 @@ const DEADLINE = Date.now() + Number(values["timeout-min"]) * 60_000;
 const POLL_MS = Number(values["poll-ms"]);
 
 const tmp = resolve(import.meta.dirname, "../../../..", ".tmp");
-const stack = JSON.parse(readFileSync(resolve(tmp, "e2e-deployments", "stack.json"), "utf8")) as { api: string; web: string; rpcUrl: string; usdc: Address; escrow: Address };
+const stack = JSON.parse(readFileSync(resolve(tmp, "e2e-deployments", "stack.json"), "utf8")) as {
+  api: string;
+  web: string;
+  rpcUrl: string;
+  usdc: Address;
+  escrow: Address;
+};
 const publicClient = createPublicClient({ chain: foundry, transport: http(stack.rpcUrl) });
-const testClient = createTestClient({ chain: foundry, mode: "anvil", transport: http(stack.rpcUrl) });
+const testClient = createTestClient({
+  chain: foundry,
+  mode: "anvil",
+  transport: http(stack.rpcUrl),
+});
 
 // ── Measurements ────────────────────────────────────────────────────────────
 type Phase = "login" | "create" | "quote" | "fund" | "deliver" | "complete";
-const durations: Record<Phase, number[]> = { login: [], create: [], quote: [], fund: [], deliver: [], complete: [] };
+const durations: Record<Phase, number[]> = {
+  login: [],
+  create: [],
+  quote: [],
+  fund: [],
+  deliver: [],
+  complete: [],
+};
 const requests: { route: string; ms: number; status: number }[] = [];
 const failures: Record<string, number> = {};
 const queuePeaks: Record<string, number> = {};
@@ -67,10 +92,18 @@ class Client {
     const cookie = [...this.jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
     const res = await fetch(`${stack.api}${path}`, {
       method,
-      headers: { "x-forwarded-for": this.ip, ...(cookie ? { cookie } : {}), ...(method === "POST" ? { "content-type": "application/json" } : {}) },
+      headers: {
+        "x-forwarded-for": this.ip,
+        ...(cookie ? { cookie } : {}),
+        ...(method === "POST" ? { "content-type": "application/json" } : {}),
+      },
       body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
     });
-    requests.push({ route: `${method} ${route}`, ms: performance.now() - started, status: res.status });
+    requests.push({
+      route: `${method} ${route}`,
+      ms: performance.now() - started,
+      status: res.status,
+    });
     for (const c of res.headers.getSetCookie()) {
       const [pair = ""] = c.split(";");
       const i = pair.indexOf("=");
@@ -86,7 +119,8 @@ class Client {
       await this.send("POST", "/auth/refresh", {}, "/auth/refresh");
       res = await this.send(method, path, body, route);
     }
-    if (!res.ok) throw new Error(`${method} ${route} → ${res.status} ${(await res.text()).slice(0, 200)}`);
+    if (!res.ok)
+      throw new Error(`${method} ${route} → ${res.status} ${(await res.text()).slice(0, 200)}`);
     return (await res.json()) as T;
   }
 
@@ -103,7 +137,10 @@ class Client {
       issuedAt: new Date(),
       statement: "Sign in to Kazi",
     });
-    await this.call("POST", "/auth/verify", { message, signature: await this.account.signMessage({ message }) });
+    await this.call("POST", "/auth/verify", {
+      message,
+      signature: await this.account.signMessage({ message }),
+    });
   }
 }
 
@@ -123,7 +160,12 @@ async function timed<T>(phase: Phase, fn: () => Promise<T>): Promise<T> {
 async function waitForStatus(c: Client, taskId: string, want: string[], fail: string[] = []) {
   for (;;) {
     if (Date.now() > DEADLINE) throw new Error(`timed out waiting for ${want.join("/")}`);
-    const { task } = await c.call<{ task: { status: string } }>("GET", `/tasks/${taskId}`, undefined, "/tasks/:id");
+    const { task } = await c.call<{ task: { status: string } }>(
+      "GET",
+      `/tasks/${taskId}`,
+      undefined,
+      "/tasks/:id",
+    );
     if (want.includes(task.status)) return task.status;
     if (fail.includes(task.status)) throw new Error(`task ended ${task.status}`);
     await sleep(POLL_MS + Math.random() * 1000);
@@ -153,40 +195,76 @@ async function lifecycle(i: number) {
     await c.call("POST", `/tasks/${task.id}/quote`, {}, "/tasks/:id/quote");
     for (;;) {
       if (Date.now() > DEADLINE) throw new Error("timed out waiting for the quote");
-      const q = await c.call<{ quote: { outcome: string } | null }>("GET", `/tasks/${task.id}/quote`, undefined, "/tasks/:id/quote");
+      const q = await c.call<{ quote: { outcome: string } | null }>(
+        "GET",
+        `/tasks/${task.id}/quote`,
+        undefined,
+        "/tasks/:id/quote",
+      );
       if (q.quote?.outcome === "QUOTED") return;
       if (q.quote && q.quote.outcome !== "QUOTED") throw new Error(`quote ${q.quote.outcome}`);
       await sleep(POLL_MS / 2 + Math.random() * 500);
     }
   });
   await timed("fund", async () => {
-    const p = await c.call<{ escrowAddress: Address; usdcAddress: Address; total: string; quoteSig: Hex; quote: { taskId: Hex; providerIds: string[]; amounts: string[]; deadline: string; feeBps: number; expiry: string } }>(
-      "GET",
-      `/tasks/${task.id}/fund-params`,
-      undefined,
-      "/tasks/:id/fund-params",
-    );
+    const p = await c.call<{
+      escrowAddress: Address;
+      usdcAddress: Address;
+      total: string;
+      quoteSig: Hex;
+      quote: {
+        taskId: Hex;
+        providerIds: string[];
+        amounts: string[];
+        deadline: string;
+        feeBps: number;
+        expiry: string;
+      };
+    }>("GET", `/tasks/${task.id}/fund-params`, undefined, "/tasks/:id/fund-params");
     const total = BigInt(p.total);
     const wait = async (hash: Hex) => {
       const r = await publicClient.waitForTransactionReceipt({ hash });
       if (r.status !== "success") throw new Error("transaction reverted");
     };
-    await wait(await wallet.writeContract({ address: p.usdcAddress, abi: mockUsdcAbi, functionName: "mint", args: [account.address, total] }));
-    await wait(await wallet.writeContract({ address: p.usdcAddress, abi: mockUsdcAbi, functionName: "approve", args: [p.escrowAddress, total] }));
+    await wait(
+      await wallet.writeContract({
+        address: p.usdcAddress,
+        abi: mockUsdcAbi,
+        functionName: "mint",
+        args: [account.address, total],
+      }),
+    );
+    await wait(
+      await wallet.writeContract({
+        address: p.usdcAddress,
+        abi: mockUsdcAbi,
+        functionName: "approve",
+        args: [p.escrowAddress, total],
+      }),
+    );
     await wait(
       await wallet.writeContract({
         address: p.escrowAddress,
         abi: taskEscrowAbi,
         functionName: "createAndFund",
         args: [
-          { taskId: p.quote.taskId, providerIds: p.quote.providerIds.map(BigInt), amounts: p.quote.amounts.map(BigInt), deadline: BigInt(p.quote.deadline), feeBps: p.quote.feeBps, expiry: BigInt(p.quote.expiry) },
+          {
+            taskId: p.quote.taskId,
+            providerIds: p.quote.providerIds.map(BigInt),
+            amounts: p.quote.amounts.map(BigInt),
+            deadline: BigInt(p.quote.deadline),
+            feeBps: p.quote.feeBps,
+            expiry: BigInt(p.quote.expiry),
+          },
           p.quoteSig,
         ],
       }),
     );
     await waitForStatus(c, task.id, ["FUNDED", "IN_PROGRESS", "DELIVERED"]);
   });
-  await timed("deliver", () => waitForStatus(c, task.id, ["DELIVERED"], ["REFUNDED", "PARTIALLY_REFUNDED"]));
+  await timed("deliver", () =>
+    waitForStatus(c, task.id, ["DELIVERED"], ["REFUNDED", "PARTIALLY_REFUNDED"]),
+  );
   await timed("complete", async () => {
     await c.call("POST", `/tasks/${task.id}/approve`, {}, "/tasks/:id/approve");
     await waitForStatus(c, task.id, ["COMPLETED"], ["REFUNDED", "PARTIALLY_REFUNDED"]);
@@ -200,7 +278,10 @@ async function sampleQueues(stop: () => boolean) {
   await admin.login();
   while (!stop()) {
     try {
-      const { queues } = await admin.call<{ queues: Record<string, Record<string, number>> }>("GET", "/admin/queues");
+      const { queues } = await admin.call<{ queues: Record<string, Record<string, number>> }>(
+        "GET",
+        "/admin/queues",
+      );
       for (const [name, counts] of Object.entries(queues)) {
         const depth = (counts["waiting"] ?? 0) + (counts["active"] ?? 0) + (counts["delayed"] ?? 0);
         queuePeaks[name] = Math.max(queuePeaks[name] ?? 0, depth);
@@ -234,12 +315,22 @@ const summary = {
   completed,
   failed: results.filter((r) => r.status === "rejected").length,
   wallClockSec: Math.round((Date.now() - started) / 1000),
-  phasesMs: Object.fromEntries(Object.entries(durations).map(([k, xs]) => [k, { n: xs.length, p50: pct(xs, 50), p95: pct(xs, 95), p99: pct(xs, 99), max: pct(xs, 100) }])),
+  phasesMs: Object.fromEntries(
+    Object.entries(durations).map(([k, xs]) => [
+      k,
+      { n: xs.length, p50: pct(xs, 50), p95: pct(xs, 95), p99: pct(xs, 99), max: pct(xs, 100) },
+    ]),
+  ),
   api: {
     requests: requests.length,
     errors5xx,
     status429: requests.filter((r) => r.status === 429).length,
-    routesMs: Object.fromEntries([...byRoute.entries()].map(([route, xs]) => [route, { n: xs.length, p50: pct(xs, 50), p95: pct(xs, 95), p99: pct(xs, 99) }])),
+    routesMs: Object.fromEntries(
+      [...byRoute.entries()].map(([route, xs]) => [
+        route,
+        { n: xs.length, p50: pct(xs, 50), p95: pct(xs, 95), p99: pct(xs, 99) },
+      ]),
+    ),
   },
   queuePeaks,
   failures,

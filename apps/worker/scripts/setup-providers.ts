@@ -8,7 +8,13 @@
 import { pino } from "pino";
 import { createPublicClient, defineChain, http, type Hex } from "viem";
 import { z } from "zod";
-import { chainEnvSchema, dbEnvSchema, getChainConfig, loadEnv, runtimeEnvSchema } from "@kazi/config";
+import {
+  chainEnvSchema,
+  dbEnvSchema,
+  getChainConfig,
+  loadEnv,
+  runtimeEnvSchema,
+} from "@kazi/config";
 import { loadDeployment } from "@kazi/config/deployments";
 import { createPrismaClient } from "@kazi/db";
 import { registerKaziProviders } from "../src/setup/providers";

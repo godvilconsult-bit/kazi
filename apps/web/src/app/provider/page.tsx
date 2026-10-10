@@ -36,7 +36,10 @@ export default function ProviderListPage() {
 
 function Listings() {
   const t = useTranslations("provider");
-  const q = useQuery({ queryKey: ["me", "providers"], queryFn: () => api<{ providers: ProviderOwner[] }>("/me/providers") });
+  const q = useQuery({
+    queryKey: ["me", "providers"],
+    queryFn: () => api<{ providers: ProviderOwner[] }>("/me/providers"),
+  });
   if (q.isLoading) return <Skeleton className="h-40" />;
   const list = q.data?.providers ?? [];
   if (list.length === 0) {
@@ -54,14 +57,20 @@ function Listings() {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {list.map((p) => (
-        <Link key={p.id} href={`/provider/${p.id}`} className="rounded-xl border border-ink/80 bg-surface p-5 shadow-stamp-sm transition-all hover:-translate-y-px hover:shadow-stamp">
+        <Link
+          key={p.id}
+          href={`/provider/${p.id}`}
+          className="rounded-xl border border-ink/80 bg-surface p-5 shadow-stamp-sm transition-all hover:-translate-y-px hover:shadow-stamp"
+        >
           <div className="flex flex-wrap items-center gap-2">
             <KindBadge kind={p.kind} hosting={p.hosting} />
             <ProviderStatusBadge status={p.status} />
           </div>
           <h2 className="mt-3 font-display text-xl font-bold">{p.name}</h2>
           <p className="mt-1 line-clamp-2 text-sm text-muted">{p.description}</p>
-          <p className="mt-3 font-mono text-xs text-muted">{p.onchainId ? t("onchain", { id: p.onchainId }) : t("notOnchain")}</p>
+          <p className="mt-3 font-mono text-xs text-muted">
+            {p.onchainId ? t("onchain", { id: p.onchainId }) : t("notOnchain")}
+          </p>
         </Link>
       ))}
     </div>

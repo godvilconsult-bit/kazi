@@ -58,7 +58,11 @@ export async function activateMaturedStake(deps: {
   log: Logger;
 }): Promise<number> {
   const vault = deps.deployment.stakingVault;
-  const keys = await maturedStakeKeys({ prisma: deps.prisma, publicClient: deps.publicClient, vault });
+  const keys = await maturedStakeKeys({
+    prisma: deps.prisma,
+    publicClient: deps.publicClient,
+    vault,
+  });
   for (let i = 0; i < keys.length; i += POKE_BATCH) {
     await deps.operator.pokeStakes(vault, keys.slice(i, i + POKE_BATCH));
   }
@@ -66,7 +70,12 @@ export async function activateMaturedStake(deps: {
 }
 
 /** Accounts (holders and provider bonds) with warm-up stake whose warm-up has ended. */
-export async function maturedStakeKeys(deps: { prisma: PrismaClient; publicClient: PublicClient; vault: Address; nowSec?: bigint }): Promise<Hex[]> {
+export async function maturedStakeKeys(deps: {
+  prisma: PrismaClient;
+  publicClient: PublicClient;
+  vault: Address;
+  nowSec?: bigint;
+}): Promise<Hex[]> {
   const rows = await deps.prisma.chainEvent.findMany({
     where: {
       contract: deps.vault.toLowerCase(),
@@ -78,20 +87,33 @@ export async function maturedStakeKeys(deps: { prisma: PrismaClient; publicClien
   const candidates = new Set<Hex>();
   for (const r of rows) {
     const a = r.args as Record<string, unknown>;
-    if (r.name === "Staked" && typeof a["holder"] === "string") candidates.add(holderKey(a["holder"] as Address));
-    if (r.name === "Bonded" && a["providerId"] !== undefined) candidates.add(providerKey(BigInt(String(a["providerId"]))));
+    if (r.name === "Staked" && typeof a["holder"] === "string")
+      candidates.add(holderKey(a["holder"] as Address));
+    if (r.name === "Bonded" && a["providerId"] !== undefined)
+      candidates.add(providerKey(BigInt(String(a["providerId"]))));
   }
   if (candidates.size === 0) return [];
 
   const client = deps.publicClient;
-  const warmup = await client.readContract({ address: deps.vault, abi: stakingVaultAbi, functionName: "WARMUP" });
+  const warmup = await client.readContract({
+    address: deps.vault,
+    abi: stakingVaultAbi,
+    functionName: "WARMUP",
+  });
   const now = deps.nowSec ?? (await client.getBlock()).timestamp;
   const list = [...candidates];
   const matured: Hex[] = [];
   for (let i = 0; i < list.length; i += READ_CHUNK) {
     const chunk = list.slice(i, i + READ_CHUNK);
     const accounts = await Promise.all(
-      chunk.map((key) => client.readContract({ address: deps.vault, abi: stakingVaultAbi, functionName: "getAccount", args: [key] })),
+      chunk.map((key) =>
+        client.readContract({
+          address: deps.vault,
+          abi: stakingVaultAbi,
+          functionName: "getAccount",
+          args: [key],
+        }),
+      ),
     );
     accounts.forEach((a, j) => {
       const key = chunk[j];

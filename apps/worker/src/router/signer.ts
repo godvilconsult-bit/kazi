@@ -1,4 +1,11 @@
-import { createPublicClient, http, type Address, type Hex, type LocalAccount, type PublicClient } from "viem";
+import {
+  createPublicClient,
+  http,
+  type Address,
+  type Hex,
+  type LocalAccount,
+  type PublicClient,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Deployment } from "@kazi/config/deployments";
 import {
@@ -28,7 +35,11 @@ export interface QuoteSigner {
 }
 
 /** `key`: a KMS-backed account in production (chain/signers.ts), or a dev private key. */
-export function createQuoteSigner(key: Hex | LocalAccount, chainId: number, escrow: Address): QuoteSigner {
+export function createQuoteSigner(
+  key: Hex | LocalAccount,
+  chainId: number,
+  escrow: Address,
+): QuoteSigner {
   const account = typeof key === "string" ? privateKeyToAccount(key) : key;
   const domain = quoteDomain(chainId, escrow);
   return {
@@ -101,14 +112,27 @@ export function createRouterChain(
     },
     async kaziDecimals() {
       tokenDecimals ??= Number(
-        await client.readContract({ address: d.kaziToken, abi: mockUsdcAbi, functionName: "decimals" }),
+        await client.readContract({
+          address: d.kaziToken,
+          abi: mockUsdcAbi,
+          functionName: "decimals",
+        }),
       );
       return tokenDecimals;
     },
     async earningStake(holder) {
       const [a, warmup, block] = await Promise.all([
-        client.readContract({ address: d.stakingVault, abi: stakingVaultAbi, functionName: "getAccount", args: [holderKey(holder)] }),
-        client.readContract({ address: d.stakingVault, abi: stakingVaultAbi, functionName: "WARMUP" }),
+        client.readContract({
+          address: d.stakingVault,
+          abi: stakingVaultAbi,
+          functionName: "getAccount",
+          args: [holderKey(holder)],
+        }),
+        client.readContract({
+          address: d.stakingVault,
+          abi: stakingVaultAbi,
+          functionName: "WARMUP",
+        }),
         client.getBlock(),
       ]);
       const matured = a.pending > 0n && block.timestamp >= a.pendingSince + warmup;

@@ -7,7 +7,8 @@ import { z } from "zod";
  */
 
 export const PROVIDER_TEST_TTL_SEC = 24 * 3_600;
-export const providerTestKey = (prefix: string, testId: string) => `${prefix}:provider-test:${testId}`;
+export const providerTestKey = (prefix: string, testId: string) =>
+  `${prefix}:provider-test:${testId}`;
 export const providerTestCallbackPath = (testId: string) => `/agent/test-callback/${testId}`;
 
 export const providerTestStateSchema = z.object({

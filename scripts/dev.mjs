@@ -25,7 +25,11 @@ const commands = {
     const dir = resolve(root, "packages/contracts/.anvil");
     mkdirSync(dir, { recursive: true });
     // Dump state every 10 s so contracts survive a hard stop of the preview.
-    return ["anvil", ["--state", join(dir, "state.json"), "--state-interval", "10", "--host", "127.0.0.1"], resolve(root, "packages/contracts")];
+    return [
+      "anvil",
+      ["--state", join(dir, "state.json"), "--state-interval", "10", "--host", "127.0.0.1"],
+      resolve(root, "packages/contracts"),
+    ];
   },
   api: () => ["pnpm", ["--filter", "@kazi/api", "dev"], root],
   worker: () => ["pnpm", ["--filter", "@kazi/worker", "dev"], root],
@@ -37,7 +41,10 @@ if (!make) {
   process.exit(1);
 }
 const [cmd, args, cwd] = make();
-if (target === "anvil" && !existsSync(join(foundryBin, process.platform === "win32" ? "anvil.exe" : "anvil"))) {
+if (
+  target === "anvil" &&
+  !existsSync(join(foundryBin, process.platform === "win32" ? "anvil.exe" : "anvil"))
+) {
   console.warn("anvil not found in ~/.foundry/bin; relying on PATH");
 }
 const child = spawn(cmd, args, { cwd, env, stdio: "inherit", shell: process.platform === "win32" });

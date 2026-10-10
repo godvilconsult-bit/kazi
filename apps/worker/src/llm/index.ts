@@ -66,7 +66,11 @@ export async function checkLlmCostAlert(
     data: {
       taskId,
       type: "LLM_COST_HIGH",
-      data: { spentUsd: Number(spentUsd.toFixed(6)), valueUsd, ratio: Number((spentUsd / valueUsd).toFixed(4)) },
+      data: {
+        spentUsd: Number(spentUsd.toFixed(6)),
+        valueUsd,
+        ratio: Number((spentUsd / valueUsd).toFixed(4)),
+      },
     },
   });
   log.warn({ taskId, spentUsd, valueUsd }, "router + judge LLM cost above 8% of task value");

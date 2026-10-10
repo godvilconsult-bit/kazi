@@ -28,7 +28,11 @@ export function Header() {
     { href: "/developers", label: t("developers"), show: !user },
     { href: "/tasks", label: t("myTasks"), show: Boolean(user) },
     { href: "/provider", label: t("provide"), show: Boolean(user) },
-    { href: "/freelancer/offers", label: t("offers"), show: Boolean(user?.roles.includes("FREELANCER")) },
+    {
+      href: "/freelancer/offers",
+      label: t("offers"),
+      show: Boolean(user?.roles.includes("FREELANCER")),
+    },
     { href: "/admin", label: t("admin"), show: isAdmin },
   ].filter((l) => l.show);
 
@@ -42,7 +46,12 @@ export function Header() {
           </Link>
           <nav className="ml-4 hidden items-center gap-1 md:flex" aria-label="Main">
             {links.map((l) => (
-              <NavLink key={l.href} href={l.href} label={l.label} active={pathname.startsWith(l.href)} />
+              <NavLink
+                key={l.href}
+                href={l.href}
+                label={l.label}
+                active={pathname.startsWith(l.href)}
+              />
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-1.5">
@@ -74,7 +83,12 @@ export function Header() {
             <Container className="flex flex-col gap-1 py-3">
               <NavLink href="/new" label={t("newTask")} active={pathname === "/new"} />
               {links.map((l) => (
-                <NavLink key={l.href} href={l.href} label={l.label} active={pathname.startsWith(l.href)} />
+                <NavLink
+                  key={l.href}
+                  href={l.href}
+                  label={l.label}
+                  active={pathname.startsWith(l.href)}
+                />
               ))}
               <NavLink href="/get-usdc" label={t("getUsdc")} active={pathname === "/get-usdc"} />
               <div className="mt-2 flex items-center gap-2 border-t border-dashed border-line pt-3">
@@ -127,16 +141,32 @@ function Banners() {
         </div>
       ) : null}
       {wrongNetwork ? (
-        <div className="flex flex-wrap items-center justify-center gap-3 bg-bad-soft px-4 py-2 text-bad" role="alert">
+        <div
+          className="flex flex-wrap items-center justify-center gap-3 bg-bad-soft px-4 py-2 text-bad"
+          role="alert"
+        >
           <span>{tw("wrongNetwork")}</span>
-          <Button size="sm" variant="danger" loading={isPending} onClick={() => switchChain({ chainId: cfg.chain.id })}>
+          <Button
+            size="sm"
+            variant="danger"
+            loading={isPending}
+            onClick={() => switchChain({ chainId: cfg.chain.id })}
+          >
             {tw("switchTo", { name: cfg.chain.name })}
           </Button>
         </div>
       ) : null}
       {mismatch && user && address ? (
-        <div className="flex flex-wrap items-center justify-center gap-3 bg-info-soft px-4 py-2 text-info" role="status">
-          <span>{tw("mismatch", { signedIn: shortAddress(user.wallet), connected: shortAddress(address) })}</span>
+        <div
+          className="flex flex-wrap items-center justify-center gap-3 bg-info-soft px-4 py-2 text-info"
+          role="status"
+        >
+          <span>
+            {tw("mismatch", {
+              signedIn: shortAddress(user.wallet),
+              connected: shortAddress(address),
+            })}
+          </span>
           <Button size="sm" variant="outline" loading={signingIn} onClick={() => void signIn()}>
             {tw("signInAgain")}
           </Button>
@@ -169,14 +199,25 @@ function WalletButton() {
           {shortAddress(user.wallet)}
         </button>
         {menu ? (
-          <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-ink bg-surface p-2 shadow-stamp" onMouseLeave={() => setMenu(false)}>
+          <div
+            className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-ink bg-surface p-2 shadow-stamp"
+            onMouseLeave={() => setMenu(false)}
+          >
             <p className="px-2 pt-1 text-xs text-muted">{t("signedInAs")}</p>
             <p className="break-all px-2 pb-2 font-mono text-xs">{user.wallet}</p>
-            <Link href="/points" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2" onClick={() => setMenu(false)}>
+            <Link
+              href="/points"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2"
+              onClick={() => setMenu(false)}
+            >
               <Sparkles className="size-4" />
               {nav("points")}
             </Link>
-            <Link href="/settings/api-keys" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2" onClick={() => setMenu(false)}>
+            <Link
+              href="/settings/api-keys"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2"
+              onClick={() => setMenu(false)}
+            >
               <KeyRound className="size-4" />
               {nav("apiKeys")}
             </Link>
@@ -200,10 +241,20 @@ function WalletButton() {
   if (isConnected && address) {
     return (
       <div className="flex flex-col items-end">
-        <Button size="sm" variant="primary" loading={signingIn} onClick={() => void signIn()} title={t("signInHint")}>
+        <Button
+          size="sm"
+          variant="primary"
+          loading={signingIn}
+          onClick={() => void signIn()}
+          title={t("signInHint")}
+        >
           {signingIn ? t("signingIn") : t("signIn")}
         </Button>
-        {error ? <span className="sr-only" role="alert">{error}</span> : null}
+        {error ? (
+          <span className="sr-only" role="alert">
+            {error}
+          </span>
+        ) : null}
       </div>
     );
   }

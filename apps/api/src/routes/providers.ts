@@ -22,7 +22,10 @@ import { serializeProviderOwner, serializeProviderPublic } from "./serializers";
 
 const idParams = z.object({ id: z.string().min(1).max(64) });
 const slugParams = z.object({ slug: z.string().min(1).max(100) });
-const testParams = z.object({ id: z.string().min(1).max(64), testId: z.string().regex(/^[0-9a-f]{24}$/) });
+const testParams = z.object({
+  id: z.string().min(1).max(64),
+  testId: z.string().regex(/^[0-9a-f]{24}$/),
+});
 const testSchema = z
   .object({
     capability: z.string().min(1).max(64).optional(),
@@ -68,7 +71,8 @@ export function providerRoutes(s: AppServices) {
         const auth = requireAuth(req);
         const body = parse(createProviderSchema, req.body);
         const capabilities = await assertCapabilitiesExist(body.capabilities);
-        if (await s.sanctions?.isSanctioned(body.payoutAddress)) throw forbidden("This payout address can't be used on Kazi.");
+        if (await s.sanctions?.isSanctioned(body.payoutAddress))
+          throw forbidden("This payout address can't be used on Kazi.");
         const hosted = body.hosting === "KAZI";
         // Self-hosted agents sign their callbacks with a webhook secret; Kazi-hosted agents need none.
         const webhookSecret = body.kind === "AGENT" && !hosted ? generateWebhookSecret() : null;
@@ -179,7 +183,8 @@ export function providerRoutes(s: AppServices) {
         const { provider } = await loadOwnProvider(req);
         if (provider.kind !== "AGENT" || provider.hosting !== "SELF")
           throw badRequest("only self-hosted agents have test runs (hosted agents: /advise)");
-        if (!provider.endpointUrl || !provider.webhookSecretEnc) throw badRequest("set an endpoint first");
+        if (!provider.endpointUrl || !provider.webhookSecretEnc)
+          throw badRequest("set an endpoint first");
         const body = parse(testSchema, req.body ?? {});
         const capability = body.capability ?? provider.capabilities[0];
         if (!capability || !provider.capabilities.includes(capability))
@@ -234,7 +239,9 @@ export function providerRoutes(s: AppServices) {
         where: { providerId: provider.id },
         orderBy: { createdAt: "desc" },
         take: 50,
-        include: { subtask: { select: { title: true, capability: true, amount: true, status: true } } },
+        include: {
+          subtask: { select: { title: true, capability: true, amount: true, status: true } },
+        },
       });
       return {
         submissions: rows.map((r) => ({

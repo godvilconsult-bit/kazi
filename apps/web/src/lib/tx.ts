@@ -77,7 +77,13 @@ export function useTx() {
   const send = useCallback(
     async (tx: { to: Address; data: Hex }, onHash?: (hash: Hex) => void) => {
       const fees = await prepare();
-      const hash = await sendTransaction(config, { to: tx.to, data: tx.data, value: 0n, ...fees, chainId: cfg.chain.id });
+      const hash = await sendTransaction(config, {
+        to: tx.to,
+        data: tx.data,
+        value: 0n,
+        ...fees,
+        chainId: cfg.chain.id,
+      });
       onHash?.(hash);
       await wait(hash);
       return hash;

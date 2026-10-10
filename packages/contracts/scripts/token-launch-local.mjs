@@ -11,13 +11,23 @@ if (!/^0x[0-9a-fA-F]{64}$/.test(root)) {
   console.error("Set AIRDROP_MERKLE_ROOT (from the airdrop snapshot) first.");
   process.exit(1);
 }
-const local = JSON.parse(readFileSync(new URL("../../config/deployments/local.json", import.meta.url), "utf8"));
+const local = JSON.parse(
+  readFileSync(new URL("../../config/deployments/local.json", import.meta.url), "utf8"),
+);
 const ANVIL1 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"; // holds the local $KAZI supply; stands in for the Safe
 const DISTRIBUTOR_KEY = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"; // anvil #1 (public)
 
 execFileSync(
   "forge",
-  ["script", "script/DeployTokenLaunch.s.sol", "--rpc-url", process.env.LOCAL_RPC_URL ?? "http://127.0.0.1:8545", "--broadcast", "--private-key", DISTRIBUTOR_KEY],
+  [
+    "script",
+    "script/DeployTokenLaunch.s.sol",
+    "--rpc-url",
+    process.env.LOCAL_RPC_URL ?? "http://127.0.0.1:8545",
+    "--broadcast",
+    "--private-key",
+    DISTRIBUTOR_KEY,
+  ],
   {
     stdio: "inherit",
     shell: true,

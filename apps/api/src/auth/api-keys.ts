@@ -19,7 +19,12 @@ export function hashApiKey(key: string): string {
 }
 
 export function generateApiKey(mainnet: boolean): { key: string; prefix: string; hash: string } {
-  const prefix = randomBytes(6).toString("base64url").toLowerCase().replace(/[^a-z0-9]/g, "").padEnd(8, "0").slice(0, 8);
+  const prefix = randomBytes(6)
+    .toString("base64url")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "")
+    .padEnd(8, "0")
+    .slice(0, 8);
   const secret = randomBytes(32).toString("base64url");
   const key = `kz_${mainnet ? "live" : "test"}_${prefix}_${secret}`;
   return { key, prefix, hash: hashApiKey(key) };
@@ -30,12 +35,20 @@ export interface ApiKeyAuth extends AuthContext {
 }
 
 /** Resolves a Bearer API key to its owner, or null. Admin is always stripped. */
-export async function authenticateApiKey(prisma: PrismaClient, key: string): Promise<ApiKeyAuth | null> {
+export async function authenticateApiKey(
+  prisma: PrismaClient,
+  key: string,
+): Promise<ApiKeyAuth | null> {
   if (!API_KEY_PATTERN.test(key)) return null;
-  const row = await prisma.apiKey.findUnique({ where: { keyHash: hashApiKey(key) }, include: { user: true } });
+  const row = await prisma.apiKey.findUnique({
+    where: { keyHash: hashApiKey(key) },
+    include: { user: true },
+  });
   if (!row || row.revokedAt) return null;
   if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > TOUCH_EVERY_MS) {
-    await prisma.apiKey.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
+    await prisma.apiKey
+      .update({ where: { id: row.id }, data: { lastUsedAt: new Date() } })
+      .catch(() => undefined);
   }
   return {
     userId: row.userId,

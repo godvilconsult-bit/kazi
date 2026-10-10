@@ -52,7 +52,13 @@ export async function buildAgentInput(
       const ref = await signedFileRef({ prisma: deps.prisma, storage }, id, AGENT_FILE_URL_TTL_SEC);
       if (ref) files.push(ref);
     }
-    files.push(...(await resolveFileRefs({ prisma: deps.prisma, storage }, fileRefs, AGENT_FILE_URL_TTL_SEC)));
+    files.push(
+      ...(await resolveFileRefs(
+        { prisma: deps.prisma, storage },
+        fileRefs,
+        AGENT_FILE_URL_TTL_SEC,
+      )),
+    );
   } else {
     files = fileRefs.filter((f) => !f.url.startsWith("kazi://"));
   }

@@ -63,7 +63,10 @@ const app = await buildApp({
           transport: { target: "pino-pretty" },
           redact: ["req.headers.cookie", "req.headers.authorization"],
         }
-      : { level: process.env["LOG_LEVEL"] || "info", redact: ["req.headers.cookie", "req.headers.authorization"] },
+      : {
+          level: process.env["LOG_LEVEL"] || "info",
+          redact: ["req.headers.cookie", "req.headers.authorization"],
+        },
 });
 
 const shutdown = async () => {

@@ -1,4 +1,11 @@
-import type { HostedAdvice, HostedConfig, PointsFlag, StoredQuote, SubtaskStatus, TaskStatus } from "@kazi/shared";
+import type {
+  HostedAdvice,
+  HostedConfig,
+  PointsFlag,
+  StoredQuote,
+  SubtaskStatus,
+  TaskStatus,
+} from "@kazi/shared";
 
 export type { HostedAdvice, HostedConfig };
 
@@ -52,7 +59,12 @@ export interface SubtaskView {
   status: SubtaskStatus;
   attempts: number;
   revisions: number;
-  provider: { name: string; slug: string; kind: "AGENT" | "HUMAN"; hosting: "SELF" | "KAZI" } | null;
+  provider: {
+    name: string;
+    slug: string;
+    kind: "AGENT" | "HUMAN";
+    hosting: "SELF" | "KAZI";
+  } | null;
   releaseTxHash: string | null;
   refundTxHash: string | null;
 }
@@ -115,7 +127,10 @@ export interface Deliverable {
   provider: { name: string; slug: string } | null;
   revisions: number;
   score: number | null;
-  output: { text: string | null; files: { fileId: string | null; mime: string; sha256: string }[] } | null;
+  output: {
+    text: string | null;
+    files: { fileId: string | null; mime: string; sha256: string }[];
+  } | null;
 }
 
 export interface Pricing {
@@ -261,7 +276,15 @@ export interface Stats {
   volume: string;
   topAgents: Pick<
     ProviderPublic,
-    "slug" | "name" | "kind" | "hosting" | "capabilities" | "pricing" | "reputation" | "completedCount" | "isHouse"
+    | "slug"
+    | "name"
+    | "kind"
+    | "hosting"
+    | "capabilities"
+    | "pricing"
+    | "reputation"
+    | "completedCount"
+    | "isHouse"
   >[];
 }
 
@@ -350,7 +373,15 @@ export type StakingInfo =
 
 export interface PointsMe {
   total: number;
-  entries: { taskId: string; title: string | null; role: "CLIENT" | "PROVIDER"; points: number; flag: PointsFlag | null; feeUnits: string; at: string }[];
+  entries: {
+    taskId: string;
+    title: string | null;
+    role: "CLIENT" | "PROVIDER";
+    points: number;
+    flag: PointsFlag | null;
+    feeUnits: string;
+    at: string;
+  }[];
 }
 
 export interface PointsLeader {

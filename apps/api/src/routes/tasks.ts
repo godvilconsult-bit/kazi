@@ -31,19 +31,22 @@ const SSE_HEARTBEAT_MS = 15_000;
 const idParams = z.object({ id: z.string().min(1).max(64) });
 /** Operator-only audit events: Kazi's own costs and review signals never reach the client's stream. */
 const INTERNAL_EVENT_TYPES = ["LLM_COST_HIGH", "INJECTION_SUSPECTED", "CHAIN_ANOMALY"];
-const revisionSchema = z.object({
-  subtaskIndex: z.number().int().min(0),
-  note: z.string().trim().min(10).max(2_000),
-}).strict();
-const disputeSchema = z.object({
-  reason: z.string().trim().min(10).max(4_000),
-  evidence: z.array(z.string().max(2_000)).max(10).default([]),
-}).strict();
+const revisionSchema = z
+  .object({
+    subtaskIndex: z.number().int().min(0),
+    note: z.string().trim().min(10).max(2_000),
+  })
+  .strict();
+const disputeSchema = z
+  .object({
+    reason: z.string().trim().min(10).max(4_000),
+    evidence: z.array(z.string().max(2_000)).max(10).default([]),
+  })
+  .strict();
 /** Optional: switch Economy/Express before (re-)quoting (docs/11-HOSTED-AGENTS.md §3). */
 const quoteRequestSchema = z.object({ speed: z.enum(TASK_SPEEDS).optional() }).strict();
 
 export function taskRoutes(s: AppServices) {
-
   /** Load a task the caller may see (its client, or an admin). 404 otherwise — don't leak existence. */
   async function loadOwnTask(req: FastifyRequest, withSubtasks = false) {
     const auth = requireAuth(req);
@@ -54,7 +57,9 @@ export function taskRoutes(s: AppServices) {
         subtasks: withSubtasks
           ? {
               orderBy: { index: "asc" },
-              include: { provider: { select: { name: true, slug: true, kind: true, hosting: true } } },
+              include: {
+                provider: { select: { name: true, slug: true, kind: true, hosting: true } },
+              },
             }
           : false,
       },
@@ -164,8 +169,13 @@ export function taskRoutes(s: AppServices) {
       const body = parse(updateTaskSchema, req.body);
       const current = task.quote ? storedQuoteSchema.safeParse(task.quote) : undefined;
       const liveQuote =
-        current?.success && current.data.outcome === "QUOTED" && new Date(current.data.expiresAt) > new Date();
-      if (!["DRAFT", "QUOTED", "EXPIRED"].includes(task.status) || (task.status === "QUOTED" && liveQuote)) {
+        current?.success &&
+        current.data.outcome === "QUOTED" &&
+        new Date(current.data.expiresAt) > new Date();
+      if (
+        !["DRAFT", "QUOTED", "EXPIRED"].includes(task.status) ||
+        (task.status === "QUOTED" && liveQuote)
+      ) {
         throw invalidState(
           task.status === "QUOTED"
             ? "This quote can still be funded until it expires; duplicate the task to change it"
@@ -187,14 +197,17 @@ export function taskRoutes(s: AppServices) {
         }
       }
       // An expired QUOTED task is EXPIRED from here on (the old signature is dead).
-      const status = task.status === "QUOTED" ? transition("task", "QUOTED", "EXPIRE_QUOTE") : task.status;
+      const status =
+        task.status === "QUOTED" ? transition("task", "QUOTED", "EXPIRE_QUOTE") : task.status;
       const updated = await s.prisma.task.updateMany({
         where: { id: task.id, status: task.status, quoteVersion: task.quoteVersion },
         data: {
           status,
           ...(body.title !== undefined ? { title: body.title } : {}),
           ...(body.description !== undefined ? { description: body.description } : {}),
-          ...(body.attachments !== undefined ? { attachments: [...new Set(body.attachments)] } : {}),
+          ...(body.attachments !== undefined
+            ? { attachments: [...new Set(body.attachments)] }
+            : {}),
           ...(body.budgetMax !== undefined ? { budgetMax: body.budgetMax } : {}),
           ...(body.deadline !== undefined ? { deadline: new Date(body.deadline) } : {}),
           ...(body.speed !== undefined ? { speed: body.speed } : {}),
@@ -359,14 +372,19 @@ export function taskRoutes(s: AppServices) {
     app.post("/tasks/:id/revision", async (req) => {
       const { task } = await loadOwnTask(req);
       const body = parse(revisionSchema, req.body);
-      if (task.status !== "DELIVERED") throw invalidState("Revisions can only be requested during review");
-      if (task.deadline <= new Date()) throw invalidState("The deadline has passed; approve or dispute instead");
+      if (task.status !== "DELIVERED")
+        throw invalidState("Revisions can only be requested during review");
+      if (task.deadline <= new Date())
+        throw invalidState("The deadline has passed; approve or dispute instead");
       const st = await s.prisma.subtask.findUnique({
         where: { taskId_index: { taskId: task.id, index: body.subtaskIndex } },
-        include: { submissions: { where: { accepted: true }, orderBy: { attempt: "desc" }, take: 1 } },
+        include: {
+          submissions: { where: { accepted: true }, orderBy: { attempt: "desc" }, take: 1 },
+        },
       });
       if (!st || st.kind !== "WORK") throw notFound("Step");
-      if (st.status !== "ACCEPTED") throw invalidState("Only an accepted, unpaid step can be revised");
+      if (st.status !== "ACCEPTED")
+        throw invalidState("Only an accepted, unpaid step can be revised");
       if (st.revisions >= 1) throw invalidState("This step has already been revised once");
       const accepted = st.submissions[0];
       await s.prisma.$transaction(async (tx) => {
@@ -377,14 +395,19 @@ export function taskRoutes(s: AppServices) {
         if (moved.count !== 1) throw invalidState("Task changed concurrently, retry");
         await tx.subtask.update({
           where: { id: st.id },
-          data: { status: transition("subtask", "ACCEPTED", "REVISE"), revisions: { increment: 1 } },
+          data: {
+            status: transition("subtask", "ACCEPTED", "REVISE"),
+            revisions: { increment: 1 },
+          },
         });
         if (accepted) {
           // The next attempt reads this as its feedback (executor: previous attempt's evaluation).
           const prev = (accepted.evaluation ?? {}) as Record<string, unknown>;
           await tx.submission.update({
             where: { id: accepted.id },
-            data: { evaluation: { ...prev, feedback: `The client asked for a revision: ${body.note}` } },
+            data: {
+              evaluation: { ...prev, feedback: `The client asked for a revision: ${body.note}` },
+            },
           });
         }
         await tx.taskEvent.create({
@@ -409,7 +432,9 @@ export function taskRoutes(s: AppServices) {
         update: { reason: body.reason, evidence: body.evidence },
         create: { taskId: task.id, reason: body.reason, evidence: body.evidence },
       });
-      await s.prisma.taskEvent.create({ data: { taskId: task.id, type: "DISPUTE_REASON", data: {} } });
+      await s.prisma.taskEvent.create({
+        data: { taskId: task.id, type: "DISPUTE_REASON", data: {} },
+      });
       return { dispute: { id: dispute.id, status: dispute.status } };
     });
 
@@ -417,7 +442,10 @@ export function taskRoutes(s: AppServices) {
     app.get("/tasks/:id/invoice.pdf", async (req, reply) => {
       const { task } = await loadOwnTask(req);
       if (!task.fundTxHash) throw invalidState("The task hasn't been funded yet");
-      const client = await s.prisma.user.findUniqueOrThrow({ where: { id: task.clientId }, select: { wallet: true } });
+      const client = await s.prisma.user.findUniqueOrThrow({
+        where: { id: task.clientId },
+        select: { wallet: true },
+      });
       const subtasks = await s.prisma.subtask.findMany({
         where: { taskId: task.id },
         orderBy: { index: "asc" },
@@ -432,7 +460,10 @@ export function taskRoutes(s: AppServices) {
       });
       return reply
         .header("content-type", "application/pdf")
-        .header("content-disposition", `attachment; filename="kazi-invoice-${task.id.slice(0, 8)}.pdf"`)
+        .header(
+          "content-disposition",
+          `attachment; filename="kazi-invoice-${task.id.slice(0, 8)}.pdf"`,
+        )
         .send(Buffer.from(pdf));
     });
 

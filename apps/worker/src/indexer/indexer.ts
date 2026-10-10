@@ -96,9 +96,14 @@ export class ChainIndexer {
         await this.prisma.chainEvent.update({ where: { id: event.id }, data: { processed: true } });
         done++;
         if (this.opts.onEvent) {
-          await this.opts.onEvent(event, contract.kind).catch((err: unknown) =>
-            this.log.warn({ err, chainEventId: event.id, name: event.name }, "event observer failed"),
-          );
+          await this.opts
+            .onEvent(event, contract.kind)
+            .catch((err: unknown) =>
+              this.log.warn(
+                { err, chainEventId: event.id, name: event.name },
+                "event observer failed",
+              ),
+            );
         }
       } catch (err) {
         // Stop here so later events for the same task aren't applied out of order; the job retries.
@@ -160,7 +165,10 @@ const minBig = (a: bigint, b: bigint) => (a < b ? a : b);
  * still looks unpaid. When the batch was cut at `limit`, the last transaction waits for the next
  * batch so it is never split.
  */
-export function closeLastPerTx<T extends { txHash: string; name: string }>(events: readonly T[], truncated: boolean): T[] {
+export function closeLastPerTx<T extends { txHash: string; name: string }>(
+  events: readonly T[],
+  truncated: boolean,
+): T[] {
   const out: T[] = [];
   let i = 0;
   while (i < events.length) {
@@ -169,7 +177,10 @@ export function closeLastPerTx<T extends { txHash: string; name: string }>(event
     while (j < events.length && events[j]?.txHash === tx) j++;
     if (truncated && j === events.length && i > 0) break; // possibly incomplete: next batch
     const group = events.slice(i, j);
-    out.push(...group.filter((e) => e.name !== "TaskClosed"), ...group.filter((e) => e.name === "TaskClosed"));
+    out.push(
+      ...group.filter((e) => e.name !== "TaskClosed"),
+      ...group.filter((e) => e.name === "TaskClosed"),
+    );
     i = j;
   }
   return out;

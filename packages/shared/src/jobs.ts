@@ -88,7 +88,8 @@ export const jobIds = {
   hostedRun: (subtaskId: string, attempt: number) => `hosted-${subtaskId}-${attempt}`,
   advise: (providerId: string, atMs: number) => `advise-${providerId}-${atMs}`,
   /** At most one recompute per provider per minute. */
-  reputation: (providerId: string, atMs: number) => `rep-${providerId}-${Math.floor(atMs / 60_000)}`,
+  reputation: (providerId: string, atMs: number) =>
+    `rep-${providerId}-${Math.floor(atMs / 60_000)}`,
   offerAccepted: (offerId: string) => `offer-${offerId}`,
   providerTest: (testId: string) => `ptest-${testId}`,
   release: (subtaskId: string) => `release-${subtaskId}`,

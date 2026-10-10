@@ -68,7 +68,13 @@ export class MemoryJobQueue implements JobQueue {
     return Object.fromEntries(
       QUEUE_NAMES.map((q) => [
         q,
-        { waiting: this.jobs.filter((j) => j.queue === q).length, active: 0, delayed: 0, failed: 0, completed: 0 },
+        {
+          waiting: this.jobs.filter((j) => j.queue === q).length,
+          active: 0,
+          delayed: 0,
+          failed: 0,
+          completed: 0,
+        },
       ]),
     ) as QueueCounts;
   }

@@ -20,7 +20,12 @@ export function Receipt({ task }: { task: TaskView }) {
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-line px-5 py-4">
         <h2 className="font-display text-xl font-bold">{t("receiptTitle")}</h2>
         {task.fundTxHash ? (
-          <a href={apiUrl(`/tasks/${task.id}/invoice.pdf`)} target="_blank" rel="noopener noreferrer" className={buttonClass("outline", "sm")}>
+          <a
+            href={apiUrl(`/tasks/${task.id}/invoice.pdf`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonClass("outline", "sm")}
+          >
             <FileDown className="size-4" />
             {t("invoice")}
           </a>
@@ -28,10 +33,17 @@ export function Receipt({ task }: { task: TaskView }) {
       </div>
       <ol className="divide-y divide-dashed divide-line">
         {steps.map((s) => (
-          <li key={s.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
+          <li
+            key={s.id}
+            className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm"
+          >
             <div className="min-w-0">
-              <p className="font-semibold">{s.kind === "SERVICE_FEE" ? t("serviceFee") : s.title}</p>
-              {s.provider && s.kind === "WORK" ? <p className="text-muted">{s.provider.name}</p> : null}
+              <p className="font-semibold">
+                {s.kind === "SERVICE_FEE" ? t("serviceFee") : s.title}
+              </p>
+              {s.provider && s.kind === "WORK" ? (
+                <p className="text-muted">{s.provider.name}</p>
+              ) : null}
             </div>
             <div className="flex items-center gap-3">
               {s.releaseTxHash ? <TxLink hash={s.releaseTxHash} label={t("paid")} /> : null}
@@ -61,7 +73,11 @@ export function RatingForm({ task }: { task: TaskView }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const send = useMutation({
-    mutationFn: () => api(`/tasks/${task.id}/rate`, { method: "POST", body: { rating, ...(comment.trim() ? { comment: comment.trim() } : {}) } }),
+    mutationFn: () =>
+      api(`/tasks/${task.id}/rate`, {
+        method: "POST",
+        body: { rating, ...(comment.trim() ? { comment: comment.trim() } : {}) },
+      }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["task", task.id] }),
   });
   if (task.rating) {
@@ -69,7 +85,9 @@ export function RatingForm({ task }: { task: TaskView }) {
       <div className="rounded-xl border border-line bg-surface p-5">
         <p className="text-sm font-semibold">{t("yourRating")}</p>
         <Stars value={task.rating} />
-        {task.ratingComment ? <p className="mt-2 text-sm text-muted">{task.ratingComment}</p> : null}
+        {task.ratingComment ? (
+          <p className="mt-2 text-sm text-muted">{task.ratingComment}</p>
+        ) : null}
       </div>
     );
   }
@@ -91,9 +109,25 @@ export function RatingForm({ task }: { task: TaskView }) {
           </button>
         ))}
       </div>
-      <Textarea className="mt-3" rows={3} maxLength={2_000} placeholder={t("rateComment")} value={comment} onChange={(e) => setComment(e.target.value)} />
-      {send.error ? <Notice tone="bad" className="mt-3">{errorMessage(send.error)}</Notice> : null}
-      <Button className="mt-3" disabled={rating === 0} loading={send.isPending} onClick={() => send.mutate()}>
+      <Textarea
+        className="mt-3"
+        rows={3}
+        maxLength={2_000}
+        placeholder={t("rateComment")}
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+      />
+      {send.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(send.error)}
+        </Notice>
+      ) : null}
+      <Button
+        className="mt-3"
+        disabled={rating === 0}
+        loading={send.isPending}
+        onClick={() => send.mutate()}
+      >
         {t("rateSend")}
       </Button>
     </div>

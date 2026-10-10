@@ -54,7 +54,8 @@ export function planAirdrop(opts: PlanOptions): AirdropPlan {
   const excluded = new Set((opts.exclude ?? []).map((w) => w.toLowerCase()));
   const amounts = new Map<string, bigint>();
   const pointsOf = new Map<string, bigint>();
-  const add = (map: Map<string, bigint>, wallet: string, v: bigint) => map.set(wallet, (map.get(wallet) ?? 0n) + v);
+  const add = (map: Map<string, bigint>, wallet: string, v: bigint) =>
+    map.set(wallet, (map.get(wallet) ?? 0n) + v);
 
   let fixedTotal = 0n;
   for (const f of opts.fixed ?? []) {
@@ -71,7 +72,9 @@ export function planAirdrop(opts: PlanOptions): AirdropPlan {
     if (!excluded.has(w) && h.points > 0n) add(pointsOf, w, h.points);
   }
   const minPoints = opts.minPoints ?? 1n;
-  let pool = [...pointsOf.entries()].filter(([, p]) => p >= minPoints).sort(([a], [b]) => (a < b ? -1 : 1));
+  let pool = [...pointsOf.entries()]
+    .filter(([, p]) => p >= minPoints)
+    .sort(([a], [b]) => (a < b ? -1 : 1));
 
   const cap = opts.maxPerWallet ?? null;
   let budget = opts.total - fixedTotal;
@@ -97,10 +100,23 @@ export function planAirdrop(opts: PlanOptions): AirdropPlan {
     pool = pool.filter(([w]) => !cappedSet.has(w));
   }
 
-  const rows = [...amounts.entries()].filter(([, a]) => a > 0n).sort(([a], [b]) => (a < b ? -1 : 1));
+  const rows = [...amounts.entries()]
+    .filter(([, a]) => a > 0n)
+    .sort(([a], [b]) => (a < b ? -1 : 1));
   if (rows.length === 0) throw new Error("nobody qualifies for this airdrop");
   const tree = buildMerkleTree(rows.map(([w, a]) => airdropLeaf(getAddress(w), a)));
-  const allocations = rows.map(([w, amount], i) => ({ wallet: getAddress(w), amount, points: pointsOf.get(w) ?? 0n, proof: tree.proof(i) }));
+  const allocations = rows.map(([w, amount], i) => ({
+    wallet: getAddress(w),
+    amount,
+    points: pointsOf.get(w) ?? 0n,
+    proof: tree.proof(i),
+  }));
   const allocated = allocations.reduce((a, r) => a + r.amount, 0n);
-  return { root: tree.root, total: opts.total, allocated, unallocated: opts.total - allocated, allocations };
+  return {
+    root: tree.root,
+    total: opts.total,
+    allocated,
+    unallocated: opts.total - allocated,
+    allocations,
+  };
 }

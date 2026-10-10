@@ -96,14 +96,23 @@ export function createEscrowOperator(opts: {
 
   async function fees() {
     const est = await opts.publicClient.estimateFeesPerGas();
-    const maxFeePerGas = est.maxFeePerGas > opts.minMaxFeePerGasWei ? est.maxFeePerGas : opts.minMaxFeePerGasWei;
-    return { maxFeePerGas, maxPriorityFeePerGas: est.maxPriorityFeePerGas < maxFeePerGas ? est.maxPriorityFeePerGas : maxFeePerGas };
+    const maxFeePerGas =
+      est.maxFeePerGas > opts.minMaxFeePerGasWei ? est.maxFeePerGas : opts.minMaxFeePerGasWei;
+    return {
+      maxFeePerGas,
+      maxPriorityFeePerGas:
+        est.maxPriorityFeePerGas < maxFeePerGas ? est.maxPriorityFeePerGas : maxFeePerGas,
+    };
   }
 
   return {
     address: account.address,
     paused() {
-      return opts.publicClient.readContract({ address: opts.escrow, abi: taskEscrowAbi, functionName: "paused" });
+      return opts.publicClient.readContract({
+        address: opts.escrow,
+        abi: taskEscrowAbi,
+        functionName: "paused",
+      });
     },
     pokeStakes(vault, keys) {
       return enqueue(async () => {

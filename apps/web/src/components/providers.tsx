@@ -11,7 +11,15 @@ import { AuthProvider } from "./auth";
 import { ConfigContext } from "./config";
 import { GeoContext } from "./geo";
 
-export function Providers({ config, geo, children }: { config: PublicConfig; geo: Geo; children: ReactNode }) {
+export function Providers({
+  config,
+  geo,
+  children,
+}: {
+  config: PublicConfig;
+  geo: Geo;
+  children: ReactNode;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({

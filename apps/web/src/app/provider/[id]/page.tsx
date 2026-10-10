@@ -7,12 +7,23 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount, useReadContracts } from "wagmi";
 import { keccak256, stringToHex } from "viem";
 import { ArrowLeft, KeyRound, Play } from "lucide-react";
-import { agentRegistryAbi, kaziTokenAbi, nanoToUsd, stakingVaultAbi, type HostedConfig } from "@kazi/shared";
+import {
+  agentRegistryAbi,
+  kaziTokenAbi,
+  nanoToUsd,
+  stakingVaultAbi,
+  type HostedConfig,
+} from "@kazi/shared";
 import { api, errorMessage } from "@/lib/api";
 import { relativeTime, shortAddress, tokenAmount, usdc } from "@/lib/format";
 import { useTx } from "@/lib/tx";
 import { initSteps, isBusy, isUserRejection, stepsReducer } from "@/lib/tx-steps";
-import type { ProviderOwner, ProviderStats, ProviderSubmission, ProviderTestState } from "@/lib/types";
+import type {
+  ProviderOwner,
+  ProviderStats,
+  ProviderSubmission,
+  ProviderTestState,
+} from "@/lib/types";
 import { KindBadge } from "@/components/agent-card";
 import { useAuth } from "@/components/auth";
 import { useKaziConfig } from "@/components/config";
@@ -24,7 +35,17 @@ import { ReputationChart } from "@/components/reputation-chart";
 import { ProviderStatusBadge } from "@/components/status";
 import { TxStepper } from "@/components/tx-stepper";
 import { ConnectWalletButton } from "@/components/wallet";
-import { Badge, Button, Card, EmptyState, Field, Notice, Select, Skeleton, Textarea } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Notice,
+  Select,
+  Skeleton,
+  Textarea,
+} from "@/components/ui";
 
 // On by default since Phase 6; NEXT_PUBLIC_FEATURE_BOND=0 shows the pre-launch notice instead.
 const BOND_ENABLED = process.env["NEXT_PUBLIC_FEATURE_BOND"] !== "0";
@@ -46,14 +67,21 @@ function Dashboard({ id }: { id: string }) {
   const q = useQuery({
     queryKey: ["provider", id],
     queryFn: () => api<{ provider: ProviderOwner }>(`/me/providers/${id}`).then((r) => r.provider),
-    refetchInterval: (query) => (query.state.data && (query.state.data.onchainId === null || query.state.data.hostedAdvice?.status === "RUNNING") ? 6_000 : false),
+    refetchInterval: (query) =>
+      query.state.data &&
+      (query.state.data.onchainId === null || query.state.data.hostedAdvice?.status === "RUNNING")
+        ? 6_000
+        : false,
   });
   const p = q.data;
   if (q.isLoading) return <Skeleton className="h-96" />;
   if (!p) return <EmptyState title={tp("empty")} />;
   return (
     <div className="space-y-6">
-      <Link href="/provider" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
+      <Link
+        href="/provider"
+        className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"
+      >
         <ArrowLeft className="size-4" />
         {t("back")}
       </Link>
@@ -63,8 +91,12 @@ function Dashboard({ id }: { id: string }) {
             <KindBadge kind={p.kind} hosting={p.hosting} />
             <ProviderStatusBadge status={p.status} />
           </div>
-          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight break-words sm:text-4xl">{p.name}</h1>
-          {p.status === "PENDING" ? <p className="mt-1 text-sm text-muted">{t("reviewNote")}</p> : null}
+          <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight break-words sm:text-4xl">
+            {p.name}
+          </h1>
+          {p.status === "PENDING" ? (
+            <p className="mt-1 text-sm text-muted">{t("reviewNote")}</p>
+          ) : null}
         </div>
         {p.kind === "HUMAN" ? (
           <Link href="/freelancer/offers" className="text-sm font-semibold text-accent underline">
@@ -83,7 +115,13 @@ function Dashboard({ id }: { id: string }) {
         </div>
         <aside className="space-y-6">
           <Onchain p={p} />
-          {p.onchainId ? BOND_ENABLED ? <Bond p={p} /> : <Notice tone="info">{t("bondMock")}</Notice> : null}
+          {p.onchainId ? (
+            BOND_ENABLED ? (
+              <Bond p={p} />
+            ) : (
+              <Notice tone="info">{t("bondMock")}</Notice>
+            )
+          ) : null}
           {p.kind === "AGENT" && p.hosting === "SELF" ? <Secret id={id} /> : null}
         </aside>
       </div>
@@ -93,7 +131,10 @@ function Dashboard({ id }: { id: string }) {
 
 function Stats({ id }: { id: string }) {
   const t = useTranslations("dashboard");
-  const q = useQuery({ queryKey: ["provider", id, "stats"], queryFn: () => api<{ stats: ProviderStats }>(`/providers/${id}/stats`).then((r) => r.stats) });
+  const q = useQuery({
+    queryKey: ["provider", id, "stats"],
+    queryFn: () => api<{ stats: ProviderStats }>(`/providers/${id}/stats`).then((r) => r.stats),
+  });
   const s = q.data;
   return (
     <Card>
@@ -103,8 +144,14 @@ function Stats({ id }: { id: string }) {
           <Stat label={t("earnings")} value={<Usdc value={s.earningsGross} />} />
           <Stat label={t("completed")} value={s.completedCount} />
           <Stat label={t("failed")} value={s.failedCount} />
-          <Stat label={t("successRate")} value={s.successRateBps === null ? "—" : `${(s.successRateBps / 100).toFixed(1)}%`} />
-          <Stat label={t("latency")} value={s.avgLatencyMs === null ? "—" : `${Math.round(s.avgLatencyMs / 1000)} s`} />
+          <Stat
+            label={t("successRate")}
+            value={s.successRateBps === null ? "—" : `${(s.successRateBps / 100).toFixed(1)}%`}
+          />
+          <Stat
+            label={t("latency")}
+            value={s.avgLatencyMs === null ? "—" : `${Math.round(s.avgLatencyMs / 1000)} s`}
+          />
           <Stat label={t("reputation")} value={s.reputation.toFixed(0)} />
         </dl>
       ) : (
@@ -118,13 +165,20 @@ function ReputationCard({ slug }: { slug: string }) {
   const t = useTranslations("agent");
   const q = useQuery({
     queryKey: ["provider", slug, "reputation"],
-    queryFn: () => api<{ points: { value: number; createdAt: string }[] }>(`/providers/${slug}/reputation`).then((r) => r.points),
+    queryFn: () =>
+      api<{ points: { value: number; createdAt: string }[] }>(`/providers/${slug}/reputation`).then(
+        (r) => r.points,
+      ),
   });
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">{t("history")}</h2>
       <div className="mt-3">
-        <ReputationChart points={q.data ?? []} emptyLabel={t("historyEmpty")} ariaLabel={t("historyAria")} />
+        <ReputationChart
+          points={q.data ?? []}
+          emptyLabel={t("historyEmpty")}
+          ariaLabel={t("historyAria")}
+        />
       </div>
     </Card>
   );
@@ -148,7 +202,9 @@ function Onchain({ p }: { p: ProviderOwner }) {
   const { write } = useTx();
   const [state, setState] = useState<"idle" | "busy" | "sent">("idle");
   const [error, setError] = useState<string | null>(null);
-  const rightWallet = Boolean(address && user && address.toLowerCase() === user.wallet.toLowerCase());
+  const rightWallet = Boolean(
+    address && user && address.toLowerCase() === user.wallet.toLowerCase(),
+  );
 
   if (p.onchainId) return <Notice tone="ok">{t("registered", { id: p.onchainId })}</Notice>;
   return (
@@ -156,9 +212,21 @@ function Onchain({ p }: { p: ProviderOwner }) {
       <h2 className="font-display text-lg font-bold">{t("onchainTitle")}</h2>
       <p className="mt-1 text-sm text-muted">{t("onchainBody")}</p>
       {!address ? <ConnectWalletButton className="mt-3" /> : null}
-      {address && !rightWallet && user ? <Notice tone="warn" className="mt-3">{t("wrongWallet", { wallet: shortAddress(user.wallet) })}</Notice> : null}
-      {state === "sent" ? <Notice tone="info" className="mt-3">{t("registering")}</Notice> : null}
-      {error ? <Notice tone="bad" className="mt-3">{error}</Notice> : null}
+      {address && !rightWallet && user ? (
+        <Notice tone="warn" className="mt-3">
+          {t("wrongWallet", { wallet: shortAddress(user.wallet) })}
+        </Notice>
+      ) : null}
+      {state === "sent" ? (
+        <Notice tone="info" className="mt-3">
+          {t("registering")}
+        </Notice>
+      ) : null}
+      {error ? (
+        <Notice tone="bad" className="mt-3">
+          {error}
+        </Notice>
+      ) : null}
       <Button
         className="mt-4"
         loading={state === "busy"}
@@ -172,7 +240,12 @@ function Onchain({ p }: { p: ProviderOwner }) {
               address: cfg.contracts.agentRegistry,
               abi: agentRegistryAbi,
               functionName: "register",
-              args: [p.kind === "HUMAN" ? 1 : 0, p.payoutAddress, `kazi://providers/${p.id}`, keccak256(stringToHex(p.id))],
+              args: [
+                p.kind === "HUMAN" ? 1 : 0,
+                p.payoutAddress,
+                `kazi://providers/${p.id}`,
+                keccak256(stringToHex(p.id)),
+              ],
             });
             setState("sent");
           } catch (err) {
@@ -202,12 +275,30 @@ function Bond({ p }: { p: ProviderOwner }) {
     contracts:
       reg && vault && token && p.onchainId && address
         ? [
-            { address: reg, abi: agentRegistryAbi, functionName: "minStake", args: [p.kind === "HUMAN" ? 1 : 0] },
-            { address: vault, abi: stakingVaultAbi, functionName: "stakedOf", args: [BigInt(p.onchainId)] },
-            { address: token, abi: kaziTokenAbi, functionName: "allowance", args: [address, vault] },
+            {
+              address: reg,
+              abi: agentRegistryAbi,
+              functionName: "minStake",
+              args: [p.kind === "HUMAN" ? 1 : 0],
+            },
+            {
+              address: vault,
+              abi: stakingVaultAbi,
+              functionName: "stakedOf",
+              args: [BigInt(p.onchainId)],
+            },
+            {
+              address: token,
+              abi: kaziTokenAbi,
+              functionName: "allowance",
+              args: [address, vault],
+            },
           ]
         : [],
-    query: { enabled: Boolean(reg && vault && token && p.onchainId && address), refetchInterval: 15_000 },
+    query: {
+      enabled: Boolean(reg && vault && token && p.onchainId && address),
+      refetchInterval: 15_000,
+    },
   });
   const decimals = cfg.kaziDecimals ?? 18;
   const min = reads.data?.[0]?.status === "success" ? (reads.data[0].result as bigint) : null;
@@ -220,14 +311,27 @@ function Bond({ p }: { p: ProviderOwner }) {
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">{t("bondTitle")}</h2>
-      <p className="mt-1 text-sm text-muted">{t("bondBody", { amount: min !== null ? tokenAmount(min, decimals, 0) : "…" })}</p>
-      {staked !== null ? <p className="mt-2 font-mono text-sm">{t("bondCurrent", { amount: tokenAmount(staked, decimals, 0) })}</p> : null}
+      <p className="mt-1 text-sm text-muted">
+        {t("bondBody", { amount: min !== null ? tokenAmount(min, decimals, 0) : "…" })}
+      </p>
+      {staked !== null ? (
+        <p className="mt-2 font-mono text-sm">
+          {t("bondCurrent", { amount: tokenAmount(staked, decimals, 0) })}
+        </p>
+      ) : null}
       {need > 0n ? (
         <>
           <div className="mt-4">
-            <TxStepper steps={steps} labels={{ approve: t("bondApprove", { amount }), bond: t("bondSend", { amount }) }} />
+            <TxStepper
+              steps={steps}
+              labels={{ approve: t("bondApprove", { amount }), bond: t("bondSend", { amount }) }}
+            />
           </div>
-          {error ? <Notice tone="bad" className="mt-3">{error}</Notice> : null}
+          {error ? (
+            <Notice tone="bad" className="mt-3">
+              {error}
+            </Notice>
+          ) : null}
           <Button
             className="mt-4"
             loading={isBusy(steps)}
@@ -238,16 +342,36 @@ function Bond({ p }: { p: ProviderOwner }) {
                 if (allowance >= need) dispatch({ type: "skip", key: "approve" });
                 else {
                   dispatch({ type: "wallet", key: "approve" });
-                  await write({ address: token, abi: kaziTokenAbi, functionName: "approve", args: [vault, need] }, (hash) => dispatch({ type: "sent", key: "approve", hash }));
+                  await write(
+                    {
+                      address: token,
+                      abi: kaziTokenAbi,
+                      functionName: "approve",
+                      args: [vault, need],
+                    },
+                    (hash) => dispatch({ type: "sent", key: "approve", hash }),
+                  );
                   dispatch({ type: "done", key: "approve" });
                 }
                 current = "bond";
                 dispatch({ type: "wallet", key: "bond" });
-                await write({ address: vault, abi: stakingVaultAbi, functionName: "bond", args: [BigInt(p.onchainId ?? "0"), need] }, (hash) => dispatch({ type: "sent", key: "bond", hash }));
+                await write(
+                  {
+                    address: vault,
+                    abi: stakingVaultAbi,
+                    functionName: "bond",
+                    args: [BigInt(p.onchainId ?? "0"), need],
+                  },
+                  (hash) => dispatch({ type: "sent", key: "bond", hash }),
+                );
                 dispatch({ type: "done", key: "bond" });
                 void reads.refetch();
               } catch (err) {
-                dispatch({ type: "error", key: current, error: isUserRejection(err) ? undefined : errorMessage(err) });
+                dispatch({
+                  type: "error",
+                  key: current,
+                  error: isUserRejection(err) ? undefined : errorMessage(err),
+                });
               }
             }}
           >
@@ -263,7 +387,8 @@ function Secret({ id }: { id: string }) {
   const t = useTranslations("dashboard");
   const [secret, setSecret] = useState<string | null>(null);
   const rotate = useMutation({
-    mutationFn: () => api<{ webhookSecret: string }>(`/providers/${id}/rotate-secret`, { method: "POST" }),
+    mutationFn: () =>
+      api<{ webhookSecret: string }>(`/providers/${id}/rotate-secret`, { method: "POST" }),
     onSuccess: (r) => setSecret(r.webhookSecret),
   });
   return (
@@ -278,7 +403,11 @@ function Secret({ id }: { id: string }) {
           <CopyButton value={secret} />
         </div>
       ) : null}
-      {rotate.error ? <Notice tone="bad" className="mt-3">{errorMessage(rotate.error)}</Notice> : null}
+      {rotate.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(rotate.error)}
+        </Notice>
+      ) : null}
       <Button
         variant="outline"
         size="sm"
@@ -310,9 +439,13 @@ function TestConsole({ p }: { p: ProviderOwner }) {
   });
   const state = useQuery({
     queryKey: ["provider", p.id, "test", testId],
-    queryFn: () => api<{ test: ProviderTestState }>(`/providers/${p.id}/tests/${testId}`).then((r) => r.test),
+    queryFn: () =>
+      api<{ test: ProviderTestState }>(`/providers/${p.id}/tests/${testId}`).then((r) => r.test),
     enabled: Boolean(testId),
-    refetchInterval: (q) => (q.state.data && (q.state.data.status === "COMPLETED" || q.state.data.status === "FAILED") ? false : 2_000),
+    refetchInterval: (q) =>
+      q.state.data && (q.state.data.status === "COMPLETED" || q.state.data.status === "FAILED")
+        ? false
+        : 2_000,
   });
   const s = state.data;
   return (
@@ -337,14 +470,28 @@ function TestConsole({ p }: { p: ProviderOwner }) {
         <Play className="size-4" />
         {t("testRun")}
       </Button>
-      {start.error ? <Notice tone="bad" className="mt-3">{errorMessage(start.error)}</Notice> : null}
+      {start.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(start.error)}
+        </Notice>
+      ) : null}
       {s ? (
         <div className="mt-4 space-y-3 rounded-lg border border-line bg-surface-2/50 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={s.status === "COMPLETED" ? "ok" : s.status === "FAILED" ? "bad" : "info"}>{t(`testStatus${s.status}`)}</Badge>
-            {s.latencyMs !== undefined && s.http !== undefined ? <span className="font-mono text-xs text-muted">{t("testLatency", { ms: s.latencyMs, http: s.http })}</span> : null}
+            <Badge tone={s.status === "COMPLETED" ? "ok" : s.status === "FAILED" ? "bad" : "info"}>
+              {t(`testStatus${s.status}`)}
+            </Badge>
+            {s.latencyMs !== undefined && s.http !== undefined ? (
+              <span className="font-mono text-xs text-muted">
+                {t("testLatency", { ms: s.latencyMs, http: s.http })}
+              </span>
+            ) : null}
           </div>
-          {s.error ? <p className="text-sm text-bad">{s.error.code}: {s.error.message}</p> : null}
+          {s.error ? (
+            <p className="text-sm text-bad">
+              {s.error.code}: {s.error.message}
+            </p>
+          ) : null}
           {s.checks ? (
             s.checks.length === 0 ? (
               <p className="text-sm text-ok">{t("testChecksOk")}</p>
@@ -410,28 +557,59 @@ function HostedSettings({ p }: { p: ProviderOwner }) {
     <>
       <Card>
         <h2 className="font-display text-lg font-bold">{t("hostedTitle")}</h2>
-        <Field label={tw("instructions")} hint={tw("instructionsHint")} className="mt-3" htmlFor="h-instr">
-          <Textarea id="h-instr" rows={8} value={instructions} onChange={(e) => setInstructions(e.target.value)} />
+        <Field
+          label={tw("instructions")}
+          hint={tw("instructionsHint")}
+          className="mt-3"
+          htmlFor="h-instr"
+        >
+          <Textarea
+            id="h-instr"
+            rows={8}
+            value={instructions}
+            onChange={(e) => setInstructions(e.target.value)}
+          />
         </Field>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <Field label={tw("model")} htmlFor="h-model">
-            <Select id="h-model" value={model} onChange={(e) => setModel(e.target.value as HostedConfig["model"])}>
+            <Select
+              id="h-model"
+              value={model}
+              onChange={(e) => setModel(e.target.value as HostedConfig["model"])}
+            >
               <option value="claude-opus-5-5">{tw("modelOpus")}</option>
               <option value="claude-sonnet-5-5">{tw("modelSonnet")}</option>
               <option value="claude-haiku-5-5">{tw("modelHaiku")}</option>
             </Select>
           </Field>
           <Field label={tw("effort")} htmlFor="h-effort">
-            <Select id="h-effort" value={effort} onChange={(e) => setEffort(e.target.value as HostedConfig["effort"])}>
+            <Select
+              id="h-effort"
+              value={effort}
+              onChange={(e) => setEffort(e.target.value as HostedConfig["effort"])}
+            >
               <option value="low">{tw("effortLow")}</option>
               <option value="medium">{tw("effortMedium")}</option>
               <option value="high">{tw("effortHigh")}</option>
             </Select>
           </Field>
         </div>
-        {save.error ? <Notice tone="bad" className="mt-3">{errorMessage(save.error)}</Notice> : null}
-        {saved ? <Notice tone="ok" className="mt-3">{t("hostedSaved")}</Notice> : null}
-        <Button className="mt-4" loading={save.isPending} disabled={instructions.trim().length < 50} onClick={() => save.mutate()}>
+        {save.error ? (
+          <Notice tone="bad" className="mt-3">
+            {errorMessage(save.error)}
+          </Notice>
+        ) : null}
+        {saved ? (
+          <Notice tone="ok" className="mt-3">
+            {t("hostedSaved")}
+          </Notice>
+        ) : null}
+        <Button
+          className="mt-4"
+          loading={save.isPending}
+          disabled={instructions.trim().length < 50}
+          onClick={() => save.mutate()}
+        >
           {t("hostedSave")}
         </Button>
       </Card>
@@ -442,12 +620,17 @@ function HostedSettings({ p }: { p: ProviderOwner }) {
         {p.aiCostUsd ? (
           <div className="mt-3 rounded-lg border border-line bg-surface-2/50 p-3 text-sm">
             <p className="font-semibold">{t("costTitle")}</p>
-            <p className="num">{t("costEconomy", { amount: p.aiCostUsd.economy })} · {t("costExpress", { amount: p.aiCostUsd.express })}</p>
+            <p className="num">
+              {t("costEconomy", { amount: p.aiCostUsd.economy })} ·{" "}
+              {t("costExpress", { amount: p.aiCostUsd.express })}
+            </p>
             <p className="text-xs text-muted">{t("costNote")}</p>
           </div>
         ) : null}
         {advice?.status === "RUNNING" ? (
-          <Notice tone="info" className="mt-3">{t("adviceRunning")}</Notice>
+          <Notice tone="info" className="mt-3">
+            {t("adviceRunning")}
+          </Notice>
         ) : advice && advice.rows.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -463,7 +646,9 @@ function HostedSettings({ p }: { p: ProviderOwner }) {
               <tbody className="num">
                 {advice.rows.map((r) => (
                   <tr key={r.model} className="border-t border-dashed border-line">
-                    <td className="py-2 pr-3 font-sans font-semibold">{r.model.replace("claude-", "")}</td>
+                    <td className="py-2 pr-3 font-sans font-semibold">
+                      {r.model.replace("claude-", "")}
+                    </td>
                     <td className="py-2 pr-3">
                       {r.passed}/{r.runs}
                     </td>
@@ -474,13 +659,27 @@ function HostedSettings({ p }: { p: ProviderOwner }) {
                 ))}
               </tbody>
             </table>
-            {advice.finishedAt ? <p className="mt-2 font-mono text-[11px] text-muted">{relativeTime(advice.finishedAt, locale)}</p> : null}
+            {advice.finishedAt ? (
+              <p className="mt-2 font-mono text-[11px] text-muted">
+                {relativeTime(advice.finishedAt, locale)}
+              </p>
+            ) : null}
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted">{t("adviceNone")}</p>
         )}
-        {advise.error ? <Notice tone="bad" className="mt-3">{errorMessage(advise.error)}</Notice> : null}
-        <Button className="mt-4" variant="outline" loading={advise.isPending} disabled={advice?.status === "RUNNING"} onClick={() => advise.mutate()}>
+        {advise.error ? (
+          <Notice tone="bad" className="mt-3">
+            {errorMessage(advise.error)}
+          </Notice>
+        ) : null}
+        <Button
+          className="mt-4"
+          variant="outline"
+          loading={advise.isPending}
+          disabled={advice?.status === "RUNNING"}
+          onClick={() => advise.mutate()}
+        >
           {t("adviceRun")}
         </Button>
       </Card>
@@ -492,7 +691,13 @@ function Submissions({ id }: { id: string }) {
   const t = useTranslations("dashboard");
   const locale = useLocale();
   const cfg = useKaziConfig();
-  const q = useQuery({ queryKey: ["provider", id, "submissions"], queryFn: () => api<{ submissions: ProviderSubmission[] }>(`/providers/${id}/submissions`).then((r) => r.submissions) });
+  const q = useQuery({
+    queryKey: ["provider", id, "submissions"],
+    queryFn: () =>
+      api<{ submissions: ProviderSubmission[] }>(`/providers/${id}/submissions`).then(
+        (r) => r.submissions,
+      ),
+  });
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">{t("submissions")}</h2>
@@ -507,12 +712,19 @@ function Submissions({ id }: { id: string }) {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold">{s.step}</p>
                 <div className="flex items-center gap-2">
-                  {s.score !== null ? <span className="num text-xs">{Math.round(s.score)}/100</span> : null}
-                  {s.accepted === true ? <Badge tone="ok">{t("accepted")}</Badge> : s.accepted === false ? <Badge tone="bad">{t("rejected")}</Badge> : null}
+                  {s.score !== null ? (
+                    <span className="num text-xs">{Math.round(s.score)}/100</span>
+                  ) : null}
+                  {s.accepted === true ? (
+                    <Badge tone="ok">{t("accepted")}</Badge>
+                  ) : s.accepted === false ? (
+                    <Badge tone="bad">{t("rejected")}</Badge>
+                  ) : null}
                 </div>
               </div>
               <p className="mt-0.5 font-mono text-[11px] text-muted">
-                {s.capability} · {usdc(s.amount, cfg.usdcDecimals).display} USDC · {relativeTime(s.createdAt, locale)}
+                {s.capability} · {usdc(s.amount, cfg.usdcDecimals).display} USDC ·{" "}
+                {relativeTime(s.createdAt, locale)}
               </p>
               {s.feedback ? (
                 <p className="mt-1 text-muted">

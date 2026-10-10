@@ -17,9 +17,12 @@ export interface SignerEnv {
   QUOTER_KMS_KEY_ID?: string | undefined;
 }
 
-export async function loadSigners(env: SignerEnv): Promise<{ operator: LocalAccount; quoter: LocalAccount }> {
+export async function loadSigners(
+  env: SignerEnv,
+): Promise<{ operator: LocalAccount; quoter: LocalAccount }> {
   if (env.SIGNER_BACKEND === "aws-kms") {
-    if (!env.OPERATOR_KMS_KEY_ID || !env.QUOTER_KMS_KEY_ID) throw new Error("SIGNER_BACKEND=aws-kms needs OPERATOR_KMS_KEY_ID and QUOTER_KMS_KEY_ID");
+    if (!env.OPERATOR_KMS_KEY_ID || !env.QUOTER_KMS_KEY_ID)
+      throw new Error("SIGNER_BACKEND=aws-kms needs OPERATOR_KMS_KEY_ID and QUOTER_KMS_KEY_ID");
     const { awsKmsKey } = await import("./aws-kms");
     const [operator, quoter] = await Promise.all([
       createKmsAccount(awsKmsKey(env.OPERATOR_KMS_KEY_ID)),
@@ -28,14 +31,25 @@ export async function loadSigners(env: SignerEnv): Promise<{ operator: LocalAcco
     return { operator, quoter };
   }
   plaintextAllowed(env);
-  if (!env.OPERATOR_PRIVATE_KEY || !env.QUOTER_PRIVATE_KEY) throw new Error("OPERATOR_PRIVATE_KEY and QUOTER_PRIVATE_KEY are required with SIGNER_BACKEND=env");
-  return { operator: privateKeyToAccount(env.OPERATOR_PRIVATE_KEY as Hex), quoter: privateKeyToAccount(env.QUOTER_PRIVATE_KEY as Hex) };
+  if (!env.OPERATOR_PRIVATE_KEY || !env.QUOTER_PRIVATE_KEY)
+    throw new Error(
+      "OPERATOR_PRIVATE_KEY and QUOTER_PRIVATE_KEY are required with SIGNER_BACKEND=env",
+    );
+  return {
+    operator: privateKeyToAccount(env.OPERATOR_PRIVATE_KEY as Hex),
+    quoter: privateKeyToAccount(env.QUOTER_PRIVATE_KEY as Hex),
+  };
 }
 
 /** Plaintext keys: never on mainnet; in production only with an explicit ALLOW_PLAINTEXT_KEYS (testnet). */
-export function plaintextAllowed(env: Pick<SignerEnv, "NODE_ENV" | "KAZI_NETWORK" | "ALLOW_PLAINTEXT_KEYS">): void {
-  if (env.KAZI_NETWORK === "mainnet") throw new Error("Mainnet signers must use a KMS: set SIGNER_BACKEND=aws-kms");
+export function plaintextAllowed(
+  env: Pick<SignerEnv, "NODE_ENV" | "KAZI_NETWORK" | "ALLOW_PLAINTEXT_KEYS">,
+): void {
+  if (env.KAZI_NETWORK === "mainnet")
+    throw new Error("Mainnet signers must use a KMS: set SIGNER_BACKEND=aws-kms");
   if (env.NODE_ENV === "production" && !env.ALLOW_PLAINTEXT_KEYS) {
-    throw new Error("Plaintext signer keys are refused in production: set SIGNER_BACKEND=aws-kms, or ALLOW_PLAINTEXT_KEYS=true on testnet");
+    throw new Error(
+      "Plaintext signer keys are refused in production: set SIGNER_BACKEND=aws-kms, or ALLOW_PLAINTEXT_KEYS=true on testnet",
+    );
   }
 }

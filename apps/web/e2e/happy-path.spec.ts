@@ -20,7 +20,9 @@ test("a client posts, funds, reviews and completes a task", async ({ page }) => 
   // Post the task (client-side navigation, like a user clicking the header link).
   await page.getByRole("link", { name: "New task" }).first().click();
   await page.waitForURL(/\/new$/);
-  await page.locator("#description").fill("Write a business plan for a solar lamp shop in Arusha that sells 120 lamps a month.");
+  await page
+    .locator("#description")
+    .fill("Write a business plan for a solar lamp shop in Arusha that sells 120 lamps a month.");
   await page.getByRole("button", { name: /get my free quote/i }).click();
   await page.waitForURL(/\/tasks\/[0-9a-f-]{36}$/);
 
@@ -31,13 +33,17 @@ test("a client posts, funds, reviews and completes a task", async ({ page }) => 
   await expect(page.getByText("Funded. Work is starting.")).toBeVisible();
 
   // The house agent delivers and the evaluator accepts.
-  await expect(page.getByRole("heading", { name: "Review the work" })).toBeVisible({ timeout: 240_000 });
+  await expect(page.getByRole("heading", { name: "Review the work" })).toBeVisible({
+    timeout: 240_000,
+  });
   await expect(page.getByRole("heading", { name: "Market" })).toBeVisible();
 
   // Approve: the payout worker releases every milestone; the indexer closes the task.
   await page.getByRole("button", { name: /approve and pay/i }).click();
   await expect(page.getByText("Approved — payouts are on their way.")).toBeVisible();
-  await expect(page.getByText("Completed", { exact: true }).first()).toBeVisible({ timeout: 240_000 });
+  await expect(page.getByText("Completed", { exact: true }).first()).toBeVisible({
+    timeout: 240_000,
+  });
   await expect(page.getByRole("heading", { name: "Receipt" })).toBeVisible();
   await expect(page.getByRole("link", { name: /download invoice/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: "How did it go?" })).toBeVisible();

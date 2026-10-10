@@ -9,7 +9,17 @@ import { formatDate } from "@/lib/format";
 import { PageBody } from "@/components/container";
 import { CopyButton } from "@/components/money";
 import { RequireAuth } from "@/components/require-auth";
-import { Badge, Button, Card, EmptyState, Field, Input, Notice, PageHeader, Skeleton } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  Notice,
+  PageHeader,
+  Skeleton,
+} from "@/components/ui";
 
 interface ApiKeyView {
   id: string;
@@ -38,9 +48,13 @@ function Keys() {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [fresh, setFresh] = useState<string | null>(null);
-  const q = useQuery({ queryKey: ["me", "api-keys"], queryFn: () => api<{ apiKeys: ApiKeyView[] }>("/me/api-keys").then((r) => r.apiKeys) });
+  const q = useQuery({
+    queryKey: ["me", "api-keys"],
+    queryFn: () => api<{ apiKeys: ApiKeyView[] }>("/me/api-keys").then((r) => r.apiKeys),
+  });
   const create = useMutation({
-    mutationFn: () => api<{ key: string }>("/me/api-keys", { method: "POST", body: { name: name.trim() } }),
+    mutationFn: () =>
+      api<{ key: string }>("/me/api-keys", { method: "POST", body: { name: name.trim() } }),
     onSuccess: (r) => {
       setFresh(r.key);
       setName("");
@@ -64,14 +78,24 @@ function Keys() {
           }}
         >
           <Field label={t("name")} className="flex-1" htmlFor="key-name">
-            <Input id="key-name" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={t("namePlaceholder")} />
+            <Input
+              id="key-name"
+              maxLength={60}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("namePlaceholder")}
+            />
           </Field>
           <Button type="submit" loading={create.isPending} disabled={!name.trim()}>
             <KeyRound className="size-4" />
             {t("create")}
           </Button>
         </form>
-        {create.error ? <Notice tone="bad" className="mt-3">{errorMessage(create.error)}</Notice> : null}
+        {create.error ? (
+          <Notice tone="bad" className="mt-3">
+            {errorMessage(create.error)}
+          </Notice>
+        ) : null}
         {fresh ? (
           <div className="mt-4 rounded-lg border border-warn bg-warn-soft p-3">
             <p className="font-semibold">{t("newKeyTitle")}</p>
@@ -96,7 +120,9 @@ function Keys() {
                 <p className="font-semibold">{k.name}</p>
                 <p className="font-mono text-xs text-muted">
                   kz_…_{k.prefix}_… · {t("created", { date: formatDate(k.createdAt, locale) })} ·{" "}
-                  {k.lastUsedAt ? t("lastUsed", { date: formatDate(k.lastUsedAt, locale) }) : t("neverUsed")}
+                  {k.lastUsedAt
+                    ? t("lastUsed", { date: formatDate(k.lastUsedAt, locale) })
+                    : t("neverUsed")}
                 </p>
               </div>
               {k.revokedAt ? (

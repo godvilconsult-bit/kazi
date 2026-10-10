@@ -48,7 +48,10 @@ export function FileUpload({
       {files.length > 0 ? (
         <ul className="mb-2 space-y-1.5">
           {files.map((f) => (
-            <li key={f.id} className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm">
+            <li
+              key={f.id}
+              className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2 text-sm"
+            >
               <FileText className="size-4 shrink-0 text-muted" />
               <span className="min-w-0 flex-1 truncate">{f.filename}</span>
               <span className="font-mono text-xs text-muted">{formatBytes(f.size)}</span>
@@ -65,10 +68,25 @@ export function FileUpload({
           ))}
         </ul>
       ) : null}
-      <input ref={input} type="file" multiple className="sr-only" onChange={(e) => void add(e.target.files)} disabled={disabled || busy !== null} />
-      <Button variant="outline" size="sm" onClick={() => input.current?.click()} disabled={disabled || files.length >= max} loading={busy !== null}>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        className="sr-only"
+        onChange={(e) => void add(e.target.files)}
+        disabled={disabled || busy !== null}
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => input.current?.click()}
+        disabled={disabled || files.length >= max}
+        loading={busy !== null}
+      >
         <Paperclip className="size-4" />
-        {busy ? `${t("uploading", { name: busy.name })} ${Math.round(busy.progress * 100)}%` : t("addFiles")}
+        {busy
+          ? `${t("uploading", { name: busy.name })} ${Math.round(busy.progress * 100)}%`
+          : t("addFiles")}
       </Button>
       {error ? (
         <p className="mt-2 text-sm text-bad" role="alert">

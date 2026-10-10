@@ -39,7 +39,9 @@ function List() {
     queryKey: ["notifications", "page", unreadOnly],
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
-      api<Page>(`/notifications?limit=20${unreadOnly ? "&unread=1" : ""}${pageParam ? `&cursor=${pageParam}` : ""}`),
+      api<Page>(
+        `/notifications?limit=20${unreadOnly ? "&unread=1" : ""}${pageParam ? `&cursor=${pageParam}` : ""}`,
+      ),
     getNextPageParam: (last) => last.nextCursor,
   });
   const markAll = useMutation({
@@ -55,7 +57,12 @@ function List() {
           {t("unreadOnly")}
         </Chip>
         {unread > 0 ? (
-          <Button variant="outline" size="sm" loading={markAll.isPending} onClick={() => markAll.mutate()}>
+          <Button
+            variant="outline"
+            size="sm"
+            loading={markAll.isPending}
+            onClick={() => markAll.mutate()}
+          >
             {t("markAll")}
           </Button>
         ) : null}
@@ -74,7 +81,9 @@ function List() {
               <Link href={n.link ?? "#"} className="block px-4 py-3 hover:bg-surface-2">
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="font-semibold">{n.title}</p>
-                  <span className="shrink-0 font-mono text-[11px] text-muted">{relativeTime(n.createdAt, locale)}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-muted">
+                    {relativeTime(n.createdAt, locale)}
+                  </span>
                 </div>
                 <p className="mt-0.5 text-sm text-muted">{n.body}</p>
               </Link>
@@ -84,7 +93,11 @@ function List() {
       )}
       {q.hasNextPage ? (
         <div className="mt-4 text-center">
-          <Button variant="outline" loading={q.isFetchingNextPage} onClick={() => void q.fetchNextPage()}>
+          <Button
+            variant="outline"
+            loading={q.isFetchingNextPage}
+            onClick={() => void q.fetchNextPage()}
+          >
             {t("loadMore")}
           </Button>
         </div>

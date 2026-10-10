@@ -13,17 +13,48 @@ describe("staking position", () => {
   const base = { active: 0n, pending: 0n, unbonding: 0n, pendingSince: 0n, unbondReadyAt: 0n };
 
   it("treats warm-up stake as not earning until it is activated", () => {
-    const pos = stakePosition({ ...base, active: 100n * KAZI, pending: 50n * KAZI, pendingSince: 1_000n }, 1_000 + 3_600, 86_400);
-    expect(pos).toMatchObject({ active: 100n * KAZI, warming: 50n * KAZI, warmUntil: 87_400, needsActivation: false, unstakeable: 150n * KAZI });
-    const matured = stakePosition({ ...base, pending: 50n * KAZI, pendingSince: 1_000n }, 87_400, 86_400);
+    const pos = stakePosition(
+      { ...base, active: 100n * KAZI, pending: 50n * KAZI, pendingSince: 1_000n },
+      1_000 + 3_600,
+      86_400,
+    );
+    expect(pos).toMatchObject({
+      active: 100n * KAZI,
+      warming: 50n * KAZI,
+      warmUntil: 87_400,
+      needsActivation: false,
+      unstakeable: 150n * KAZI,
+    });
+    const matured = stakePosition(
+      { ...base, pending: 50n * KAZI, pendingSince: 1_000n },
+      87_400,
+      86_400,
+    );
     expect(matured.needsActivation).toBe(true);
   });
 
   it("allows a withdrawal only once the cooldown has passed", () => {
-    const cooling = stakePosition({ ...base, unbonding: 10n * KAZI, unbondReadyAt: 2_000n }, 1_999, 86_400);
-    expect(cooling).toMatchObject({ unbonding: 10n * KAZI, unbondReadyAt: 2_000, canWithdraw: false, warmUntil: null, unstakeable: 0n });
-    expect(stakePosition({ ...base, unbonding: 10n * KAZI, unbondReadyAt: 2_000n }, 2_000, 86_400).canWithdraw).toBe(true);
-    expect(stakePosition(base, 99_999, 86_400)).toMatchObject({ unbondReadyAt: null, canWithdraw: false, needsActivation: false });
+    const cooling = stakePosition(
+      { ...base, unbonding: 10n * KAZI, unbondReadyAt: 2_000n },
+      1_999,
+      86_400,
+    );
+    expect(cooling).toMatchObject({
+      unbonding: 10n * KAZI,
+      unbondReadyAt: 2_000,
+      canWithdraw: false,
+      warmUntil: null,
+      unstakeable: 0n,
+    });
+    expect(
+      stakePosition({ ...base, unbonding: 10n * KAZI, unbondReadyAt: 2_000n }, 2_000, 86_400)
+        .canWithdraw,
+    ).toBe(true);
+    expect(stakePosition(base, 99_999, 86_400)).toMatchObject({
+      unbondReadyAt: null,
+      canWithdraw: false,
+      needsActivation: false,
+    });
   });
 
   it("approves exactly what a stake needs and validates amounts", () => {
@@ -74,8 +105,16 @@ describe("geo restriction", () => {
       ["x-vercel-ip-country", "TZ"],
     ]);
     const h = { get: (name: string) => headers.get(name) ?? null };
-    expect(geoFromHeaders(h, { GEO_RESTRICTED_COUNTRIES: "US" })).toEqual({ country: "US", restricted: true });
-    expect(geoFromHeaders(h, { GEO_RESTRICTED_COUNTRIES: "US", GEO_COUNTRY_HEADER: "X-Vercel-IP-Country" })).toEqual({ country: "TZ", restricted: false });
+    expect(geoFromHeaders(h, { GEO_RESTRICTED_COUNTRIES: "US" })).toEqual({
+      country: "US",
+      restricted: true,
+    });
+    expect(
+      geoFromHeaders(h, {
+        GEO_RESTRICTED_COUNTRIES: "US",
+        GEO_COUNTRY_HEADER: "X-Vercel-IP-Country",
+      }),
+    ).toEqual({ country: "TZ", restricted: false });
     expect(geoFromHeaders(h, {})).toEqual({ country: "US", restricted: false });
   });
 });

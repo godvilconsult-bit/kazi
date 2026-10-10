@@ -20,7 +20,16 @@ import { Activity, StepTimeline } from "@/components/task/progress";
 import { QuoteCard } from "@/components/task/quote-card";
 import { RatingForm, Receipt } from "@/components/task/receipt";
 import { Deliverables, ReviewPanel, useDeliverables } from "@/components/task/review";
-import { Button, Card, EmptyState, ErrorState, Field, Notice, Skeleton, Textarea } from "@/components/ui";
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Field,
+  Notice,
+  Skeleton,
+  Textarea,
+} from "@/components/ui";
 
 const ACTIVE = ["FUNDED", "IN_PROGRESS"];
 const CLOSED = ["COMPLETED", "REFUNDED", "PARTIALLY_REFUNDED", "RESOLVED"];
@@ -48,20 +57,23 @@ function TaskView({ id }: { id: string }) {
   const taskQ = useQuery({
     queryKey: ["task", id],
     queryFn: () => api<{ task: TaskView }>(`/tasks/${id}`).then((r) => r.task),
-    refetchInterval: (q) => (q.state.data && ["DRAFT", ...ACTIVE].includes(q.state.data.status) ? 8_000 : false),
+    refetchInterval: (q) =>
+      q.state.data && ["DRAFT", ...ACTIVE].includes(q.state.data.status) ? 8_000 : false,
   });
   const task = taskQ.data;
   const wantsQuote = task ? ["DRAFT", "QUOTED", "EXPIRED"].includes(task.status) : false;
   const quoteQ = useQuery({
     queryKey: ["task", id, "quote", task?.quoteVersion, task?.status],
-    queryFn: () => api<{ quote: QuoteView | null; status: string }>(`/tasks/${id}/quote`).then((r) => r.quote),
+    queryFn: () =>
+      api<{ quote: QuoteView | null; status: string }>(`/tasks/${id}/quote`).then((r) => r.quote),
     enabled: wantsQuote,
   });
   const closed = task ? CLOSED.includes(task.status) || task.status === "DISPUTED" : false;
   const deliverables = useDeliverables(id, closed);
 
   const requote = useMutation({
-    mutationFn: (speed?: "ECONOMY" | "EXPRESS") => api(`/tasks/${id}/quote`, { method: "POST", body: speed ? { speed } : {} }),
+    mutationFn: (speed?: "ECONOMY" | "EXPRESS") =>
+      api(`/tasks/${id}/quote`, { method: "POST", body: speed ? { speed } : {} }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: ["task", id] }),
   });
   const cancel = useMutation({
@@ -74,7 +86,12 @@ function TaskView({ id }: { id: string }) {
     return taskQ.error instanceof ApiError && taskQ.error.status === 404 ? (
       <EmptyState title={t("notFound")} />
     ) : (
-      <ErrorState title={tc("error")} message={errorMessage(taskQ.error)} onRetry={() => void taskQ.refetch()} retryLabel={tc("retry")} />
+      <ErrorState
+        title={tc("error")}
+        message={errorMessage(taskQ.error)}
+        onRetry={() => void taskQ.refetch()}
+        retryLabel={tc("retry")}
+      />
     );
   }
   if (!task) return null;
@@ -84,12 +101,17 @@ function TaskView({ id }: { id: string }) {
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/tasks" className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
+        <Link
+          href="/tasks"
+          className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink"
+        >
           <ArrowLeft className="size-4" />
           {t("back")}
         </Link>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <h1 className="min-w-0 font-display text-3xl font-extrabold tracking-tight break-words sm:text-4xl">{task.title}</h1>
+          <h1 className="min-w-0 font-display text-3xl font-extrabold tracking-tight break-words sm:text-4xl">
+            {task.title}
+          </h1>
           <div className="flex items-center gap-2">
             {connected ? (
               <span className="inline-flex items-center gap-1 font-mono text-[11px] uppercase tracking-wider text-ok">
@@ -101,7 +123,8 @@ function TaskView({ id }: { id: string }) {
           </div>
         </div>
         <p className="mt-2 font-mono text-xs text-muted">
-          {t("deadline")}: {formatDate(task.deadline, locale)} · {t("speed")}: {task.speed === "ECONOMY" ? t("speedEconomy") : t("speedExpress")}
+          {t("deadline")}: {formatDate(task.deadline, locale)} · {t("speed")}:{" "}
+          {task.speed === "ECONOMY" ? t("speedEconomy") : t("speedExpress")}
         </p>
       </div>
 
@@ -117,24 +140,40 @@ function TaskView({ id }: { id: string }) {
               </div>
             </Card>
           ) : null}
-          {task.status === "DRAFT" && quote?.outcome === "NEEDS_CLARIFICATION" ? <Clarify task={task} questions={quote.questions} /> : null}
+          {task.status === "DRAFT" && quote?.outcome === "NEEDS_CLARIFICATION" ? (
+            <Clarify task={task} questions={quote.questions} />
+          ) : null}
           {task.status === "DRAFT" && quote?.outcome === "INFEASIBLE" ? (
             <Card className="border-bad/60">
               <h2 className="font-display text-xl font-bold">{t("infeasibleTitle")}</h2>
               <p className="mt-2 text-sm">{quote.reason}</p>
               <p className="mt-1 text-sm text-muted">{t("infeasibleBody")}</p>
-              <Button className="mt-4" variant="outline" onClick={() => router.push(`/new?from=${task.id}`)}>
+              <Button
+                className="mt-4"
+                variant="outline"
+                onClick={() => router.push(`/new?from=${task.id}`)}
+              >
                 {t("editTask")}
               </Button>
             </Card>
           ) : null}
           {task.status === "QUOTED" && quote?.outcome === "QUOTED" ? (
-            <QuoteCard quote={quote} task={task} switching={requote.isPending} onSwitchSpeed={(s) => requote.mutate(s)} />
+            <QuoteCard
+              quote={quote}
+              task={task}
+              switching={requote.isPending}
+              onSwitchSpeed={(s) => requote.mutate(s)}
+            />
           ) : null}
-          {(task.status === "EXPIRED" || (task.status === "QUOTED" && quote?.outcome === "QUOTED" && quote.expired)) ? (
+          {task.status === "EXPIRED" ||
+          (task.status === "QUOTED" && quote?.outcome === "QUOTED" && quote.expired) ? (
             <Card>
               <h2 className="font-display text-lg font-bold">{t("expiredTitle")}</h2>
-              <Button className="mt-3" loading={requote.isPending} onClick={() => requote.mutate(undefined)}>
+              <Button
+                className="mt-3"
+                loading={requote.isPending}
+                onClick={() => requote.mutate(undefined)}
+              >
                 {t("requote")}
               </Button>
             </Card>
@@ -142,7 +181,8 @@ function TaskView({ id }: { id: string }) {
           {task.status === "CANCELLED" ? <Notice tone="info">{t("cancelled")}</Notice> : null}
 
           {/* Work in progress */}
-          {[...ACTIVE, "DELIVERED", "DISPUTED", ...CLOSED].includes(task.status) && steps.length > 0 ? (
+          {[...ACTIVE, "DELIVERED", "DISPUTED", ...CLOSED].includes(task.status) &&
+          steps.length > 0 ? (
             <section>
               <h2 className="mb-3 font-display text-xl font-bold">{t("progressTitle")}</h2>
               <StepTimeline steps={steps} events={events} />
@@ -151,9 +191,21 @@ function TaskView({ id }: { id: string }) {
 
           {task.status === "DELIVERED" ? <ReviewPanel task={task} /> : null}
           {task.status === "DISPUTED" ? <Notice tone="bad">{t("disputed")}</Notice> : null}
-          {task.status === "REFUNDED" ? <Notice tone="info" title={t("refundedTitle")}>{t("refundedBody")}</Notice> : null}
-          {task.status === "PARTIALLY_REFUNDED" ? <Notice tone="info" title={t("partialTitle")}>{t("partialBody")}</Notice> : null}
-          {task.status === "RESOLVED" ? <Notice tone="info" title={t("resolvedTitle")}>{t("resolvedBody")}</Notice> : null}
+          {task.status === "REFUNDED" ? (
+            <Notice tone="info" title={t("refundedTitle")}>
+              {t("refundedBody")}
+            </Notice>
+          ) : null}
+          {task.status === "PARTIALLY_REFUNDED" ? (
+            <Notice tone="info" title={t("partialTitle")}>
+              {t("partialBody")}
+            </Notice>
+          ) : null}
+          {task.status === "RESOLVED" ? (
+            <Notice tone="info" title={t("resolvedTitle")}>
+              {t("resolvedBody")}
+            </Notice>
+          ) : null}
           {closed ? (
             <section>
               <h2 className="mb-3 font-display text-xl font-bold">{t("deliverables")}</h2>
@@ -170,21 +222,33 @@ function TaskView({ id }: { id: string }) {
           {task.status === "COMPLETED" ? <RatingForm task={task} /> : null}
 
           <Card>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{t("description")}</h2>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
+              {t("description")}
+            </h2>
             <div className="max-h-72 overflow-y-auto text-sm">
               <Markdown>{task.description}</Markdown>
             </div>
-            {task.attachments.length > 0 ? <p className="mt-2 font-mono text-xs text-muted">{t("attachments", { count: task.attachments.length })}</p> : null}
+            {task.attachments.length > 0 ? (
+              <p className="mt-2 font-mono text-xs text-muted">
+                {t("attachments", { count: task.attachments.length })}
+              </p>
+            ) : null}
           </Card>
 
           <Card>
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">{t("activity")}</h2>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">
+              {t("activity")}
+            </h2>
             <Activity events={events} />
           </Card>
 
           {["DRAFT", "QUOTED"].includes(task.status) ? (
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => router.push(`/new?from=${task.id}`)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => router.push(`/new?from=${task.id}`)}
+              >
                 {t("editTask")}
               </Button>
               <Button
@@ -217,7 +281,11 @@ function Clarify({ task, questions }: { task: TaskView; questions: string[] }) {
       api(`/tasks/${task.id}`, {
         method: "PATCH",
         body: {
-          description: `${task.description}\n\nAnswers to the planner's questions:\n${questions.map((q) => `- ${q}`).join("\n")}\n\n${answers.trim()}`.slice(0, 20_000),
+          description:
+            `${task.description}\n\nAnswers to the planner's questions:\n${questions.map((q) => `- ${q}`).join("\n")}\n\n${answers.trim()}`.slice(
+              0,
+              20_000,
+            ),
           requote: true,
         },
       }),
@@ -236,10 +304,24 @@ function Clarify({ task, questions }: { task: TaskView; questions: string[] }) {
       </ul>
       <p className="mt-3 text-sm text-muted">{t("clarifyBody")}</p>
       <Field label={t("clarifyLabel")} className="mt-3" htmlFor="clarify">
-        <Textarea id="clarify" rows={5} value={answers} onChange={(e) => setAnswers(e.target.value)} />
+        <Textarea
+          id="clarify"
+          rows={5}
+          value={answers}
+          onChange={(e) => setAnswers(e.target.value)}
+        />
       </Field>
-      {send.error ? <Notice tone="bad" className="mt-3">{errorMessage(send.error)}</Notice> : null}
-      <Button className="mt-3" loading={send.isPending} disabled={answers.trim().length < 3} onClick={() => send.mutate()}>
+      {send.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(send.error)}
+        </Notice>
+      ) : null}
+      <Button
+        className="mt-3"
+        loading={send.isPending}
+        disabled={answers.trim().length < 3}
+        onClick={() => send.mutate()}
+      >
         {t("clarifySend")}
       </Button>
     </Card>

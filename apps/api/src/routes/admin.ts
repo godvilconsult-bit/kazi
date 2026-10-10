@@ -31,20 +31,35 @@ const providerListQuery = z.object({
   status: z.enum(["PENDING", "ACTIVE", "SUSPENDED", "DELISTED"]).default("PENDING"),
 });
 const reviewSchema = z
-  .object({ reviewScore: z.number().int().min(0).max(100).optional(), note: z.string().max(2_000).optional() })
+  .object({
+    reviewScore: z.number().int().min(0).max(100).optional(),
+    note: z.string().max(2_000).optional(),
+  })
   .strict();
-const slashSchema = z.object({ amount: decimalAmountSchema, reason: z.string().trim().min(10).max(2_000) }).strict();
-const disputeListQuery = z.object({ status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED"]).optional() });
+const slashSchema = z
+  .object({ amount: decimalAmountSchema, reason: z.string().trim().min(10).max(2_000) })
+  .strict();
+const disputeListQuery = z.object({
+  status: z.enum(["OPEN", "UNDER_REVIEW", "RESOLVED"]).optional(),
+});
 const resolveSchema = z
   .object({
     resolutions: z
-      .array(z.object({ index: z.number().int().min(0), clientShareBps: z.number().int().min(0).max(10_000) }))
+      .array(
+        z.object({
+          index: z.number().int().min(0),
+          clientShareBps: z.number().int().min(0).max(10_000),
+        }),
+      )
       .min(1)
       .max(32),
     note: z.string().max(4_000).optional(),
   })
   .strict()
-  .refine((v) => new Set(v.resolutions.map((r) => r.index)).size === v.resolutions.length, "duplicate index");
+  .refine(
+    (v) => new Set(v.resolutions.map((r) => r.index)).size === v.resolutions.length,
+    "duplicate index",
+  );
 const feeSplitSchema = z
   .object({
     treasuryBps: z.number().int().min(0).max(10_000),
@@ -52,7 +67,10 @@ const feeSplitSchema = z
     buybackBps: z.number().int().min(0).max(10_000),
   })
   .strict()
-  .refine((v) => v.treasuryBps + v.stakerBps + v.buybackBps === 10_000, "The split must add up to 10,000 bps");
+  .refine(
+    (v) => v.treasuryBps + v.stakerBps + v.buybackBps === 10_000,
+    "The split must add up to 10,000 bps",
+  );
 export const settingsSchema = z
   .object({
     announcement: z.string().max(500).nullable().optional(),
@@ -123,11 +141,16 @@ export function adminRoutes(s: AppServices) {
         const { id } = parse(idParams, req.params);
         const p = await s.prisma.provider.findUnique({ where: { id } });
         if (!p) throw notFound("Provider");
-        if (p.onchainId === null) throw invalidState("The owner hasn't registered this provider onchain yet");
+        if (p.onchainId === null)
+          throw invalidState("The owner hasn't registered this provider onchain yet");
         return {
           tx: tx(
             contract("agentRegistry"),
-            encodeFunctionData({ abi: agentRegistryAbi, functionName: action, args: [BigInt(p.onchainId)] }),
+            encodeFunctionData({
+              abi: agentRegistryAbi,
+              functionName: action,
+              args: [BigInt(p.onchainId)],
+            }),
           ),
           signer: "registrar",
         };
@@ -143,7 +166,11 @@ export function adminRoutes(s: AppServices) {
       if (p.onchainId === null) throw invalidState("This provider isn't registered onchain");
       if (!s.publicClient) throw invalidState("No RPC configured");
       const tokenDecimals = Number(
-        await s.publicClient.readContract({ address: contract("kaziToken"), abi: kaziTokenAbi, functionName: "decimals" }),
+        await s.publicClient.readContract({
+          address: contract("kaziToken"),
+          abi: kaziTokenAbi,
+          functionName: "decimals",
+        }),
       );
       const amount = parseUnits(body.amount, tokenDecimals);
       return {
@@ -208,7 +235,11 @@ export function adminRoutes(s: AppServices) {
               provider: st.provider,
               // Untrusted agent output: the admin UI renders it sanitized (CLAUDE.md rule 7).
               latest: st.submissions[0]
-                ? { output: st.submissions[0].output, score: st.submissions[0].score, evaluation: st.submissions[0].evaluation }
+                ? {
+                    output: st.submissions[0].output,
+                    score: st.submissions[0].score,
+                    evaluation: st.submissions[0].evaluation,
+                  }
                 : null,
             })),
           },
@@ -234,7 +265,8 @@ export function adminRoutes(s: AppServices) {
           .map((st) => [st.index, st]),
       );
       for (const r of body.resolutions) {
-        if (!open.has(r.index)) throw invalidState(`Milestone ${r.index} is already settled or doesn't exist`);
+        if (!open.has(r.index))
+          throw invalidState(`Milestone ${r.index} is already settled or doesn't exist`);
       }
       const escrow = contract("taskEscrow");
       const txs = body.resolutions.map((r) =>
@@ -251,7 +283,11 @@ export function adminRoutes(s: AppServices) {
         where: { id },
         data: {
           status: "UNDER_REVIEW",
-          resolution: { resolutions: body.resolutions, note: body.note ?? null, proposedAt: new Date().toISOString() },
+          resolution: {
+            resolutions: body.resolutions,
+            note: body.note ?? null,
+            proposedAt: new Date().toISOString(),
+          },
           resolvedBy: auth.wallet,
         },
       });
@@ -265,8 +301,16 @@ export function adminRoutes(s: AppServices) {
       if (!s.publicClient) throw invalidState("No RPC configured");
       const escrow = contract("taskEscrow");
       const [paused, feeBps] = await Promise.all([
-        s.publicClient.readContract({ address: escrow, abi: taskEscrowAbi, functionName: "paused" }),
-        s.publicClient.readContract({ address: escrow, abi: taskEscrowAbi, functionName: "feeBps" }),
+        s.publicClient.readContract({
+          address: escrow,
+          abi: taskEscrowAbi,
+          functionName: "paused",
+        }),
+        s.publicClient.readContract({
+          address: escrow,
+          abi: taskEscrowAbi,
+          functionName: "feeBps",
+        }),
       ]);
       return { escrow, paused, feeBps: Number(feeBps) };
     });
@@ -276,7 +320,10 @@ export function adminRoutes(s: AppServices) {
       app.post(`/admin/escrow/${action}`, async (req) => {
         requireAdmin(req, s.adminWallets);
         return {
-          tx: tx(contract("taskEscrow"), encodeFunctionData({ abi: taskEscrowAbi, functionName: action })),
+          tx: tx(
+            contract("taskEscrow"),
+            encodeFunctionData({ abi: taskEscrowAbi, functionName: action }),
+          ),
           signer: action === "pause" ? "guardian" : "adminSafe",
         };
       });
@@ -289,12 +336,35 @@ export function adminRoutes(s: AppServices) {
       if (!s.publicClient) throw invalidState("No RPC configured");
       const distributor = contract("feeDistributor");
       const [treasuryBps, stakerBps, buybackBps, stakingVault] = await Promise.all([
-        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "treasuryBps" }),
-        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "stakerBps" }),
-        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "buybackBps" }),
-        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "stakingVault" }),
+        s.publicClient.readContract({
+          address: distributor,
+          abi: feeDistributorAbi,
+          functionName: "treasuryBps",
+        }),
+        s.publicClient.readContract({
+          address: distributor,
+          abi: feeDistributorAbi,
+          functionName: "stakerBps",
+        }),
+        s.publicClient.readContract({
+          address: distributor,
+          abi: feeDistributorAbi,
+          functionName: "buybackBps",
+        }),
+        s.publicClient.readContract({
+          address: distributor,
+          abi: feeDistributorAbi,
+          functionName: "stakingVault",
+        }),
       ]);
-      return { split: { treasuryBps: Number(treasuryBps), stakerBps: Number(stakerBps), buybackBps: Number(buybackBps) }, stakingVault };
+      return {
+        split: {
+          treasuryBps: Number(treasuryBps),
+          stakerBps: Number(stakerBps),
+          buybackBps: Number(buybackBps),
+        },
+        stakingVault,
+      };
     });
 
     /** Calldata for the admin Safe: FeeDistributor.setSplit (e.g. switch the staker share on at launch). */
@@ -304,7 +374,11 @@ export function adminRoutes(s: AppServices) {
       return {
         tx: tx(
           contract("feeDistributor"),
-          encodeFunctionData({ abi: feeDistributorAbi, functionName: "setSplit", args: [body.treasuryBps, body.stakerBps, body.buybackBps] }),
+          encodeFunctionData({
+            abi: feeDistributorAbi,
+            functionName: "setSplit",
+            args: [body.treasuryBps, body.stakerBps, body.buybackBps],
+          }),
         ),
         signer: "adminSafe",
       };

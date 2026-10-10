@@ -138,7 +138,9 @@ export async function signedFileRef(
   if (!f || f.status !== "UPLOADED") return null;
   let sha256 = f.sha256;
   if (!sha256 || !/^[0-9a-f]{64}$/.test(sha256)) {
-    sha256 = createHash("sha256").update(await deps.storage.download(f.key, MAX_FILE_BYTES)).digest("hex");
+    sha256 = createHash("sha256")
+      .update(await deps.storage.download(f.key, MAX_FILE_BYTES))
+      .digest("hex");
     await deps.prisma.fileObject.update({ where: { id: f.id }, data: { sha256 } });
   }
   return { url: await deps.storage.createDownloadUrl(f.key, ttlSec), sha256, mime: f.mime };
@@ -182,7 +184,10 @@ export async function importAgentFiles(
     if (own?.[1]) {
       // Passed through from an earlier step. Only the task client's own files (attachments and
       // imported outputs) — never another user's file id, or the next step would get a signed URL.
-      const row = await deps.prisma.fileObject.findUnique({ where: { id: own[1] }, select: { ownerId: true, status: true } });
+      const row = await deps.prisma.fileObject.findUnique({
+        where: { id: own[1] },
+        select: { ownerId: true, status: true },
+      });
       if (!row || row.ownerId !== ctx.clientId || row.status !== "UPLOADED") {
         throw new FileImportError(`file ${i + 1}: unknown file reference`);
       }
@@ -191,7 +196,8 @@ export async function importAgentFiles(
     }
     const bytes = await safeFetch(f.url, MAX_FILE_BYTES, deps);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
-    if (sha256 !== f.sha256) throw new FileImportError(`file ${i + 1}: sha256 does not match the declared hash`);
+    if (sha256 !== f.sha256)
+      throw new FileImportError(`file ${i + 1}: sha256 does not match the declared hash`);
     const key = `outputs/${ctx.taskId}/${ctx.subtaskId}/${ctx.attempt}/${i + 1}-${sha256.slice(0, 16)}`;
     await deps.storage.upload(key, bytes, f.mime);
     const row = await deps.prisma.fileObject.upsert({
@@ -220,14 +226,20 @@ export async function importAgentFiles(
  */
 export async function privateHostReason(u: URL): Promise<string | null> {
   const host = u.hostname.replace(/^\[|\]$/g, "");
-  const addrs = isIP(host) ? [{ address: host }] : await lookup(host, { all: true }).catch(() => []);
+  const addrs = isIP(host)
+    ? [{ address: host }]
+    : await lookup(host, { all: true }).catch(() => []);
   if (addrs.length === 0) return "does not resolve";
   if (addrs.some((a) => isPrivateAddress(a.address))) return "is not public";
   return null;
 }
 
 /** Fetch an agent-supplied URL without letting it reach Kazi's own network (SSRF). */
-export async function safeFetch(url: string, maxBytes: number, deps: { fetch?: typeof fetch; allowInsecure?: boolean } = {}): Promise<Uint8Array> {
+export async function safeFetch(
+  url: string,
+  maxBytes: number,
+  deps: { fetch?: typeof fetch; allowInsecure?: boolean } = {},
+): Promise<Uint8Array> {
   let u: URL;
   try {
     u = new URL(url);
@@ -239,7 +251,10 @@ export async function safeFetch(url: string, maxBytes: number, deps: { fetch?: t
     const reason = await privateHostReason(u);
     if (reason) throw new FileImportError(`file host ${reason}`);
   }
-  const res = await (deps.fetch ?? globalThis.fetch)(u, { redirect: "error", signal: AbortSignal.timeout(60_000) });
+  const res = await (deps.fetch ?? globalThis.fetch)(u, {
+    redirect: "error",
+    signal: AbortSignal.timeout(60_000),
+  });
   if (!res.ok || !res.body) throw new FileImportError(`file download failed (HTTP ${res.status})`);
   const declared = Number(res.headers.get("content-length") ?? "0");
   if (declared > maxBytes) throw new FileImportError("file is too large");
@@ -271,7 +286,10 @@ export function isPrivateAddress(ip: string): boolean {
   if (isIP(ip) === 4) {
     const [a = 0, b = 0] = ip.split(".").map(Number);
     return (
-      a === 0 || a === 10 || a === 127 || a >= 224 ||
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      a >= 224 ||
       (a === 100 && b >= 64 && b <= 127) ||
       (a === 169 && b === 254) ||
       (a === 172 && b >= 16 && b <= 31) ||
@@ -280,6 +298,15 @@ export function isPrivateAddress(ip: string): boolean {
     );
   }
   const v6 = ip.toLowerCase();
-  return v6 === "::" || v6 === "::1" || v6.startsWith("fc") || v6.startsWith("fd") || v6.startsWith("fe8") ||
-    v6.startsWith("fe9") || v6.startsWith("fea") || v6.startsWith("feb") || v6.startsWith("ff");
+  return (
+    v6 === "::" ||
+    v6 === "::1" ||
+    v6.startsWith("fc") ||
+    v6.startsWith("fd") ||
+    v6.startsWith("fe8") ||
+    v6.startsWith("fe9") ||
+    v6.startsWith("fea") ||
+    v6.startsWith("feb") ||
+    v6.startsWith("ff")
+  );
 }

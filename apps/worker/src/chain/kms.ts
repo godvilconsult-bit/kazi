@@ -42,7 +42,11 @@ export async function createKmsAccount(key: KmsKey): Promise<LocalAccount> {
     const { r, s: rawS } = parseDerSignature(await key.signDigest(hexToBytes(hash)));
     const s = rawS > N / 2n ? N - rawS : rawS;
     for (const yParity of [0, 1] as const) {
-      const signature = serializeSignature({ r: numberToHex(r, { size: 32 }), s: numberToHex(s, { size: 32 }), yParity });
+      const signature = serializeSignature({
+        r: numberToHex(r, { size: 32 }),
+        s: numberToHex(s, { size: 32 }),
+        yParity,
+      });
       if ((await recoverAddress({ hash, signature })) === address) return signature;
     }
     throw new Error("KMS signature does not recover to the key's address");
@@ -60,7 +64,8 @@ export async function createKmsAccount(key: KmsKey): Promise<LocalAccount> {
       return signHash(hashTypedData(typedData));
     },
     async signTransaction(transaction, options) {
-      const serializer = (options?.serializer ?? serializeTransaction) as SerializeTransactionFn<TransactionSerializable>;
+      const serializer = (options?.serializer ??
+        serializeTransaction) as SerializeTransactionFn<TransactionSerializable>;
       const unsigned = await serializer(transaction as TransactionSerializable);
       const signature = parseSignature(await signHash(keccak256(unsigned)));
       return serializer(transaction as TransactionSerializable, signature);
@@ -71,7 +76,8 @@ export async function createKmsAccount(key: KmsKey): Promise<LocalAccount> {
 /** The 65-byte uncompressed point (0x04 ‖ X ‖ Y) at the end of a secp256k1 SPKI. */
 export function uncompressedPublicKey(spki: Uint8Array): Hex {
   const point = spki.slice(-65);
-  if (spki.length < 65 || point[0] !== 0x04) throw new Error("KMS public key is not an uncompressed secp256k1 point");
+  if (spki.length < 65 || point[0] !== 0x04)
+    throw new Error("KMS public key is not an uncompressed secp256k1 point");
   return toHex(point);
 }
 

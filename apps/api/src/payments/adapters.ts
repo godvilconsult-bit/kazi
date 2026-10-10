@@ -26,7 +26,12 @@ export type PaymentInstructions =
 export interface PaymentAdapter {
   readonly method: PaymentMethod;
   readonly enabled: boolean;
-  instructions(input: { quote: Extract<StoredQuote, { outcome: "QUOTED" }>; chainId: number; usdc: Address; escrow: Address }): PaymentInstructions;
+  instructions(input: {
+    quote: Extract<StoredQuote, { outcome: "QUOTED" }>;
+    chainId: number;
+    usdc: Address;
+    escrow: Address;
+  }): PaymentInstructions;
 }
 
 export const escrowWalletAdapter: PaymentAdapter = {
@@ -41,10 +46,15 @@ export const escrowWalletAdapter: PaymentAdapter = {
       total: quote.total,
       expiresAt: quote.expiresAt,
       steps: [
-        { to: usdc, function: "approve(address spender, uint256 amount)", args: [escrow, quote.total] },
+        {
+          to: usdc,
+          function: "approve(address spender, uint256 amount)",
+          args: [escrow, quote.total],
+        },
         {
           to: escrow,
-          function: "createAndFund((bytes32 taskId, uint256[] providerIds, uint128[] amounts, uint64 deadline, uint16 feeBps, uint64 expiry) quote, bytes quoteSig)",
+          function:
+            "createAndFund((bytes32 taskId, uint256[] providerIds, uint128[] amounts, uint64 deadline, uint16 feeBps, uint64 expiry) quote, bytes quoteSig)",
           args: [quote.onchain, quote.signature],
         },
       ],
@@ -59,7 +69,8 @@ export const x402Adapter: PaymentAdapter = {
     return {
       method: "x402",
       status: "unavailable",
-      reason: "x402 payments are not enabled yet: Arc nanopayments are unverified for production. Fund the escrow from your wallet (method=escrow-wallet).",
+      reason:
+        "x402 payments are not enabled yet: Arc nanopayments are unverified for production. Fund the escrow from your wallet (method=escrow-wallet).",
     };
   },
 };

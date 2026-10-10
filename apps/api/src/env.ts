@@ -46,10 +46,16 @@ export const apiEnvSchema = runtimeEnvSchema
           const hops = Number(v);
           return (_address, hop) => hop < hops; // trust the n proxies closest to the API
         }
-        return v.split(",").map((s) => s.trim()).filter(Boolean);
+        return v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
       }),
     /** Wallet sanctions screening at sign-in and for payout addresses (security/sanctions.ts). */
-    CHAINALYSIS_API_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(8).optional()),
+    CHAINALYSIS_API_KEY: z.preprocess(
+      (v) => (v === "" ? undefined : v),
+      z.string().min(8).optional(),
+    ),
     SANCTIONS_FAIL_CLOSED: z
       .enum(["true", "false"])
       .default("false")

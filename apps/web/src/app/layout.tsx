@@ -15,8 +15,16 @@ import "./globals.css";
 // Every page depends on live API config (chain, contracts, decimals); nothing is prerendered at build.
 export const dynamic = "force-dynamic";
 
-const display = Bricolage_Grotesque({ subsets: ["latin"], variable: "--font-bricolage", display: "swap" });
-const sans = Instrument_Sans({ subsets: ["latin"], variable: "--font-instrument", display: "swap" });
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
+const sans = Instrument_Sans({
+  subsets: ["latin"],
+  variable: "--font-instrument",
+  display: "swap",
+});
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", display: "swap" });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -37,10 +45,18 @@ export const viewport: Viewport = {
 const themeScript = `(function(){try{var t=localStorage.getItem("kazi-theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.theme=t}catch(e){}})()`;
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const [locale, config, requestHeaders] = await Promise.all([getLocale(), getPublicConfig(), headers()]);
+  const [locale, config, requestHeaders] = await Promise.all([
+    getLocale(),
+    getPublicConfig(),
+    headers(),
+  ]);
   const geo = geoFromHeaders(requestHeaders);
   return (
-    <html lang={locale} suppressHydrationWarning className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+    <html
+      lang={locale}
+      suppressHydrationWarning
+      className={`${display.variable} ${sans.variable} ${mono.variable}`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

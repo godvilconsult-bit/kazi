@@ -147,7 +147,13 @@ export async function dispatchSubtask(
     // Delivered through the freelancer dashboard; widened or failed by `offersTick`.
     await createDirectOffer(
       deps.prisma,
-      { id: fresh.id, attempts: fresh.attempts, title: fresh.title, timeoutAt: fresh.timeoutAt, providerId: provider.id },
+      {
+        id: fresh.id,
+        attempts: fresh.attempts,
+        title: fresh.title,
+        timeoutAt: fresh.timeoutAt,
+        providerId: provider.id,
+      },
       now,
     );
     await deps.prisma.taskEvent.create({
@@ -178,10 +184,20 @@ export async function dispatchSubtask(
     const reason = await privateHostReason(new URL(provider.endpointUrl));
     if (reason) {
       await applyAgentResult(
-        { prisma: deps.prisma, jobs: deps.jobs, log, now: deps.now, storage: deps.storage, fetch: deps.fetch },
+        {
+          prisma: deps.prisma,
+          jobs: deps.jobs,
+          log,
+          now: deps.now,
+          storage: deps.storage,
+          fetch: deps.fetch,
+        },
         subtaskId,
         attempt,
-        { status: "failed", error: { code: "BAD_ENDPOINT", message: `The agent endpoint host ${reason}.` } },
+        {
+          status: "failed",
+          error: { code: "BAD_ENDPOINT", message: `The agent endpoint host ${reason}.` },
+        },
       );
       return "sent";
     }

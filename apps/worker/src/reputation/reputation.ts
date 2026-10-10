@@ -33,13 +33,22 @@ export function reputationScore(
   let den = PRIOR_WEIGHT;
   for (const e of events) {
     const t = e.onTime ? 1 : 0;
-    const v = e.rating !== null ? 0.5 * e.judge + 0.3 * (e.rating / 5) + 0.2 * t : (0.5 * e.judge + 0.2 * t) / 0.7;
+    const v =
+      e.rating !== null
+        ? 0.5 * e.judge + 0.3 * (e.rating / 5) + 0.2 * t
+        : (0.5 * e.judge + 0.2 * t) / 0.7;
     const w = now.getTime() - e.at.getTime() > DECAY_AFTER_MS ? 0.5 : 1;
     num += w * v;
     den += w;
   }
-  const raw = (100 * num) / den - PENALTY_DISPUTE_LOST * penalties.disputesLost - PENALTY_SLASH * penalties.slashes;
-  return { value: Math.round(Math.min(100, Math.max(0, raw)) * 10) / 10, weight: den - PRIOR_WEIGHT };
+  const raw =
+    (100 * num) / den -
+    PENALTY_DISPUTE_LOST * penalties.disputesLost -
+    PENALTY_SLASH * penalties.slashes;
+  return {
+    value: Math.round(Math.min(100, Math.max(0, raw)) * 10) / 10,
+    weight: den - PRIOR_WEIGHT,
+  };
 }
 
 export async function recomputeReputation(
@@ -82,17 +91,28 @@ export async function recomputeReputation(
   // Disputes this provider lost: arbiter gave the client half or more of one of its milestones.
   const byTaskIndex = new Set(subtasks.map((s) => `${s.task.onchainId}:${s.index}`));
   const resolutions = byTaskIndex.size
-    ? await prisma.chainEvent.findMany({ where: { name: "DisputeResolved" }, select: { args: true } })
+    ? await prisma.chainEvent.findMany({
+        where: { name: "DisputeResolved" },
+        select: { args: true },
+      })
     : [];
   const disputesLost = resolutions.filter((r) => {
-    const a = r.args as { taskId?: string; index?: string | number; clientShareBps?: string | number };
+    const a = r.args as {
+      taskId?: string;
+      index?: string | number;
+      clientShareBps?: string | number;
+    };
     return byTaskIndex.has(`${a.taskId}:${a.index}`) && Number(a.clientShareBps ?? 0) >= 5_000;
   }).length;
   const slashes =
     provider.onchainId === null
       ? 0
-      : (await prisma.chainEvent.findMany({ where: { name: "Slashed" }, select: { args: true } })).filter(
-          (r) => String((r.args as { providerId?: unknown }).providerId) === provider.onchainId?.toString(),
+      : (
+          await prisma.chainEvent.findMany({ where: { name: "Slashed" }, select: { args: true } })
+        ).filter(
+          (r) =>
+            String((r.args as { providerId?: unknown }).providerId) ===
+            provider.onchainId?.toString(),
         ).length;
 
   const { value, weight } = reputationScore(events, { disputesLost, slashes }, now);
@@ -112,7 +132,10 @@ export async function recomputeReputation(
 
 /** Daily: recompute everyone (time decay changes scores even without new work). */
 export async function recomputeAllReputations(prisma: PrismaClient, log: Logger): Promise<number> {
-  const providers = await prisma.provider.findMany({ where: { status: { in: ["ACTIVE", "SUSPENDED"] } }, select: { id: true } });
+  const providers = await prisma.provider.findMany({
+    where: { status: { in: ["ACTIVE", "SUSPENDED"] } },
+    select: { id: true },
+  });
   for (const p of providers) await recomputeReputation(prisma, p.id, log);
   return providers.length;
 }

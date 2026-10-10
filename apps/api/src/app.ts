@@ -107,7 +107,13 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     sanctions:
       deps.sanctions ??
       (deps.env.CHAINALYSIS_API_KEY
-        ? chainalysisScreen({ apiKey: deps.env.CHAINALYSIS_API_KEY, redis: deps.redis, prefix: deps.env.REDIS_KEY_PREFIX, log: app.log, failClosed: deps.env.SANCTIONS_FAIL_CLOSED })
+        ? chainalysisScreen({
+            apiKey: deps.env.CHAINALYSIS_API_KEY,
+            redis: deps.redis,
+            prefix: deps.env.REDIS_KEY_PREFIX,
+            log: app.log,
+            failClosed: deps.env.SANCTIONS_FAIL_CLOSED,
+          })
         : undefined),
   };
 
@@ -150,7 +156,8 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   });
   // Every API-key request also counts against a per-key budget.
   app.addHook("preHandler", async (req, reply) => {
-    if (req.auth?.apiKeyId) await services.limiter.guard("api-key", deps.env.API_KEY_RATE_LIMIT, 60)(req, reply);
+    if (req.auth?.apiKeyId)
+      await services.limiter.guard("api-key", deps.env.API_KEY_RATE_LIMIT, 60)(req, reply);
   });
 
   app.get("/health", async () => ({ status: "ok" }));

@@ -45,10 +45,20 @@ export const options = {
   },
 };
 
-const PAGES = ["/config", "/stats", "/capabilities", "/providers", "/token/metrics", "/token/staking", "/points/leaderboard"];
+const PAGES = [
+  "/config",
+  "/stats",
+  "/capabilities",
+  "/providers",
+  "/token/metrics",
+  "/token/staking",
+  "/points/leaderboard",
+];
 
 export function browse() {
-  const res = http.get(`${API}${PAGES[Math.floor(Math.random() * PAGES.length)]}`, { tags: { name: "public-read" } });
+  const res = http.get(`${API}${PAGES[Math.floor(Math.random() * PAGES.length)]}`, {
+    tags: { name: "public-read" },
+  });
   check(res, { "status 200": (r) => r.status === 200 });
 }
 
@@ -59,7 +69,9 @@ export function quickTask() {
   const started = Date.now();
   const created = http.post(
     `${API}/v1/quick-tasks`,
-    JSON.stringify({ description: `Write a business plan for a solar lamp shop in Arusha that sells ${100 + (__VU % 50)} lamps a month.` }),
+    JSON.stringify({
+      description: `Write a business plan for a solar lamp shop in Arusha that sells ${100 + (__VU % 50)} lamps a month.`,
+    }),
     { headers, tags: { name: "quick-task" } },
   );
   if (!check(created, { "task accepted": (r) => r.status === 202 })) {

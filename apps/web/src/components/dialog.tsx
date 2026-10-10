@@ -47,12 +47,21 @@ export function Dialog({
             <h2 id={titleId} className="font-display text-lg font-bold">
               {title}
             </h2>
-            <button type="button" onClick={onClose} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-ink" aria-label="Close">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded p-1 text-muted hover:bg-surface-2 hover:text-ink"
+              aria-label="Close"
+            >
               <X className="size-4" />
             </button>
           </div>
           <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer ? <div className="flex flex-wrap justify-end gap-2 border-t border-dashed border-line px-5 py-3">{footer}</div> : null}
+          {footer ? (
+            <div className="flex flex-wrap justify-end gap-2 border-t border-dashed border-line px-5 py-3">
+              {footer}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </dialog>

@@ -54,7 +54,11 @@ function readEnvFile(path: string): Record<string, string> {
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
     if (!m?.[1]) continue;
-    out[m[1]] = (m[2] ?? "").split(" #")[0]?.trim().replace(/^["']|["']$/g, "") ?? "";
+    out[m[1]] =
+      (m[2] ?? "")
+        .split(" #")[0]
+        ?.trim()
+        .replace(/^["']|["']$/g, "") ?? "";
   }
   return out;
 }
@@ -62,7 +66,8 @@ function readEnvFile(path: string): Record<string, string> {
 function key(env: Record<string, string>, name: string): Hex {
   let v = env[name] ?? "";
   if (v && !v.startsWith("0x")) v = `0x${v}`;
-  if (!/^0x[0-9a-fA-F]{64}$/.test(v)) throw new Error(`${name} is missing or not a 32-byte hex key`);
+  if (!/^0x[0-9a-fA-F]{64}$/.test(v))
+    throw new Error(`${name} is missing or not a 32-byte hex key`);
   return v as Hex;
 }
 
@@ -73,7 +78,12 @@ function addr(env: Record<string, string>, name: string): Address {
 }
 
 function forgeBin(): string {
-  const local = join(homedir(), ".foundry", "bin", process.platform === "win32" ? "forge.exe" : "forge");
+  const local = join(
+    homedir(),
+    ".foundry",
+    "bin",
+    process.platform === "win32" ? "forge.exe" : "forge",
+  );
   return process.env["FORGE"] ?? (existsSync(local) ? local : "forge");
 }
 
@@ -89,7 +99,9 @@ const chain = defineChain({
 const pub = createPublicClient({ chain, transport: http(chainCfg.rpcUrl, { timeout: 30_000 }) });
 const actualChainId = await pub.getChainId();
 if (actualChainId !== preset.chainId) {
-  throw new Error(`RPC is chain ${actualChainId}, expected Arc testnet ${preset.chainId}; refusing to deploy`);
+  throw new Error(
+    `RPC is chain ${actualChainId}, expected Arc testnet ${preset.chainId}; refusing to deploy`,
+  );
 }
 
 const deployer = privateKeyToAccount(key(env, "DEPLOYER_PRIVATE_KEY"));
@@ -97,17 +109,27 @@ const operator = privateKeyToAccount(key(env, "OPERATOR_PRIVATE_KEY")).address;
 const quoter = privateKeyToAccount(key(env, "QUOTER_PRIVATE_KEY")).address;
 const treasury = addr(env, "TREASURY_ADDRESS");
 const adminWallet = addr(env, "ADMIN_WALLET");
-const wallet = createWalletClient({ account: deployer, chain, transport: http(chainCfg.rpcUrl, { timeout: 30_000 }) });
+const wallet = createWalletClient({
+  account: deployer,
+  chain,
+  transport: http(chainCfg.rpcUrl, { timeout: 30_000 }),
+});
 
 async function fees() {
   const est = await pub.estimateFeesPerGas();
   const floor = preset.minMaxFeePerGasWei;
   const maxFeePerGas = est.maxFeePerGas > floor ? est.maxFeePerGas : floor;
-  return { maxFeePerGas, maxPriorityFeePerGas: est.maxPriorityFeePerGas < maxFeePerGas ? est.maxPriorityFeePerGas : maxFeePerGas };
+  return {
+    maxFeePerGas,
+    maxPriorityFeePerGas:
+      est.maxPriorityFeePerGas < maxFeePerGas ? est.maxPriorityFeePerGas : maxFeePerGas,
+  };
 }
 
 const balance = await pub.getBalance({ address: deployer.address });
-console.log(`deployer ${deployer.address}: ${formatUnits(balance, preset.nativeCurrency.decimals)} USDC (gas)`);
+console.log(
+  `deployer ${deployer.address}: ${formatUnits(balance, preset.nativeCurrency.decimals)} USDC (gas)`,
+);
 if (balance === 0n) throw new Error("the deployer has no testnet USDC for gas");
 
 if (existsSync(DEPLOYMENT_FILE) && !process.argv.includes("--redeploy")) {
@@ -132,7 +154,9 @@ if (adminSafe) {
     functionName: "setup",
     args: [[adminWallet], 1n, ZERO, "0x", SAFE_FALLBACK_HANDLER, ZERO, 0n, ZERO],
   });
-  const saltNonce = BigInt(keccak256(stringToHex(`kazi-testnet-admin-${adminWallet.toLowerCase()}`)));
+  const saltNonce = BigInt(
+    keccak256(stringToHex(`kazi-testnet-admin-${adminWallet.toLowerCase()}`)),
+  );
   const { request, result } = await pub.simulateContract({
     account: deployer,
     address: SAFE_PROXY_FACTORY,
@@ -145,24 +169,41 @@ if (adminSafe) {
   const receipt = await pub.waitForTransactionReceipt({ hash });
   if (receipt.status !== "success") throw new Error(`Safe creation reverted (${hash})`);
   adminSafe = getAddress(result);
-  appendFileSync(ENV_FILE, `\n# Admin Safe v1.4.1 (owner ${adminWallet}, threshold 1), created ${new Date().toISOString()}\nADMIN_SAFE=${adminSafe}\n`);
+  appendFileSync(
+    ENV_FILE,
+    `\n# Admin Safe v1.4.1 (owner ${adminWallet}, threshold 1), created ${new Date().toISOString()}\nADMIN_SAFE=${adminSafe}\n`,
+  );
   console.log(`admin Safe created: ${adminSafe} (tx ${hash})`);
 }
 const owners = await pub.readContract({
   address: adminSafe,
-  abi: parseAbi(["function getOwners() view returns (address[])", "function getThreshold() view returns (uint256)"]),
+  abi: parseAbi([
+    "function getOwners() view returns (address[])",
+    "function getThreshold() view returns (uint256)",
+  ]),
   functionName: "getOwners",
 });
 const owner = owners.length === 1 ? owners[0] : undefined;
 if (!owner || getAddress(owner) !== adminWallet) {
-  throw new Error(`Safe ${adminSafe} owners are ${owners.join(", ")}, expected only ${adminWallet}`);
+  throw new Error(
+    `Safe ${adminSafe} owners are ${owners.join(", ")}, expected only ${adminWallet}`,
+  );
 }
 
 // ── 2. Contracts ─────────────────────────────────────────────────────────────
 console.log("deploying contracts with forge (this takes a minute)…");
 execFileSync(
   forgeBin(),
-  ["script", "script/Deploy.s.sol", "--rpc-url", chainCfg.rpcUrl, "--broadcast", "--slow", "--private-key", key(env, "DEPLOYER_PRIVATE_KEY")],
+  [
+    "script",
+    "script/Deploy.s.sol",
+    "--rpc-url",
+    chainCfg.rpcUrl,
+    "--broadcast",
+    "--slow",
+    "--private-key",
+    key(env, "DEPLOYER_PRIVATE_KEY"),
+  ],
   {
     cwd: CONTRACTS_DIR,
     stdio: ["ignore", "inherit", "inherit"],
@@ -205,8 +246,18 @@ const [arbiterRole, operatorRole, quoterRole, registrarRole, slasherRole] = awai
   pub.readContract({ address: registry, abi: agentRegistryAbi, functionName: "REGISTRAR_ROLE" }),
   pub.readContract({ address: vault, abi: stakingVaultAbi, functionName: "SLASHER_ROLE" }),
 ]);
-const has = (address: Address, abi: typeof taskEscrowAbi | typeof agentRegistryAbi | typeof stakingVaultAbi, r: Hex, who: Address) =>
-  pub.readContract({ address, abi: abi as typeof taskEscrowAbi, functionName: "hasRole", args: [r, who] });
+const has = (
+  address: Address,
+  abi: typeof taskEscrowAbi | typeof agentRegistryAbi | typeof stakingVaultAbi,
+  r: Hex,
+  who: Address,
+) =>
+  pub.readContract({
+    address,
+    abi: abi as typeof taskEscrowAbi,
+    functionName: "hasRole",
+    args: [r, who],
+  });
 const checks: [string, Promise<boolean>][] = [
   ["escrow admin = Safe", has(escrow, taskEscrowAbi, ADMIN_ROLE, adminSafe)],
   ["registry admin = Safe", has(registry, agentRegistryAbi, ADMIN_ROLE, adminSafe)],
@@ -214,9 +265,18 @@ const checks: [string, Promise<boolean>][] = [
   ["escrow arbiter = Safe", has(escrow, taskEscrowAbi, arbiterRole, adminSafe)],
   ["escrow operator", has(escrow, taskEscrowAbi, operatorRole, operator)],
   ["escrow quoter", has(escrow, taskEscrowAbi, quoterRole, quoter)],
-  ["deployer renounced escrow admin", has(escrow, taskEscrowAbi, ADMIN_ROLE, deployer.address).then((v) => !v)],
-  ["deployer renounced registry admin", has(registry, agentRegistryAbi, ADMIN_ROLE, deployer.address).then((v) => !v)],
-  ["registrar = deployer (house-agent setup)", has(registry, agentRegistryAbi, registrarRole, deployer.address)],
+  [
+    "deployer renounced escrow admin",
+    has(escrow, taskEscrowAbi, ADMIN_ROLE, deployer.address).then((v) => !v),
+  ],
+  [
+    "deployer renounced registry admin",
+    has(registry, agentRegistryAbi, ADMIN_ROLE, deployer.address).then((v) => !v),
+  ],
+  [
+    "registrar = deployer (house-agent setup)",
+    has(registry, agentRegistryAbi, registrarRole, deployer.address),
+  ],
   ["registrar = admin wallet", has(registry, agentRegistryAbi, registrarRole, adminWallet)],
   ["slasher = admin wallet", has(vault, stakingVaultAbi, slasherRole, adminWallet)],
 ];

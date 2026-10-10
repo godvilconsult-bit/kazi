@@ -3,7 +3,10 @@
  * sends credentials; an expired access token is refreshed once, transparently.
  */
 
-export const API_URL = (process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000").replace(/\/$/, "");
+export const API_URL = (process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:4000").replace(
+  /\/$/,
+  "",
+);
 
 export class ApiError extends Error {
   override readonly name = "ApiError";
@@ -20,7 +23,12 @@ let refreshing: Promise<boolean> | null = null;
 
 /** One refresh at a time; concurrent 401s wait for the same rotation. */
 function refreshSession(): Promise<boolean> {
-  refreshing ??= fetch(`${API_URL}/auth/refresh`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: "{}" })
+  refreshing ??= fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: "{}",
+  })
     .then((r) => r.ok)
     .catch(() => false)
     .finally(() => {
@@ -50,8 +58,14 @@ export async function api<T>(path: string, init: ApiInit = {}, retry = true): Pr
     if (await refreshSession()) return api<T>(path, init, false);
   }
   if (!res.ok) {
-    const err = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
-    throw new ApiError(res.status, err?.error?.code ?? `HTTP_${res.status}`, err?.error?.message ?? res.statusText);
+    const err = (await res.json().catch(() => null)) as {
+      error?: { code?: string; message?: string };
+    } | null;
+    throw new ApiError(
+      res.status,
+      err?.error?.code ?? `HTTP_${res.status}`,
+      err?.error?.message ?? res.statusText,
+    );
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;

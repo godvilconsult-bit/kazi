@@ -14,5 +14,7 @@ export function holderKey(holder: Address): Hex {
 
 /** providerKey(providerId) = keccak256(abi.encode("kazi.provider", providerId)). */
 export function providerKey(providerId: bigint): Hex {
-  return keccak256(encodeAbiParameters([{ type: "string" }, { type: "uint256" }], ["kazi.provider", providerId]));
+  return keccak256(
+    encodeAbiParameters([{ type: "string" }, { type: "uint256" }], ["kazi.provider", providerId]),
+  );
 }

@@ -41,7 +41,12 @@ export function StepStatusBadge({ status }: { status: SubtaskStatus }) {
   return <Badge tone={STEP_TONE[status]}>{t(status)}</Badge>;
 }
 
-const PROVIDER_TONE = { PENDING: "warn", ACTIVE: "ok", SUSPENDED: "bad", DELISTED: "neutral" } as const;
+const PROVIDER_TONE = {
+  PENDING: "warn",
+  ACTIVE: "ok",
+  SUSPENDED: "bad",
+  DELISTED: "neutral",
+} as const;
 
 export function ProviderStatusBadge({ status }: { status: keyof typeof PROVIDER_TONE }) {
   const t = useTranslations("provider");

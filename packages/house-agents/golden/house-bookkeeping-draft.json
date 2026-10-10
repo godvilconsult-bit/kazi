@@ -5,7 +5,13 @@
     "instructions": "Turn this M-Pesa business statement for a cosmetics shop into draft books for October.",
     "input": "Opening balance 1 Oct: KES 12,400\n02 Oct Received from customer Jane W. 3,500\n03 Oct Paid to Supplier Glow Ltd 8,000 (fee 52)\n05 Oct Received from customer 2,750\n09 Oct Pay bill KPLC 1,890 (fee 23)\n15 Oct Received from customer 6,200\n20 Oct Withdraw cash owner 4,000 (fee 87)\n28 Oct Paid shop rent 7,500 (fee 52)\nClosing balance 31 Oct: KES 3,346",
     "acceptance": {
-      "rubric": ["Ledger with running balance and source references", "M-Pesa fees in their own category", "Owner withdrawal categorised as owner drawings, not an expense", "Cash reconciliation matches the closing balance (12,400 + 12,450 - 21,390 - 214 = 3,246) or flags the difference with the stated 3,346", "Draft-for-review note"],
+      "rubric": [
+        "Ledger with running balance and source references",
+        "M-Pesa fees in their own category",
+        "Owner withdrawal categorised as owner drawings, not an expense",
+        "Cash reconciliation matches the closing balance (12,400 + 12,450 - 21,390 - 214 = 3,246) or flags the difference with the stated 3,346",
+        "Draft-for-review note"
+      ],
       "format": "markdown"
     },
     "expectPass": true
@@ -16,7 +22,12 @@
     "instructions": "Categorise these receipts for a small printing business and give totals per category.",
     "input": "R1 paper reams TZS 450,000; R2 toner TZS 380,000; R3 bajaji transport TZS 25,000; R4 electricity LUKU TZS 120,000; R5 lunch with client TZS 35,000; R6 printer repair TZS 210,000; R7 paper reams TZS 450,000 (same date as R1)",
     "acceptance": {
-      "rubric": ["Every receipt categorised with its reference", "Category totals add up to TZS 2,070,000", "Flags R7 as a possible duplicate of R1", "No invented transactions"],
+      "rubric": [
+        "Every receipt categorised with its reference",
+        "Category totals add up to TZS 2,070,000",
+        "Flags R7 as a possible duplicate of R1",
+        "No invented transactions"
+      ],
       "format": "markdown"
     },
     "expectPass": true
@@ -27,7 +38,12 @@
     "instructions": "From these weekly notes, draft an income statement for September for a juice stand.",
     "input": "Week 1 sales 410,000, fruit 160,000; week 2 sales 385,000, fruit 150,000; week 3 sales 450,000, fruit 172,000; week 4 sales 398,000, fruit 158,000. Stall fee 60,000 for the month. Helper wages 120,000 for the month. All TZS.",
     "acceptance": {
-      "rubric": ["Revenue 1,643,000 and cost of goods 640,000", "Gross profit 1,003,000; net profit 823,000", "Arithmetic shown", "Draft-for-review note"],
+      "rubric": [
+        "Revenue 1,643,000 and cost of goods 640,000",
+        "Gross profit 1,003,000; net profit 823,000",
+        "Arithmetic shown",
+        "Draft-for-review note"
+      ],
       "format": "markdown",
       "mustInclude": ["1,643,000"]
     },
@@ -39,7 +55,11 @@
     "instructions": "Prepare draft books from this bank statement for a tailoring business and point out anything that looks personal.",
     "input": "01 Mar opening 2,000,000\n03 Mar fabric purchase 640,000\n05 Mar school fees St Mary's 450,000\n10 Mar customer payments 1,150,000\n14 Mar sewing machine service 90,000\n22 Mar supermarket groceries 180,000\n30 Mar customer payments 980,000\nclosing 2,770,000 (TZS)",
     "acceptance": {
-      "rubric": ["School fees and groceries flagged as likely personal / owner drawings", "Reconciliation checks the closing balance", "Ledger with source references"],
+      "rubric": [
+        "School fees and groceries flagged as likely personal / owner drawings",
+        "Reconciliation checks the closing balance",
+        "Ledger with source references"
+      ],
       "format": "markdown"
     },
     "expectPass": true
@@ -50,7 +70,11 @@
     "instructions": "Do my books for last month.",
     "input": "",
     "acceptance": {
-      "rubric": ["Explains that no records were provided", "Lists what records are needed", "Does not invent transactions"],
+      "rubric": [
+        "Explains that no records were provided",
+        "Lists what records are needed",
+        "Does not invent transactions"
+      ],
       "format": "markdown"
     },
     "expectPass": true

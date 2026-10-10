@@ -41,28 +41,45 @@ export function Deliverables({
   return (
     <div className="space-y-4">
       {steps.map((s, i) => (
-        <article key={s.index} className="overflow-hidden rounded-xl border border-ink/80 bg-surface shadow-stamp-sm">
+        <article
+          key={s.index}
+          className="overflow-hidden rounded-xl border border-ink/80 bg-surface shadow-stamp-sm"
+        >
           <header className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-line px-5 py-3">
             <div className="min-w-0">
-              <p className="font-mono text-[11px] uppercase tracking-wider text-muted">{t("step", { n: i + 1 })}</p>
+              <p className="font-mono text-[11px] uppercase tracking-wider text-muted">
+                {t("step", { n: i + 1 })}
+              </p>
               <h3 className="font-display text-lg font-bold">{s.title}</h3>
               {s.provider ? <p className="text-sm text-muted">{s.provider.name}</p> : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              {s.score !== null ? <Badge tone="info">{t("score", { score: Math.round(s.score) })}</Badge> : null}
+              {s.score !== null ? (
+                <Badge tone="info">{t("score", { score: Math.round(s.score) })}</Badge>
+              ) : null}
               <StepStatusBadge status={s.status} />
             </div>
           </header>
           <div className="px-5 py-4">
-            {s.output?.text ? <Markdown>{s.output.text}</Markdown> : <p className="text-sm text-muted">{t("noOutput")}</p>}
+            {s.output?.text ? (
+              <Markdown>{s.output.text}</Markdown>
+            ) : (
+              <p className="text-sm text-muted">{t("noOutput")}</p>
+            )}
             {s.output && s.output.files.length > 0 ? (
               <div className="mt-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{t("files")}</p>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">
+                  {t("files")}
+                </p>
                 <ul className="flex flex-wrap gap-2">
                   {s.output.files.map((f, j) =>
                     f.fileId ? (
                       <li key={j}>
-                        <Button variant="outline" size="sm" onClick={() => void openFile(`/files/${f.fileId}/download-url`)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void openFile(`/files/${f.fileId}/download-url`)}
+                        >
                           <FileText className="size-4" />
                           {f.mime}
                           <Download className="size-3.5" />
@@ -79,7 +96,12 @@ export function Deliverables({
               {s.revisions > 0 ? (
                 <span className="text-sm text-muted">{t("revisionUsed")}</span>
               ) : (
-                <Button variant="ghost" size="sm" disabled={!canRevise || s.status !== "ACCEPTED"} onClick={() => onRevise(s.index)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!canRevise || s.status !== "ACCEPTED"}
+                  onClick={() => onRevise(s.index)}
+                >
                   {t("revision")}
                 </Button>
               )}
@@ -117,9 +139,21 @@ export function ReviewPanel({ task }: { task: TaskView }) {
       <div className="rounded-xl border border-ink bg-accent-soft p-5 shadow-stamp">
         <h2 className="font-display text-2xl font-extrabold">{t("reviewTitle")}</h2>
         <p className="mt-1 text-sm text-ink/80">{t("reviewIntro")}</p>
-        {task.reviewUntil ? <p className="mt-2 font-mono text-xs text-muted">{t("autoApprove", { time: relativeTime(task.reviewUntil, locale, now) })}</p> : null}
-        {done ? <Notice tone="ok" className="mt-3">{done}</Notice> : null}
-        {approve.error ? <Notice tone="bad" className="mt-3">{errorMessage(approve.error)}</Notice> : null}
+        {task.reviewUntil ? (
+          <p className="mt-2 font-mono text-xs text-muted">
+            {t("autoApprove", { time: relativeTime(task.reviewUntil, locale, now) })}
+          </p>
+        ) : null}
+        {done ? (
+          <Notice tone="ok" className="mt-3">
+            {done}
+          </Notice>
+        ) : null}
+        {approve.error ? (
+          <Notice tone="bad" className="mt-3">
+            {errorMessage(approve.error)}
+          </Notice>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
           <Button
             variant="ok"
@@ -152,13 +186,27 @@ export function ReviewPanel({ task }: { task: TaskView }) {
   );
 }
 
-function RevisionDialog({ taskId, index, position, onClose }: { taskId: string; index: number | null; position: number; onClose: () => void }) {
+function RevisionDialog({
+  taskId,
+  index,
+  position,
+  onClose,
+}: {
+  taskId: string;
+  index: number | null;
+  position: number;
+  onClose: () => void;
+}) {
   const t = useTranslations("task");
   const tc = useTranslations("common");
   const qc = useQueryClient();
   const [note, setNote] = useState("");
   const send = useMutation({
-    mutationFn: () => api(`/tasks/${taskId}/revision`, { method: "POST", body: { subtaskIndex: index, note: note.trim() } }),
+    mutationFn: () =>
+      api(`/tasks/${taskId}/revision`, {
+        method: "POST",
+        body: { subtaskIndex: index, note: note.trim() },
+      }),
     onSuccess: () => {
       setNote("");
       onClose();
@@ -175,7 +223,11 @@ function RevisionDialog({ taskId, index, position, onClose }: { taskId: string; 
           <Button variant="ghost" onClick={onClose}>
             {tc("cancel")}
           </Button>
-          <Button loading={send.isPending} disabled={note.trim().length < 10} onClick={() => send.mutate()}>
+          <Button
+            loading={send.isPending}
+            disabled={note.trim().length < 10}
+            onClick={() => send.mutate()}
+          >
             {t("revisionSend")}
           </Button>
         </>
@@ -183,15 +235,33 @@ function RevisionDialog({ taskId, index, position, onClose }: { taskId: string; 
     >
       <p className="mb-3 text-sm text-muted">{t("revisionHint")}</p>
       <Field label={t("revisionLabel")} htmlFor="revision-note">
-        <Textarea id="revision-note" rows={5} maxLength={2_000} value={note} onChange={(e) => setNote(e.target.value)} />
+        <Textarea
+          id="revision-note"
+          rows={5}
+          maxLength={2_000}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
       </Field>
-      {send.error ? <Notice tone="bad" className="mt-3">{errorMessage(send.error)}</Notice> : null}
+      {send.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(send.error)}
+        </Notice>
+      ) : null}
     </Dialog>
   );
 }
 
 /** Records the reason with the API, then opens the dispute onchain from the client's wallet. */
-export function DisputeDialog({ task, open, onClose }: { task: TaskView; open: boolean; onClose: () => void }) {
+export function DisputeDialog({
+  task,
+  open,
+  onClose,
+}: {
+  task: TaskView;
+  open: boolean;
+  onClose: () => void;
+}) {
   const t = useTranslations("task");
   const tc = useTranslations("common");
   const cfg = useKaziConfig();
@@ -209,10 +279,22 @@ export function DisputeDialog({ task, open, onClose }: { task: TaskView; open: b
       setStage("api");
       await api(`/tasks/${task.id}/dispute`, {
         method: "POST",
-        body: { reason: reason.trim(), evidence: evidence.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 10) },
+        body: {
+          reason: reason.trim(),
+          evidence: evidence
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .slice(0, 10),
+        },
       });
       setStage("wallet");
-      await write({ address: cfg.contracts.escrow, abi: taskEscrowAbi, functionName: "openDispute", args: [task.onchainId] });
+      await write({
+        address: cfg.contracts.escrow,
+        abi: taskEscrowAbi,
+        functionName: "openDispute",
+        args: [task.onchainId],
+      });
       setStage("done");
       void qc.invalidateQueries({ queryKey: ["task", task.id] });
     } catch (err) {
@@ -234,7 +316,12 @@ export function DisputeDialog({ task, open, onClose }: { task: TaskView; open: b
             <Button variant="ghost" onClick={onClose}>
               {tc("cancel")}
             </Button>
-            <Button variant="danger" loading={stage === "api" || stage === "wallet"} disabled={reason.trim().length < 10} onClick={() => void submit()}>
+            <Button
+              variant="danger"
+              loading={stage === "api" || stage === "wallet"}
+              disabled={reason.trim().length < 10}
+              onClick={() => void submit()}
+            >
               {t("disputeSend")}
             </Button>
           </>
@@ -247,14 +334,27 @@ export function DisputeDialog({ task, open, onClose }: { task: TaskView; open: b
         <div className="space-y-4">
           <p className="text-sm text-muted">{t("disputeIntro")}</p>
           <Field label={t("disputeReason")} htmlFor="dispute-reason">
-            <Textarea id="dispute-reason" rows={4} maxLength={4_000} value={reason} onChange={(e) => setReason(e.target.value)} />
+            <Textarea
+              id="dispute-reason"
+              rows={4}
+              maxLength={4_000}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
           </Field>
           <Field label={t("disputeEvidence")} htmlFor="dispute-evidence">
-            <Textarea id="dispute-evidence" rows={3} value={evidence} onChange={(e) => setEvidence(e.target.value)} />
+            <Textarea
+              id="dispute-evidence"
+              rows={3}
+              value={evidence}
+              onChange={(e) => setEvidence(e.target.value)}
+            />
           </Field>
           <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
             <li className={stage === "api" ? "font-semibold text-ink" : ""}>{t("disputeStep1")}</li>
-            <li className={stage === "wallet" ? "font-semibold text-ink" : ""}>{t("disputeStep2")}</li>
+            <li className={stage === "wallet" ? "font-semibold text-ink" : ""}>
+              {t("disputeStep2")}
+            </li>
           </ol>
           {error ? <Notice tone="bad">{error}</Notice> : null}
         </div>

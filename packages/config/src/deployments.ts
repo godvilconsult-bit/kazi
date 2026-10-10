@@ -43,7 +43,10 @@ export const tokenLaunchSchema = z.object({
 export type TokenLaunch = z.infer<typeof tokenLaunchSchema>;
 
 /** The token launch for a network, or null when the token hasn't launched there yet. */
-export function loadTokenLaunch(network: KaziNetwork, dir: string = DEFAULT_DEPLOYMENTS_DIR): TokenLaunch | null {
+export function loadTokenLaunch(
+  network: KaziNetwork,
+  dir: string = DEFAULT_DEPLOYMENTS_DIR,
+): TokenLaunch | null {
   const path = resolve(dir, `${network}-token-launch.json`);
   if (!existsSync(path)) return null;
   return tokenLaunchSchema.parse(JSON.parse(readFileSync(path, "utf8")));

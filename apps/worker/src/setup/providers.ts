@@ -56,7 +56,12 @@ export async function registerKaziProviders(opts: SetupOptions): Promise<SetupRe
     args: [0],
   });
 
-  async function send(address: Address, abi: readonly unknown[], functionName: string, args: readonly unknown[]) {
+  async function send(
+    address: Address,
+    abi: readonly unknown[],
+    functionName: string,
+    args: readonly unknown[],
+  ) {
     const fees = await opts.publicClient.estimateFeesPerGas();
     const floor = opts.minMaxFeePerGasWei ?? 0n;
     const maxFeePerGas = fees.maxFeePerGas > floor ? fees.maxFeePerGas : floor;
@@ -67,7 +72,8 @@ export async function registerKaziProviders(opts: SetupOptions): Promise<SetupRe
       functionName: functionName as never,
       args: args as never,
       maxFeePerGas,
-      maxPriorityFeePerGas: fees.maxPriorityFeePerGas < maxFeePerGas ? fees.maxPriorityFeePerGas : maxFeePerGas,
+      maxPriorityFeePerGas:
+        fees.maxPriorityFeePerGas < maxFeePerGas ? fees.maxPriorityFeePerGas : maxFeePerGas,
     });
     const hash = await wallet.writeContract(request as never);
     const receipt = await opts.publicClient.waitForTransactionReceipt({ hash });

@@ -38,7 +38,9 @@ export default function PointsPage() {
           <Rules />
         </aside>
       </div>
-      <p className="mt-10 border-t border-dashed border-line pt-4 text-xs text-muted">{t("disclaimer")}</p>
+      <p className="mt-10 border-t border-dashed border-line pt-4 text-xs text-muted">
+        {t("disclaimer")}
+      </p>
     </PageBody>
   );
 }
@@ -47,14 +49,22 @@ function Mine() {
   const t = useTranslations("points");
   const locale = useLocale();
   const { user } = useAuth();
-  const q = useQuery({ queryKey: ["points", "me", user?.id], queryFn: () => api<PointsMe>("/points/me"), enabled: Boolean(user) });
+  const q = useQuery({
+    queryKey: ["points", "me", user?.id],
+    queryFn: () => api<PointsMe>("/points/me"),
+    enabled: Boolean(user),
+  });
   if (q.isLoading || !q.data) return <Skeleton className="h-48" />;
   const { total, entries } = q.data;
   return (
     <>
       <Card>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("yourTotal")}</p>
-        <p className="num mt-1 font-display text-4xl font-extrabold">{total.toLocaleString(locale)}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+          {t("yourTotal")}
+        </p>
+        <p className="num mt-1 font-display text-4xl font-extrabold">
+          {total.toLocaleString(locale)}
+        </p>
       </Card>
       <section>
         <SectionTitle>{t("history")}</SectionTitle>
@@ -73,22 +83,36 @@ function Mine() {
               </thead>
               <tbody>
                 {entries.map((e) => (
-                  <tr key={`${e.taskId}-${e.role}`} className="border-b border-dashed border-line align-top last:border-0">
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted">{formatDate(e.at, locale)}</td>
+                  <tr
+                    key={`${e.taskId}-${e.role}`}
+                    className="border-b border-dashed border-line align-top last:border-0"
+                  >
+                    <td className="whitespace-nowrap px-4 py-3 text-xs text-muted">
+                      {formatDate(e.at, locale)}
+                    </td>
                     <td className="px-4 py-3">
                       {e.role === "CLIENT" ? (
-                        <Link href={`/tasks/${e.taskId}`} className="font-semibold hover:text-accent">
+                        <Link
+                          href={`/tasks/${e.taskId}`}
+                          className="font-semibold hover:text-accent"
+                        >
                           {e.title ?? e.taskId}
                         </Link>
                       ) : (
                         <span className="font-semibold">{e.title ?? e.taskId}</span>
                       )}
-                      {e.flag ? <p className="mt-1 text-xs text-warn">{flagText(t, e.flag)}</p> : null}
+                      {e.flag ? (
+                        <p className="mt-1 text-xs text-warn">{flagText(t, e.flag)}</p>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
-                      <Badge tone={e.role === "CLIENT" ? "info" : "accent"}>{e.role === "CLIENT" ? t("role_CLIENT") : t("role_PROVIDER")}</Badge>
+                      <Badge tone={e.role === "CLIENT" ? "info" : "accent"}>
+                        {e.role === "CLIENT" ? t("role_CLIENT") : t("role_PROVIDER")}
+                      </Badge>
                     </td>
-                    <td className="num px-4 py-3 text-right font-bold">{e.points.toLocaleString(locale)}</td>
+                    <td className="num px-4 py-3 text-right font-bold">
+                      {e.points.toLocaleString(locale)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -150,9 +174,19 @@ function Rules() {
     <Card>
       <h2 className="font-display text-lg font-bold">{t("rules")}</h2>
       <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
-        <li>{t("rule1", { client: CLIENT_POINTS_PER_USDC.toString(), provider: PROVIDER_POINTS_PER_USDC.toString() })}</li>
+        <li>
+          {t("rule1", {
+            client: CLIENT_POINTS_PER_USDC.toString(),
+            provider: PROVIDER_POINTS_PER_USDC.toString(),
+          })}
+        </li>
         <li>{t("rule2")}</li>
-        <li>{t("rule3", { limit: POINTS_REPEAT_PAIR_LIMIT, cap: POINTS_DAILY_CAP.toLocaleString(locale) })}</li>
+        <li>
+          {t("rule3", {
+            limit: POINTS_REPEAT_PAIR_LIMIT,
+            cap: POINTS_DAILY_CAP.toLocaleString(locale),
+          })}
+        </li>
       </ul>
     </Card>
   );

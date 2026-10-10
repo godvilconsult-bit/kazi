@@ -26,7 +26,10 @@ const submitSchema = z
     files: z.array(z.string().min(1).max(64)).max(20).default([]),
   })
   .strict()
-  .refine((v) => (v.text?.trim().length ?? 0) > 0 || v.files.length > 0, "text or files is required");
+  .refine(
+    (v) => (v.text?.trim().length ?? 0) > 0 || v.files.length > 0,
+    "text or files is required",
+  );
 
 export function freelancerRoutes(s: AppServices) {
   /** The caller's accepted offer on this subtask's current attempt, or 404. */
@@ -46,7 +49,11 @@ export function freelancerRoutes(s: AppServices) {
   }
 
   /** Files a freelancer may open for a step: the client's attachments + outputs of the steps it depends on. */
-  async function workFiles(st: { taskId: string; dependsOn: number[]; task: { attachments: Prisma.JsonValue } }) {
+  async function workFiles(st: {
+    taskId: string;
+    dependsOn: number[];
+    task: { attachments: Prisma.JsonValue };
+  }) {
     const ids = Array.isArray(st.task.attachments)
       ? st.task.attachments.filter((v): v is string => typeof v === "string")
       : [];
@@ -61,7 +68,11 @@ export function freelancerRoutes(s: AppServices) {
     for (const d of deps) {
       const out = capabilityOutputSchema.safeParse(d.output);
       if (!out.success) continue;
-      if (out.data.text) sections.push({ title: `Step ${d.subtask.index + 1}: ${d.subtask.title}`, text: out.data.text });
+      if (out.data.text)
+        sections.push({
+          title: `Step ${d.subtask.index + 1}: ${d.subtask.title}`,
+          text: out.data.text,
+        });
       for (const f of out.data.files ?? []) {
         const m = KAZI_FILE.exec(f.url);
         if (m?.[1]) ids.push(m[1]);
@@ -84,12 +95,17 @@ export function freelancerRoutes(s: AppServices) {
           provider: { ownerId: auth.userId, kind: "HUMAN" },
           OR: [
             { status: "OFFERED", expiresAt: { gt: now } },
-            { status: "ACCEPTED", subtask: { status: { in: ["DISPATCHED", "SUBMITTED", "EVALUATING"] } } },
+            {
+              status: "ACCEPTED",
+              subtask: { status: { in: ["DISPATCHED", "SUBMITTED", "EVALUATING"] } },
+            },
           ],
         },
         orderBy: { createdAt: "desc" },
         take: 100,
-        include: { subtask: { include: { task: { select: { title: true, deadline: true, feeBps: true } } } } },
+        include: {
+          subtask: { include: { task: { select: { title: true, deadline: true, feeBps: true } } } },
+        },
       });
       return {
         offers: offers
@@ -128,17 +144,27 @@ export function freelancerRoutes(s: AppServices) {
           : null;
         if (!st || !offer) throw notFound("Offer");
         if (offer.status === "ACCEPTED") return offer.id; // idempotent
-        if (offer.status !== "OFFERED" || st.status !== "DISPATCHED") throw invalidState("This offer is no longer open");
+        if (offer.status !== "OFFERED" || st.status !== "DISPATCHED")
+          throw invalidState("This offer is no longer open");
         if (offer.expiresAt <= now) throw invalidState("This offer has expired");
-        const taken = await tx.offer.count({ where: { subtaskId, attempt: st.attempts, status: "ACCEPTED" } });
+        const taken = await tx.offer.count({
+          where: { subtaskId, attempt: st.attempts, status: "ACCEPTED" },
+        });
         if (taken > 0) throw invalidState("Someone else accepted this work first");
-        await tx.offer.update({ where: { id: offer.id }, data: { status: "ACCEPTED", respondedAt: now } });
+        await tx.offer.update({
+          where: { id: offer.id },
+          data: { status: "ACCEPTED", respondedAt: now },
+        });
         await tx.offer.updateMany({
           where: { subtaskId, attempt: st.attempts, status: "OFFERED" },
           data: { status: "WITHDRAWN" },
         });
         await tx.taskEvent.create({
-          data: { taskId: st.taskId, type: "OFFER_ACCEPTED", data: { subtaskId, wave: offer.wave } },
+          data: {
+            taskId: st.taskId,
+            type: "OFFER_ACCEPTED",
+            data: { subtaskId, wave: offer.wave },
+          },
         });
         return offer.id;
       });
@@ -213,7 +239,9 @@ export function freelancerRoutes(s: AppServices) {
         const body = parse(submitSchema, req.body);
         if (st.status !== "DISPATCHED") throw invalidState("This step isn't waiting for work");
         if (st.providerId !== offer.providerId) {
-          throw invalidState("Your assignment is still being confirmed onchain — try again in a minute");
+          throw invalidState(
+            "Your assignment is still being confirmed onchain — try again in a minute",
+          );
         }
         const rows = await s.prisma.fileObject.findMany({ where: { id: { in: body.files } } });
         if (rows.length !== new Set(body.files).size) throw badRequest("unknown file");
@@ -223,7 +251,9 @@ export function freelancerRoutes(s: AppServices) {
           if (f.status !== "UPLOADED") throw badRequest(`${f.filename} hasn't finished uploading`);
           let sha256 = f.sha256 && /^[0-9a-f]{64}$/.test(f.sha256) ? f.sha256 : null;
           if (!sha256) {
-            sha256 = createHash("sha256").update(await s.storage.download(f.key, MAX_FILE_BYTES)).digest("hex");
+            sha256 = createHash("sha256")
+              .update(await s.storage.download(f.key, MAX_FILE_BYTES))
+              .digest("hex");
           }
           files.push({ url: `kazi://files/${f.id}`, sha256, mime: f.mime });
         }
@@ -246,7 +276,12 @@ export function freelancerRoutes(s: AppServices) {
         await s.jobs.enqueue(
           "executor",
           "agentResult",
-          { subtaskId: st.id, attempt: st.attempts, callback: { status: "completed", output }, receivedAt: receivedAt.toISOString() },
+          {
+            subtaskId: st.id,
+            attempt: st.attempts,
+            callback: { status: "completed", output },
+            receivedAt: receivedAt.toISOString(),
+          },
           jobIds.agentResult(st.id, st.attempts, "completed", receivedAt.getTime()),
         );
         return { status: "SUBMITTED" };

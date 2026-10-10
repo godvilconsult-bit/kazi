@@ -69,7 +69,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         statement: "Sign in to Kazi",
       });
       const signature = await signMessageAsync({ message });
-      const { user } = await api<{ user: User }>("/auth/verify", { method: "POST", body: { message, signature } });
+      const { user } = await api<{ user: User }>("/auth/verify", {
+        method: "POST",
+        body: { message, signature },
+      });
       qc.setQueryData(["me"], user);
       await qc.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "me" });
       return true;

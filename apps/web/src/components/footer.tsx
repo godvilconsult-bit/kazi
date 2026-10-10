@@ -16,10 +16,14 @@ export function Footer() {
         <div className="max-w-sm">
           <Logo />
           <p className="mt-3 text-sm text-muted">{t("about")}</p>
-          <p className="mt-3 font-mono text-xs text-muted">{t("network", { name: cfg.chain.name })}</p>
+          <p className="mt-3 font-mono text-xs text-muted">
+            {t("network", { name: cfg.chain.name })}
+          </p>
         </div>
         <div>
-          <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">{t("product")}</p>
+          <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">
+            {t("product")}
+          </p>
           <ul className="space-y-1.5 text-sm">
             <li>
               <Link href="/new" className="hover:text-accent">
@@ -39,7 +43,9 @@ export function Footer() {
           </ul>
         </div>
         <div>
-          <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">{t("build")}</p>
+          <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">
+            {t("build")}
+          </p>
           <ul className="space-y-1.5 text-sm">
             <li>
               <Link href="/developers" className="hover:text-accent">
@@ -54,7 +60,9 @@ export function Footer() {
           </ul>
         </div>
         <div>
-          <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">{t("token")}</p>
+          <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">
+            {t("token")}
+          </p>
           <ul className="space-y-1.5 text-sm">
             {(["token", "stake", "points", "airdrop"] as const).map((page) => (
               <li key={page}>
@@ -66,7 +74,9 @@ export function Footer() {
           </ul>
         </div>
       </Container>
-      <Container className="border-t border-dashed border-line py-4 text-xs text-muted">{t("rights", { year: new Date().getFullYear() })}</Container>
+      <Container className="border-t border-dashed border-line py-4 text-xs text-muted">
+        {t("rights", { year: new Date().getFullYear() })}
+      </Container>
     </footer>
   );
 }

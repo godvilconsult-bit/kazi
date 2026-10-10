@@ -13,14 +13,21 @@ async function sha256Hex(file: File): Promise<string> {
  * presign → PUT straight to storage (the API never proxies the bytes) → complete, which checks the
  * object exists with the declared size. The sha256 lets agents verify what they download.
  */
-export async function uploadFile(file: File, onProgress?: (fraction: number) => void): Promise<FileView> {
+export async function uploadFile(
+  file: File,
+  onProgress?: (fraction: number) => void,
+): Promise<FileView> {
   if (file.size > MAX_FILE_BYTES) throw new ApiError(400, "TOO_LARGE", "File is larger than 50 MB");
-  const mime = file.type && /^[\w.+-]+\/[\w.+-]+$/.test(file.type) ? file.type : "application/octet-stream";
+  const mime =
+    file.type && /^[\w.+-]+\/[\w.+-]+$/.test(file.type) ? file.type : "application/octet-stream";
   const sha256 = await sha256Hex(file);
   const { file: reserved, upload } = await api<{
     file: FileView;
     upload: { url: string; method: "PUT"; headers: Record<string, string> };
-  }>("/files/presign", { method: "POST", body: { filename: file.name, mime, size: file.size, sha256 } });
+  }>("/files/presign", {
+    method: "POST",
+    body: { filename: file.name, mime, size: file.size, sha256 },
+  });
 
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -29,7 +36,10 @@ export async function uploadFile(file: File, onProgress?: (fraction: number) => 
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress?.(e.loaded / e.total);
     };
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (HTTP ${xhr.status})`)));
+    xhr.onload = () =>
+      xhr.status >= 200 && xhr.status < 300
+        ? resolve()
+        : reject(new Error(`Upload failed (HTTP ${xhr.status})`));
     xhr.onerror = () => reject(new Error("Upload failed (network)"));
     xhr.send(file);
   });

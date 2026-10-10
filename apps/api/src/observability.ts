@@ -10,9 +10,18 @@ import { Histogram, Registry, collectDefaultMetrics } from "prom-client";
 
 export type ErrorReporter = (err: unknown, context: Record<string, unknown>) => void;
 
-export function initSentry(dsn: string | undefined, environment: string): ErrorReporter | undefined {
+export function initSentry(
+  dsn: string | undefined,
+  environment: string,
+): ErrorReporter | undefined {
   if (!dsn) return undefined;
-  Sentry.init({ dsn, environment, sendDefaultPii: false, tracesSampleRate: 0, initialScope: { tags: { service: "api" } } });
+  Sentry.init({
+    dsn,
+    environment,
+    sendDefaultPii: false,
+    tracesSampleRate: 0,
+    initialScope: { tags: { service: "api" } },
+  });
   return (err, context) => void Sentry.captureException(err, { extra: context });
 }
 
@@ -31,12 +40,16 @@ export function registerMetrics(app: FastifyInstance, token: string | undefined)
     // Route templates (/tasks/:id), never raw URLs: bounded label cardinality, no ids in metrics.
     const route = req.routeOptions.url ?? "unmatched";
     if (route === "/metrics") return;
-    duration.observe({ method: req.method, route, status: String(reply.statusCode) }, reply.elapsedTime / 1000);
+    duration.observe(
+      { method: req.method, route, status: String(reply.statusCode) },
+      reply.elapsedTime / 1000,
+    );
   });
   const expected = Buffer.from(`Bearer ${token}`);
   app.get("/metrics", async (req, reply) => {
     const given = Buffer.from(req.headers.authorization ?? "");
-    if (given.length !== expected.length || !timingSafeEqual(given, expected)) return reply.status(401).send();
+    if (given.length !== expected.length || !timingSafeEqual(given, expected))
+      return reply.status(401).send();
     return reply.header("content-type", registry.contentType).send(await registry.metrics());
   });
 }

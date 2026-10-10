@@ -16,7 +16,8 @@ const env = loadEnv(
     KAZI_LLM_MOCK: z.preprocess((v) => (v === "" ? undefined : v), z.enum(["e2e"]).optional()),
   }),
 );
-if (env.KAZI_LLM_MOCK && env.NODE_ENV === "production") throw new Error("KAZI_LLM_MOCK is not allowed in production");
+if (env.KAZI_LLM_MOCK && env.NODE_ENV === "production")
+  throw new Error("KAZI_LLM_MOCK is not allowed in production");
 const log = pino({
   level: "info",
   ...(env.NODE_ENV === "development" ? { transport: { target: "pino-pretty" } } : {}),

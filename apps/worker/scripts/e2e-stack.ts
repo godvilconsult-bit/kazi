@@ -19,7 +19,13 @@ import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { SecretBox, deriveHouseAgentSecret } from "@kazi/config/secrets";
 import { createPrismaClient } from "@kazi/db";
-import { CAPABILITY_DEFINITIONS, HOUSE_AGENT_LISTINGS, SERVICE_FEE_PROVIDER, kaziTokenAbi, mockUsdcAbi } from "@kazi/shared";
+import {
+  CAPABILITY_DEFINITIONS,
+  HOUSE_AGENT_LISTINGS,
+  SERVICE_FEE_PROVIDER,
+  kaziTokenAbi,
+  mockUsdcAbi,
+} from "@kazi/shared";
 import { planAirdrop } from "../src/points/airdrop";
 import { registerKaziProviders } from "../src/setup/providers";
 import { KEYS, sendTx, startLocalChain } from "../test/anvil";
@@ -34,7 +40,12 @@ const log = pino({ level: "info" });
 const children: ChildProcess[] = [];
 
 function forgeBin(): string {
-  const local = join(homedir(), ".foundry", "bin", process.platform === "win32" ? "forge.exe" : "forge");
+  const local = join(
+    homedir(),
+    ".foundry",
+    "bin",
+    process.platform === "win32" ? "forge.exe" : "forge",
+  );
   return process.env["FORGE_BIN"] ?? (existsSync(local) ? local : "forge");
 }
 
@@ -111,12 +122,18 @@ const common: Record<string, string> = {
 
 // ── Database: clean slate + the providers this flow needs ────────────────────
 const prisma = createPrismaClient(common["DATABASE_URL"] ?? "");
-const tables = await prisma.$queryRaw<{ tablename: string }[]>`select tablename from pg_tables where schemaname = 'public' and tablename <> '_prisma_migrations'`;
-await prisma.$executeRawUnsafe(`TRUNCATE ${tables.map((t) => `"${t.tablename}"`).join(", ")} RESTART IDENTITY CASCADE`);
+const tables = await prisma.$queryRaw<
+  { tablename: string }[]
+>`select tablename from pg_tables where schemaname = 'public' and tablename <> '_prisma_migrations'`;
+await prisma.$executeRawUnsafe(
+  `TRUNCATE ${tables.map((t) => `"${t.tablename}"`).join(", ")} RESTART IDENTITY CASCADE`,
+);
 for (const c of CAPABILITY_DEFINITIONS) {
   await prisma.capability.create({ data: { slug: c.slug, description: c.description } });
 }
-const owner = await prisma.user.create({ data: { wallet: admin.toLowerCase(), roles: ["CLIENT", "PROVIDER_OWNER", "ADMIN"] } });
+const owner = await prisma.user.create({
+  data: { wallet: admin.toLowerCase(), roles: ["CLIENT", "PROVIDER_OWNER", "ADMIN"] },
+});
 const box = new SecretBox(encryptionKey);
 // Only the provider the scripted plan uses (fewer onchain registrations, faster start).
 for (const a of HOUSE_AGENT_LISTINGS.filter((l) => l.slug === "house-business-plan-writer")) {
@@ -174,32 +191,58 @@ const airdropPlan = planAirdrop({
 // forge may only write under packages/config/deployments (foundry.toml fs_permissions).
 const launchOut = resolve(root, "packages/config/deployments/e2e/local-token-launch.json");
 mkdirSync(dirname(launchOut), { recursive: true });
-execFileSync(forgeBin(), ["script", "script/DeployTokenLaunch.s.sol", "--rpc-url", chain.rpcUrl, "--broadcast", "--private-key", KEYS.admin], {
-  cwd: resolve(root, "packages/contracts"),
-  stdio: ["ignore", "ignore", "inherit"],
-  env: {
-    ...process.env,
-    KAZI_NETWORK: "local",
-    KAZI_TOKEN: chain.deployment.kaziToken,
-    ADMIN_SAFE: admin,
-    TEAM_BENEFICIARY: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f", // anvil #8
-    ECOSYSTEM_BENEFICIARY: "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720", // anvil #9
-    TREASURY_ADDRESS: treasury,
-    LIQUIDITY_ADDRESS: admin, // admin keeps liquidity + community: it funds the staking test below
-    COMMUNITY_ADDRESS: admin,
-    AIRDROP_MERKLE_ROOT: airdropPlan.root,
-    TOKEN_LAUNCH_OUT: launchOut,
+execFileSync(
+  forgeBin(),
+  [
+    "script",
+    "script/DeployTokenLaunch.s.sol",
+    "--rpc-url",
+    chain.rpcUrl,
+    "--broadcast",
+    "--private-key",
+    KEYS.admin,
+  ],
+  {
+    cwd: resolve(root, "packages/contracts"),
+    stdio: ["ignore", "ignore", "inherit"],
+    env: {
+      ...process.env,
+      KAZI_NETWORK: "local",
+      KAZI_TOKEN: chain.deployment.kaziToken,
+      ADMIN_SAFE: admin,
+      TEAM_BENEFICIARY: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f", // anvil #8
+      ECOSYSTEM_BENEFICIARY: "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720", // anvil #9
+      TREASURY_ADDRESS: treasury,
+      LIQUIDITY_ADDRESS: admin, // admin keeps liquidity + community: it funds the staking test below
+      COMMUNITY_ADDRESS: admin,
+      AIRDROP_MERKLE_ROOT: airdropPlan.root,
+      TOKEN_LAUNCH_OUT: launchOut,
+    },
   },
-});
+);
 copyFileSync(launchOut, resolve(deploymentsDir, "local-token-launch.json"));
 await prisma.airdropAllocation.createMany({
-  data: airdropPlan.allocations.map((a) => ({ airdropId: AIRDROP_ID, wallet: a.wallet.toLowerCase(), amount: a.amount.toString(), proof: a.proof })),
+  data: airdropPlan.allocations.map((a) => ({
+    airdropId: AIRDROP_ID,
+    wallet: a.wallet.toLowerCase(),
+    amount: a.amount.toString(),
+    proof: a.proof,
+  })),
 });
-await sendTx(chain, KEYS.admin, chain.deployment.kaziToken, kaziTokenAbi, "transfer", [client, 10_000n * KAZI]);
+await sendTx(chain, KEYS.admin, chain.deployment.kaziToken, kaziTokenAbi, "transfer", [
+  client,
+  10_000n * KAZI,
+]);
 await prisma.$disconnect();
 
 // The test client gets 1,000 test USDC.
-const usdcDecimals = Number(await chain.publicClient.readContract({ address: chain.deployment.usdc, abi: mockUsdcAbi, functionName: "decimals" }));
+const usdcDecimals = Number(
+  await chain.publicClient.readContract({
+    address: chain.deployment.usdc,
+    abi: mockUsdcAbi,
+    functionName: "decimals",
+  }),
+);
 const minted = await chain.wallet(KEYS.admin).writeContract({
   address: chain.deployment.usdc,
   abi: mockUsdcAbi,
@@ -212,7 +255,12 @@ await chain.publicClient.waitForTransactionReceipt({ hash: minted });
 
 // ── Processes ────────────────────────────────────────────────────────────────
 function start(name: string, args: string[], extra: Record<string, string> = {}) {
-  const child = spawn("pnpm", args, { cwd: root, env: { ...process.env, ...common, ...extra }, stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
+  const child = spawn("pnpm", args, {
+    cwd: root,
+    env: { ...process.env, ...common, ...extra },
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: process.platform === "win32",
+  });
   const tag = (line: string) => line.trim() && process.stdout.write(`[${name}] ${line}\n`);
   child.stdout?.on("data", (d: Buffer) => d.toString().split("\n").forEach(tag));
   child.stderr?.on("data", (d: Buffer) => d.toString().split("\n").forEach(tag));
@@ -237,14 +285,15 @@ async function waitFor(url: string, label: string, timeoutMs = 300_000) {
 start("house", ["--filter", "@kazi/house-agents", "start"]);
 start("api", ["--filter", "@kazi/api", "start"]);
 start("worker", ["--filter", "@kazi/worker", "start"]);
-if (!LOAD) start("web", ["--filter", "@kazi/web", "exec", "next", "dev", "--port", String(PORTS.web)], {
-  NEXT_PUBLIC_API_URL: `http://localhost:${PORTS.api}`,
-  NEXT_PUBLIC_E2E_WALLET: client,
-  NEXT_DIST_DIR: ".next-e2e",
-  // Geo hooks: the spec sends cf-ipcountry: US to see the restricted staking page.
-  GEO_RESTRICTED_COUNTRIES: "US",
-  GEO_COUNTRY_HEADER: "cf-ipcountry",
-});
+if (!LOAD)
+  start("web", ["--filter", "@kazi/web", "exec", "next", "dev", "--port", String(PORTS.web)], {
+    NEXT_PUBLIC_API_URL: `http://localhost:${PORTS.api}`,
+    NEXT_PUBLIC_E2E_WALLET: client,
+    NEXT_DIST_DIR: ".next-e2e",
+    // Geo hooks: the spec sends cf-ipcountry: US to see the restricted staking page.
+    GEO_RESTRICTED_COUNTRIES: "US",
+    GEO_COUNTRY_HEADER: "cf-ipcountry",
+  });
 try {
   await waitFor(`http://127.0.0.1:${PORTS.house}/health`, "house agents");
   await waitFor(`http://localhost:${PORTS.api}/health`, "api");
@@ -257,6 +306,16 @@ try {
 // The load driver reads where everything runs from here.
 writeFileSync(
   resolve(deploymentsDir, "stack.json"),
-  JSON.stringify({ api: `http://localhost:${PORTS.api}`, web: `http://localhost:${PORTS.web}`, rpcUrl: chain.rpcUrl, usdc: chain.deployment.usdc, escrow: chain.deployment.taskEscrow }, null, 2),
+  JSON.stringify(
+    {
+      api: `http://localhost:${PORTS.api}`,
+      web: `http://localhost:${PORTS.web}`,
+      rpcUrl: chain.rpcUrl,
+      usdc: chain.deployment.usdc,
+      escrow: chain.deployment.taskEscrow,
+    },
+    null,
+    2,
+  ),
 );
 log.info({ web: `http://localhost:${PORTS.web}`, client, rpc: chain.rpcUrl }, "e2e stack ready");

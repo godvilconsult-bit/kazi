@@ -34,7 +34,12 @@ export interface AlertOptions {
 }
 
 export interface Alerter {
-  send(kind: AlertKind, summary: string, details?: Record<string, unknown>, opts?: AlertOptions): Promise<boolean>;
+  send(
+    kind: AlertKind,
+    summary: string,
+    details?: Record<string, unknown>,
+    opts?: AlertOptions,
+  ): Promise<boolean>;
 }
 
 export interface AlerterDeps {
@@ -43,7 +48,8 @@ export interface AlerterDeps {
   prefix?: string | undefined;
   webhookUrl?: string | undefined;
   /** Sentry (or any sink) — given the formatted message and severity. */
-  report?: ((message: string, severity: Severity, details: Record<string, unknown>) => void) | undefined;
+  report?:
+    ((message: string, severity: Severity, details: Record<string, unknown>) => void) | undefined;
   onSent?: ((kind: AlertKind, severity: Severity) => void) | undefined;
   fetchImpl?: typeof fetch;
 }
@@ -71,7 +77,13 @@ export function createAlerter(deps: AlerterDeps): Alerter {
       const dedupeSec = opts.dedupeSec ?? 15 * 60;
       try {
         if (dedupeSec > 0 && deps.redis) {
-          const fresh = await deps.redis.set(`${deps.prefix ?? "kazi"}:alert:${kind}:${opts.key ?? "-"}`, "1", "EX", dedupeSec, "NX");
+          const fresh = await deps.redis.set(
+            `${deps.prefix ?? "kazi"}:alert:${kind}:${opts.key ?? "-"}`,
+            "1",
+            "EX",
+            dedupeSec,
+            "NX",
+          );
           if (fresh === null) return false;
         }
       } catch (err) {
@@ -92,10 +104,14 @@ export function createAlerter(deps: AlerterDeps): Alerter {
           const res = await doFetch(deps.webhookUrl, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ text, content: text, kind, severity, details }, (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v)),
+            body: JSON.stringify(
+              { text, content: text, kind, severity, details },
+              (_k, v: unknown) => (typeof v === "bigint" ? v.toString() : v),
+            ),
             signal: AbortSignal.timeout(5_000),
           });
-          if (!res.ok) deps.log.warn({ status: res.status, kind }, "alert webhook rejected the alert");
+          if (!res.ok)
+            deps.log.warn({ status: res.status, kind }, "alert webhook rejected the alert");
         } catch (err) {
           deps.log.warn({ err, kind }, "alert webhook unreachable");
         }

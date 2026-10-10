@@ -37,7 +37,8 @@ export const executorEnvSchema = z.object({
 });
 
 /** Empty env values count as unset. */
-const optionalString = <T extends z.ZodType>(schema: T) => z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
+const optionalString = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
 
 /**
  * Platform signers (docs/09 §3, docs/runbooks/deploy.md §4): `aws-kms` in production; `env` private
@@ -50,8 +51,12 @@ export const signerBackendEnvSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((v) => v === "true"),
-  OPERATOR_PRIVATE_KEY: optionalString(z.string().regex(/^0x[0-9a-fA-F]{64}$/, "must be a 0x-prefixed 32-byte hex key")),
-  QUOTER_PRIVATE_KEY: optionalString(z.string().regex(/^0x[0-9a-fA-F]{64}$/, "must be a 0x-prefixed 32-byte hex key")),
+  OPERATOR_PRIVATE_KEY: optionalString(
+    z.string().regex(/^0x[0-9a-fA-F]{64}$/, "must be a 0x-prefixed 32-byte hex key"),
+  ),
+  QUOTER_PRIVATE_KEY: optionalString(
+    z.string().regex(/^0x[0-9a-fA-F]{64}$/, "must be a 0x-prefixed 32-byte hex key"),
+  ),
   OPERATOR_KMS_KEY_ID: optionalString(z.string().min(1)),
   QUOTER_KMS_KEY_ID: optionalString(z.string().min(1)),
 });
@@ -88,14 +93,20 @@ export const monitoringEnvSchema = z.object({
   ALERT_WEBHOOK_URL: optionalString(z.url()),
   MONITOR_EVERY_MS: z.coerce.number().int().min(10_000).default(60_000),
   /** Serve Prometheus metrics on this port (unset = off); METRICS_TOKEN requires a bearer token. */
-  WORKER_METRICS_PORT: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().int().min(1).max(65_535).optional()),
+  WORKER_METRICS_PORT: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number().int().min(1).max(65_535).optional(),
+  ),
   METRICS_TOKEN: optionalString(z.string().min(16)),
   ALERT_LARGE_RELEASE_USDC: optionalString(decimalUsdc),
   ALERT_DAILY_RELEASE_USDC: optionalString(decimalUsdc),
   ALERT_QUEUE_BACKLOG: z.coerce.number().int().min(1).default(200),
   /** Operator gas balance (native currency, decimal) below which releases may stall. */
   ALERT_OPERATOR_MIN_GAS: decimalUsdc.default("1"),
-  ALERT_LLM_HOURLY_USD: z.preprocess((v) => (v === "" ? undefined : v), z.coerce.number().positive().optional()),
+  ALERT_LLM_HOURLY_USD: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number().positive().optional(),
+  ),
 });
 
 /** Quote pricing (06-ROUTER §3). Bps are integers; the minimum fee is a decimal USDC string. */

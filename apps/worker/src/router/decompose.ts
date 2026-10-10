@@ -114,7 +114,9 @@ export async function decompose(
  * draft gets a `human.review` step after it, whatever the model planned. If no reviewer can take
  * that step, the task can't be quoted — Kazi never sells an unreviewed tax draft.
  */
-export const REVIEWED_CAPABILITIES: Readonly<Record<string, { title: string; instructions: string; rubric: string[] }>> = {
+export const REVIEWED_CAPABILITIES: Readonly<
+  Record<string, { title: string; instructions: string; rubric: string[] }>
+> = {
   "tax.tz_tra_draft": {
     title: "Licensed tax practitioner review",
     instructions:
@@ -132,7 +134,9 @@ export function withRequiredReviews(plan: Plan): Plan {
   for (const st of plan.subtasks) {
     const rule = REVIEWED_CAPABILITIES[st.capability];
     if (!rule) continue;
-    const reviewed = subtasks.some((r) => r.capability === "human.review" && r.dependsOn.includes(st.index));
+    const reviewed = subtasks.some(
+      (r) => r.capability === "human.review" && r.dependsOn.includes(st.index),
+    );
     if (reviewed) continue;
     subtasks.push({
       index: subtasks.length,

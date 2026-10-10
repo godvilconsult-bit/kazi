@@ -38,10 +38,18 @@ export function QuoteCard({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-line px-5 py-4">
         <h2 className="font-display text-xl font-bold">{t("quoteTitle")}</h2>
         <div className="flex items-center gap-2">
-          <Badge tone={speed === "ECONOMY" ? "ok" : "accent"}>{speed === "ECONOMY" ? t("speedEconomy") : t("speedExpress")}</Badge>
-          <span className={`inline-flex items-center gap-1 font-mono text-xs ${expired ? "text-bad" : "text-muted"}`}>
+          <Badge tone={speed === "ECONOMY" ? "ok" : "accent"}>
+            {speed === "ECONOMY" ? t("speedEconomy") : t("speedExpress")}
+          </Badge>
+          <span
+            className={`inline-flex items-center gap-1 font-mono text-xs ${expired ? "text-bad" : "text-muted"}`}
+          >
             <Clock className="size-3.5" />
-            {expired ? t("quoteExpired") : t("quoteValid", { time: relativeTime(quote.expiresAt, locale, now).replace(/^in /, "") })}
+            {expired
+              ? t("quoteExpired")
+              : t("quoteValid", {
+                  time: relativeTime(quote.expiresAt, locale, now).replace(/^in /, ""),
+                })}
           </span>
         </div>
       </div>
@@ -53,14 +61,20 @@ export function QuoteCard({
             <li key={s.index} className="flex items-start justify-between gap-4 px-5 py-3">
               <div className="min-w-0">
                 <p className="font-semibold">
-                  <span className="mr-2 font-mono text-xs text-muted">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="mr-2 font-mono text-xs text-muted">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
                   {s.title}
                 </p>
                 <p className="ml-7 mt-0.5 text-sm text-muted">
                   {t("doneBy")} <span className="font-medium text-ink">{s.providerName}</span>
-                  {s.aiCost ? <Cpu className="ml-1 inline size-3.5 text-accent" aria-label={t("aiCost")} /> : null}
+                  {s.aiCost ? (
+                    <Cpu className="ml-1 inline size-3.5 text-accent" aria-label={t("aiCost")} />
+                  ) : null}
                   {plan && plan.dependsOn.length > 0 ? (
-                    <span className="ml-2 font-mono text-[11px]">· {t("dependsOn", { steps: plan.dependsOn.map((d) => d + 1).join(", ") })}</span>
+                    <span className="ml-2 font-mono text-[11px]">
+                      · {t("dependsOn", { steps: plan.dependsOn.map((d) => d + 1).join(", ") })}
+                    </span>
                   ) : null}
                 </p>
               </div>
@@ -93,7 +107,12 @@ export function QuoteCard({
       ) : null}
       {onSwitchSpeed && !expired ? (
         <div className="border-t border-dashed border-line px-5 py-3">
-          <Button variant="ghost" size="sm" loading={switching} onClick={() => onSwitchSpeed(other)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={switching}
+            onClick={() => onSwitchSpeed(other)}
+          >
             {t("switchTo", { speed: other === "ECONOMY" ? t("speedEconomy") : t("speedExpress") })}
           </Button>
         </div>

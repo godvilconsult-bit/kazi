@@ -127,7 +127,13 @@ export async function judgeOutput(
       purpose: "judge",
       model: deps.judgeModel,
       system: JUDGE_SYSTEM,
-      user: renderJudgeUser(input.instructions, input.acceptance, input.output, input.input, input.notes),
+      user: renderJudgeUser(
+        input.instructions,
+        input.acceptance,
+        input.output,
+        input.input,
+        input.notes,
+      ),
       schema: judgeVerdictSchema,
       effort: "medium",
       taskId: input.taskId,
@@ -259,7 +265,12 @@ export async function evaluateSubmission(
   });
   log.info({ accepted, score: verdict?.score ?? 0 }, "submission evaluated");
   if (accepted && deps.jobs) {
-    await deps.jobs.add("executor", "reputation", { providerId: sub.providerId }, jobIds.reputation(sub.providerId, Date.now()));
+    await deps.jobs.add(
+      "executor",
+      "reputation",
+      { providerId: sub.providerId },
+      jobIds.reputation(sub.providerId, Date.now()),
+    );
   }
   return accepted ? "accepted" : "rejected";
 }

@@ -6,10 +6,32 @@ import { useQuery } from "@tanstack/react-query";
 import { useAccount, useReadContracts } from "wagmi";
 import { formatUnits, kaziTokenAbi, stakingVaultAbi } from "@kazi/shared";
 import { api, errorMessage } from "@/lib/api";
-import { durationLabel, formatDate, parseTokenInput, toBigInt, tokenAmount, usdc } from "@/lib/format";
-import { amountError, holderKey, needsApproval, sharePct, stakePosition, type AmountError, type VaultAccount } from "@/lib/staking";
+import {
+  durationLabel,
+  formatDate,
+  parseTokenInput,
+  toBigInt,
+  tokenAmount,
+  usdc,
+} from "@/lib/format";
+import {
+  amountError,
+  holderKey,
+  needsApproval,
+  sharePct,
+  stakePosition,
+  type AmountError,
+  type VaultAccount,
+} from "@/lib/staking";
 import { useTx } from "@/lib/tx";
-import { initSteps, isBusy, isUserRejection, stepsReducer, type StepAction, type TxStep } from "@/lib/tx-steps";
+import {
+  initSteps,
+  isBusy,
+  isUserRejection,
+  stepsReducer,
+  type StepAction,
+  type TxStep,
+} from "@/lib/tx-steps";
 import type { Address, StakingInfo } from "@/lib/types";
 import { useNowSeconds } from "@/lib/use-now";
 import { useKaziConfig } from "@/components/config";
@@ -18,7 +40,17 @@ import { GeoNotice, useGeo } from "@/components/geo";
 import { Usdc } from "@/components/money";
 import { TxButton } from "@/components/tx-button";
 import { TxStepper } from "@/components/tx-stepper";
-import { ButtonLink, Button, Card, ErrorState, Field, Input, Notice, PageHeader, Skeleton } from "@/components/ui";
+import {
+  ButtonLink,
+  Button,
+  Card,
+  ErrorState,
+  Field,
+  Input,
+  Notice,
+  PageHeader,
+  Skeleton,
+} from "@/components/ui";
 import { ConnectWalletButton } from "@/components/wallet";
 
 type Info = Extract<StakingInfo, { deployed: true }>;
@@ -35,11 +67,16 @@ export default function StakePage() {
   const nav = useTranslations("nav");
   const locale = useLocale();
   const cfg = useKaziConfig();
-  const info = useQuery({ queryKey: ["token", "staking"], queryFn: () => api<StakingInfo>("/token/staking"), refetchInterval: 5 * 60_000 });
+  const info = useQuery({
+    queryKey: ["token", "staking"],
+    queryFn: () => api<StakingInfo>("/token/staking"),
+    refetchInterval: 5 * 60_000,
+  });
   const vault = cfg.contracts.stakingVault;
   const token = cfg.contracts.kaziToken;
   const i = info.data?.deployed ? info.data : null;
-  const unavailable = !vault || !token || cfg.kaziDecimals === null || info.data?.deployed === false;
+  const unavailable =
+    !vault || !token || cfg.kaziDecimals === null || info.data?.deployed === false;
 
   return (
     <PageBody>
@@ -52,7 +89,13 @@ export default function StakePage() {
           </ButtonLink>
         }
       >
-        {i ? t("intro", { share: sharePct(i.stakerBps), warmup: durationLabel(i.warmupSeconds, locale), cooldown: durationLabel(i.cooldownSeconds, locale) }) : null}
+        {i
+          ? t("intro", {
+              share: sharePct(i.stakerBps),
+              warmup: durationLabel(i.warmupSeconds, locale),
+              cooldown: durationLabel(i.cooldownSeconds, locale),
+            })
+          : null}
       </PageHeader>
       <GeoNotice className="mb-6" />
       {unavailable ? (
@@ -60,7 +103,12 @@ export default function StakePage() {
       ) : info.isLoading ? (
         <Skeleton className="h-64" />
       ) : info.error || !i || !vault || !token || cfg.kaziDecimals === null ? (
-        <ErrorState title={tc("error")} message={info.error ? errorMessage(info.error) : undefined} onRetry={() => void info.refetch()} retryLabel={tc("retry")} />
+        <ErrorState
+          title={tc("error")}
+          message={info.error ? errorMessage(info.error) : undefined}
+          onRetry={() => void info.refetch()}
+          retryLabel={tc("retry")}
+        />
       ) : (
         <div className="space-y-6">
           {i.stakerBps === 0 ? <Notice tone="warn">{t("shareOff")}</Notice> : null}
@@ -79,7 +127,9 @@ function Realized({ info }: { info: Info }) {
     <Card>
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("realized")}</p>
       {toBigInt(info.rewards30d) > 0n ? (
-        <p className="num mt-1 text-2xl font-bold">{t("per1000", { amount: usdc(info.per1000Kazi30d, cfg.usdcDecimals).display })}</p>
+        <p className="num mt-1 text-2xl font-bold">
+          {t("per1000", { amount: usdc(info.per1000Kazi30d, cfg.usdcDecimals).display })}
+        </p>
       ) : (
         <p className="mt-1 font-semibold">{t("noRewards")}</p>
       )}
@@ -88,7 +138,17 @@ function Realized({ info }: { info: Info }) {
   );
 }
 
-function Wallet({ vault, token, info, decimals }: { vault: Address; token: Address; info: Info; decimals: number }) {
+function Wallet({
+  vault,
+  token,
+  info,
+  decimals,
+}: {
+  vault: Address;
+  token: Address;
+  info: Info;
+  decimals: number;
+}) {
   const t = useTranslations("stake");
   const { address } = useAccount();
   if (!address) {
@@ -102,7 +162,19 @@ function Wallet({ vault, token, info, decimals }: { vault: Address; token: Addre
   return <Position address={address} vault={vault} token={token} info={info} decimals={decimals} />;
 }
 
-function Position({ address, vault, token, info, decimals }: { address: Address; vault: Address; token: Address; info: Info; decimals: number }) {
+function Position({
+  address,
+  vault,
+  token,
+  info,
+  decimals,
+}: {
+  address: Address;
+  vault: Address;
+  token: Address;
+  info: Info;
+  decimals: number;
+}) {
   const t = useTranslations("stake");
   const locale = useLocale();
   const geo = useGeo();
@@ -142,13 +214,21 @@ function Position({ address, vault, token, info, decimals }: { address: Address;
             label={t("warming")}
             value={kazi(pos.warming)}
             unit="KAZI"
-            sub={pos.warmUntil !== null && !pos.needsActivation ? t("readyAt", { time: formatDate(new Date(pos.warmUntil * 1000), locale) }) : undefined}
+            sub={
+              pos.warmUntil !== null && !pos.needsActivation
+                ? t("readyAt", { time: formatDate(new Date(pos.warmUntil * 1000), locale) })
+                : undefined
+            }
           />
           <Stat
             label={t("unbonding")}
             value={kazi(pos.unbonding)}
             unit="KAZI"
-            sub={pos.unbondReadyAt !== null ? t("readyAt", { time: formatDate(new Date(pos.unbondReadyAt * 1000), locale) }) : undefined}
+            sub={
+              pos.unbondReadyAt !== null
+                ? t("readyAt", { time: formatDate(new Date(pos.unbondReadyAt * 1000), locale) })
+                : undefined
+            }
           />
         </div>
       </section>
@@ -158,7 +238,12 @@ function Position({ address, vault, token, info, decimals }: { address: Address;
           <p className="text-sm font-semibold">{t("needsActivation")}</p>
           <TxButton
             size="sm"
-            run={(onHash) => write({ address: vault, abi: stakingVaultAbi, functionName: "poke", args: [[key]] }, onHash)}
+            run={(onHash) =>
+              write(
+                { address: vault, abi: stakingVaultAbi, functionName: "poke", args: [[key]] },
+                onHash,
+              )
+            }
             onDone={refresh}
           >
             {t("activateCta")}
@@ -168,13 +253,24 @@ function Position({ address, vault, token, info, decimals }: { address: Address;
 
       <Card className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("claimable")}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+            {t("claimable")}
+          </p>
           <p className="mt-1 text-xl font-bold">
             <Usdc value={earned} />
           </p>
         </div>
         {earned > 0n ? (
-          <TxButton variant="ok" run={(onHash) => write({ address: vault, abi: stakingVaultAbi, functionName: "claim", args: [] }, onHash)} onDone={refresh}>
+          <TxButton
+            variant="ok"
+            run={(onHash) =>
+              write(
+                { address: vault, abi: stakingVaultAbi, functionName: "claim", args: [] },
+                onHash,
+              )
+            }
+            onDone={refresh}
+          >
             <ClaimLabel amount={earned} />
           </TxButton>
         ) : null}
@@ -183,14 +279,23 @@ function Position({ address, vault, token, info, decimals }: { address: Address;
       {pos.unbonding > 0n ? (
         <Card className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("unbonding")}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+              {t("unbonding")}
+            </p>
             {!pos.canWithdraw && pos.unbondReadyAt !== null ? (
-              <p className="mt-1 text-sm">{t("readyAt", { time: formatDate(new Date(pos.unbondReadyAt * 1000), locale) })}</p>
+              <p className="mt-1 text-sm">
+                {t("readyAt", { time: formatDate(new Date(pos.unbondReadyAt * 1000), locale) })}
+              </p>
             ) : null}
           </div>
           <TxButton
             disabled={!pos.canWithdraw}
-            run={(onHash) => write({ address: vault, abi: stakingVaultAbi, functionName: "withdraw", args: [] }, onHash)}
+            run={(onHash) =>
+              write(
+                { address: vault, abi: stakingVaultAbi, functionName: "withdraw", args: [] },
+                onHash,
+              )
+            }
             onDone={refresh}
           >
             {t("withdrawCta", { amount: kazi(pos.unbonding) })}
@@ -199,8 +304,23 @@ function Position({ address, vault, token, info, decimals }: { address: Address;
       ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
-        <StakeForm vault={vault} token={token} balance={balance} allowance={allowance} decimals={decimals} restricted={geo.restricted} onDone={refresh} />
-        <UnstakeForm vault={vault} max={pos.unstakeable} unbonding={pos.unbonding} cooldown={info.cooldownSeconds} decimals={decimals} onDone={refresh} />
+        <StakeForm
+          vault={vault}
+          token={token}
+          balance={balance}
+          allowance={allowance}
+          decimals={decimals}
+          restricted={geo.restricted}
+          onDone={refresh}
+        />
+        <UnstakeForm
+          vault={vault}
+          max={pos.unstakeable}
+          unbonding={pos.unbonding}
+          cooldown={info.cooldownSeconds}
+          decimals={decimals}
+          onDone={refresh}
+        />
       </div>
     </div>
   );
@@ -212,7 +332,17 @@ function ClaimLabel({ amount }: { amount: bigint }) {
   return <>{t("claimCta", { amount: usdc(amount, cfg.usdcDecimals).display })}</>;
 }
 
-function Stat({ label, value, unit, sub }: { label: string; value: ReactNode; unit?: string; sub?: string | undefined }) {
+function Stat({
+  label,
+  value,
+  unit,
+  sub,
+}: {
+  label: string;
+  value: ReactNode;
+  unit?: string;
+  sub?: string | undefined;
+}) {
   return (
     <Card className="flex flex-col gap-1">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
@@ -247,12 +377,31 @@ function AmountField({
   disabled?: boolean;
 }) {
   const t = useTranslations("stake");
-  const errorText = error === "invalid" ? t("errInvalid") : error === "zero" ? t("errZero") : error === "tooMuch" ? t("errTooMuch") : undefined;
+  const errorText =
+    error === "invalid"
+      ? t("errInvalid")
+      : error === "zero"
+        ? t("errZero")
+        : error === "tooMuch"
+          ? t("errTooMuch")
+          : undefined;
   return (
     <Field label={label} htmlFor={id} error={errorText} hint={hint}>
       <div className="flex gap-2">
-        <Input id={id} inputMode="decimal" autoComplete="off" placeholder="0.0" value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
-        <Button variant="outline" disabled={disabled || max === 0n} onClick={() => onChange(formatUnits(max, decimals))}>
+        <Input
+          id={id}
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="0.0"
+          value={value}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <Button
+          variant="outline"
+          disabled={disabled || max === 0n}
+          onClick={() => onChange(formatUnits(max, decimals))}
+        >
           {t("max")}
         </Button>
       </div>
@@ -296,17 +445,27 @@ function StakeForm({
       if (!needsApproval(allowance, amount)) apply({ type: "skip", key: "approve" });
       else {
         apply({ type: "wallet", key: "approve" });
-        await write({ address: token, abi: kaziTokenAbi, functionName: "approve", args: [vault, amount] }, (hash) => apply({ type: "sent", key: "approve", hash }));
+        await write(
+          { address: token, abi: kaziTokenAbi, functionName: "approve", args: [vault, amount] },
+          (hash) => apply({ type: "sent", key: "approve", hash }),
+        );
         apply({ type: "done", key: "approve" });
       }
       current = "stake";
       apply({ type: "wallet", key: "stake" });
-      await write({ address: vault, abi: stakingVaultAbi, functionName: "stake", args: [amount] }, (hash) => apply({ type: "sent", key: "stake", hash }));
+      await write(
+        { address: vault, abi: stakingVaultAbi, functionName: "stake", args: [amount] },
+        (hash) => apply({ type: "sent", key: "stake", hash }),
+      );
       apply({ type: "done", key: "stake" });
       setValue("");
       onDone();
     } catch (err) {
-      apply({ type: "error", key: current, error: isUserRejection(err) ? undefined : errorMessage(err) });
+      apply({
+        type: "error",
+        key: current,
+        error: isUserRejection(err) ? undefined : errorMessage(err),
+      });
     }
   }
 
@@ -327,8 +486,19 @@ function StakeForm({
           error={error}
           disabled={restricted || busy}
         />
-        <TxStepper steps={steps} labels={{ approve: t("stepApprove", { amount: label }), stake: t("stepStake", { amount: label }) }} />
-        <Button variant="accent" loading={busy} disabled={restricted || amount === null || Boolean(error) || amount === 0n} onClick={() => void run()}>
+        <TxStepper
+          steps={steps}
+          labels={{
+            approve: t("stepApprove", { amount: label }),
+            stake: t("stepStake", { amount: label }),
+          }}
+        />
+        <Button
+          variant="accent"
+          loading={busy}
+          disabled={restricted || amount === null || Boolean(error) || amount === 0n}
+          onClick={() => void run()}
+        >
           {t("stakeCta")}
         </Button>
       </div>
@@ -373,11 +543,25 @@ function UnstakeForm({
           hint={t("unstakeHint", { cooldown: durationLabel(cooldown, locale) })}
           disabled={max === 0n}
         />
-        {unbonding > 0n ? <Notice tone="warn">{t("restartsCooldown", { amount: tokenAmount(unbonding, decimals, 2) })}</Notice> : null}
+        {unbonding > 0n ? (
+          <Notice tone="warn">
+            {t("restartsCooldown", { amount: tokenAmount(unbonding, decimals, 2) })}
+          </Notice>
+        ) : null}
         <TxButton
           variant="outline"
           disabled={amount === null || Boolean(error) || amount === 0n}
-          run={(onHash) => write({ address: vault, abi: stakingVaultAbi, functionName: "requestUnstake", args: [amount ?? 0n] }, onHash)}
+          run={(onHash) =>
+            write(
+              {
+                address: vault,
+                abi: stakingVaultAbi,
+                functionName: "requestUnstake",
+                args: [amount ?? 0n],
+              },
+              onHash,
+            )
+          }
           onDone={() => {
             setValue("");
             onDone();

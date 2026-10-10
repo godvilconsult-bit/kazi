@@ -98,7 +98,10 @@ export const EXPLORATION_RATE = 0.1;
 export const NEWCOMER_MAX_COMPLETED = 10;
 export const NEWCOMER_MIN_REVIEW_SCORE = 80;
 
-export function applyExploration(ranked: ScoredCandidate[], random: () => number): ScoredCandidate[] {
+export function applyExploration(
+  ranked: ScoredCandidate[],
+  random: () => number,
+): ScoredCandidate[] {
   if (ranked.length < 2 || random() >= EXPLORATION_RATE) return ranked;
   const newcomer = ranked.find(
     (c) =>
@@ -108,4 +111,3 @@ export function applyExploration(ranked: ScoredCandidate[], random: () => number
   if (!newcomer || newcomer === ranked[0]) return ranked;
   return [newcomer, ...ranked.filter((c) => c !== newcomer)];
 }
-

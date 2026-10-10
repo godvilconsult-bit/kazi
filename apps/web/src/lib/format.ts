@@ -32,7 +32,11 @@ export function parseTokenInput(value: string, decimals: number): bigint | null 
 }
 
 /** Token amounts with a few more decimals (stake, rewards). */
-export function tokenAmount(v: string | bigint | null | undefined, decimals: number, places = 2): string {
+export function tokenAmount(
+  v: string | bigint | null | undefined,
+  decimals: number,
+  places = 2,
+): string {
   const exact = formatUnits(toBigInt(v), decimals);
   const [whole = "0", fraction = ""] = exact.split(".");
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -49,7 +53,11 @@ export function shortHash(h: string | null | undefined): string {
   return h.length > 14 ? `${h.slice(0, 8)}…${h.slice(-6)}` : h;
 }
 
-export function explorerUrl(base: string | null | undefined, kind: "tx" | "address", value: string): string | null {
+export function explorerUrl(
+  base: string | null | undefined,
+  kind: "tx" | "address",
+  value: string,
+): string | null {
   return base ? `${base.replace(/\/$/, "")}/${kind}/${value}` : null;
 }
 
@@ -73,7 +81,11 @@ export function relativeTime(iso: string | Date, locale: string, now = Date.now(
 /** "7 days" / "siku 7": whole days when exact, else hours, else minutes. */
 export function durationLabel(seconds: number, locale: string): string {
   const [unit, n] =
-    seconds % 86_400 === 0 ? (["day", seconds / 86_400] as const) : seconds % 3_600 === 0 ? (["hour", seconds / 3_600] as const) : (["minute", Math.round(seconds / 60)] as const);
+    seconds % 86_400 === 0
+      ? (["day", seconds / 86_400] as const)
+      : seconds % 3_600 === 0
+        ? (["hour", seconds / 3_600] as const)
+        : (["minute", Math.round(seconds / 60)] as const);
   return new Intl.NumberFormat(locale, { style: "unit", unit, unitDisplay: "long" }).format(n);
 }
 

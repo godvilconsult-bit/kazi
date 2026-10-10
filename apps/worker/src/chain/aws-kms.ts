@@ -11,13 +11,20 @@ export function awsKmsKey(keyId: string, client: KMSClient = new KMSClient({})):
     async getPublicKey() {
       const res = await client.send(new GetPublicKeyCommand({ KeyId: keyId }));
       if (res.KeySpec !== "ECC_SECG_P256K1" || !res.PublicKey) {
-        throw new Error(`KMS key ${keyId} is not a secp256k1 signing key (KeySpec ${res.KeySpec ?? "unknown"})`);
+        throw new Error(
+          `KMS key ${keyId} is not a secp256k1 signing key (KeySpec ${res.KeySpec ?? "unknown"})`,
+        );
       }
       return res.PublicKey;
     },
     async signDigest(digest) {
       const res = await client.send(
-        new SignCommand({ KeyId: keyId, Message: digest, MessageType: "DIGEST", SigningAlgorithm: "ECDSA_SHA_256" }),
+        new SignCommand({
+          KeyId: keyId,
+          Message: digest,
+          MessageType: "DIGEST",
+          SigningAlgorithm: "ECDSA_SHA_256",
+        }),
       );
       if (!res.Signature) throw new Error(`KMS key ${keyId} returned no signature`);
       return res.Signature;

@@ -11,7 +11,15 @@ import type { FeeSplit, TokenMetrics, VestingProgress } from "@/lib/types";
 import { useKaziConfig } from "@/components/config";
 import { PageBody } from "@/components/container";
 import { AddressPill, Usdc } from "@/components/money";
-import { ButtonLink, Card, ErrorState, Notice, PageHeader, SectionTitle, Skeleton } from "@/components/ui";
+import {
+  ButtonLink,
+  Card,
+  ErrorState,
+  Notice,
+  PageHeader,
+  SectionTitle,
+  Skeleton,
+} from "@/components/ui";
 
 const CONTRACT_LABELS = {
   kaziToken: "c_kaziToken",
@@ -27,7 +35,11 @@ const CONTRACT_LABELS = {
 export default function TokenPage() {
   const t = useTranslations("token");
   const tc = useTranslations("common");
-  const q = useQuery({ queryKey: ["token", "metrics"], queryFn: () => api<TokenMetrics>("/token/metrics"), refetchInterval: 5 * 60_000 });
+  const q = useQuery({
+    queryKey: ["token", "metrics"],
+    queryFn: () => api<TokenMetrics>("/token/metrics"),
+    refetchInterval: 5 * 60_000,
+  });
   return (
     <PageBody>
       <PageHeader
@@ -44,13 +56,20 @@ export default function TokenPage() {
       {q.isLoading ? (
         <Skeleton className="h-72" />
       ) : q.error || !q.data ? (
-        <ErrorState title={tc("error")} message={q.error ? errorMessage(q.error) : undefined} onRetry={() => void q.refetch()} retryLabel={tc("retry")} />
+        <ErrorState
+          title={tc("error")}
+          message={q.error ? errorMessage(q.error) : undefined}
+          onRetry={() => void q.refetch()}
+          retryLabel={tc("retry")}
+        />
       ) : !q.data.deployed ? (
         <Notice tone="info">{t("notDeployed")}</Notice>
       ) : (
         <Metrics m={q.data} />
       )}
-      <p className="mt-10 border-t border-dashed border-line pt-4 text-xs text-muted">{t("disclaimer")}</p>
+      <p className="mt-10 border-t border-dashed border-line pt-4 text-xs text-muted">
+        {t("disclaimer")}
+      </p>
     </PageBody>
   );
 }
@@ -61,25 +80,39 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
   const cfg = useKaziConfig();
   const d = cfg.kaziDecimals ?? 18;
   const kazi = (v: string) => tokenAmount(v, d, 0);
-  const contracts = Object.entries(m.contracts).filter((e): e is [keyof typeof CONTRACT_LABELS, `0x${string}`] => Boolean(e[1]) && e[0] in CONTRACT_LABELS);
+  const contracts = Object.entries(m.contracts).filter(
+    (e): e is [keyof typeof CONTRACT_LABELS, `0x${string}`] =>
+      Boolean(e[1]) && e[0] in CONTRACT_LABELS,
+  );
   return (
     <div className="space-y-8">
       {!m.launched ? (
         <Notice tone="info">{t("notLaunched")}</Notice>
       ) : m.tge ? (
-        <p className="font-mono text-xs text-muted">{t("launchedOn", { date: formatDate(new Date(m.tge * 1000), locale) })}</p>
+        <p className="font-mono text-xs text-muted">
+          {t("launchedOn", { date: formatDate(new Date(m.tge * 1000), locale) })}
+        </p>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label={t("supply")} value={kazi(m.totalSupply)} unit="KAZI" />
         {/* Before launch the supply sits with the distributor: nothing circulates yet. */}
-        {m.launched ? <Stat label={t("circulating")} value={kazi(m.circulating)} unit="KAZI" /> : null}
-        <Stat label={t("staked")} value={kazi(m.staked)} unit="KAZI" sub={m.launched ? t("stakedShare", { pct: sharePct(m.stakedBps) }) : undefined} />
+        {m.launched ? (
+          <Stat label={t("circulating")} value={kazi(m.circulating)} unit="KAZI" />
+        ) : null}
+        <Stat
+          label={t("staked")}
+          value={kazi(m.staked)}
+          unit="KAZI"
+          sub={m.launched ? t("stakedShare", { pct: sharePct(m.stakedBps) }) : undefined}
+        />
         <Stat label={t("rewards30")} value={<Usdc value={m.stakerRewards.last30d} />} />
         <Stat label={t("rewardsAll")} value={<Usdc value={m.stakerRewards.allTime} />} />
         <Stat label={t("feesDistributed")} value={<Usdc value={m.feesDistributed} />} />
         <Stat label={t("buyback")} value={<Usdc value={m.buybackReserved} />} />
-        {m.treasuryUsdc !== null ? <Stat label={t("treasury")} value={<Usdc value={m.treasuryUsdc} />} /> : null}
+        {m.treasuryUsdc !== null ? (
+          <Stat label={t("treasury")} value={<Usdc value={m.treasuryUsdc} />} />
+        ) : null}
       </div>
 
       {m.split ? <Split split={m.split} /> : null}
@@ -99,8 +132,17 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
         <section>
           <SectionTitle>{t("airdrop")}</SectionTitle>
           <Card>
-            <p className="num text-lg font-bold">{t("airdropClaimed", { claimed: kazi(m.airdrop.claimed), left: kazi(m.airdrop.balance) })}</p>
-            <p className="mt-1 text-sm text-muted">{t("airdropDeadline", { date: formatDate(new Date(m.airdrop.deadline * 1000), locale) })}</p>
+            <p className="num text-lg font-bold">
+              {t("airdropClaimed", {
+                claimed: kazi(m.airdrop.claimed),
+                left: kazi(m.airdrop.balance),
+              })}
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              {t("airdropDeadline", {
+                date: formatDate(new Date(m.airdrop.deadline * 1000), locale),
+              })}
+            </p>
           </Card>
         </section>
       ) : null}
@@ -110,7 +152,10 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
         <Card className="p-0">
           <dl className="divide-y divide-dashed divide-line">
             {contracts.map(([name, address]) => (
-              <div key={name} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
+              <div
+                key={name}
+                className="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
+              >
                 <dt className="text-sm font-semibold">{t(CONTRACT_LABELS[name])}</dt>
                 <dd>
                   <AddressPill address={address} />
@@ -124,7 +169,17 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
   );
 }
 
-function Stat({ label, value, unit, sub }: { label: string; value: ReactNode; unit?: string; sub?: string }) {
+function Stat({
+  label,
+  value,
+  unit,
+  sub,
+}: {
+  label: string;
+  value: ReactNode;
+  unit?: string;
+  sub?: string;
+}) {
   return (
     <Card className="flex flex-col gap-1">
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
@@ -153,7 +208,11 @@ function Split({ split }: { split: FeeSplit }) {
           role="img"
           aria-label={parts.map((p) => `${p.label} ${sharePct(p.bps)}%`).join(", ")}
         >
-          {parts.map((p) => (p.bps > 0 ? <div key={p.key} className={p.className} style={{ width: `${p.bps / 100}%` }} /> : null))}
+          {parts.map((p) =>
+            p.bps > 0 ? (
+              <div key={p.key} className={p.className} style={{ width: `${p.bps / 100}%` }} />
+            ) : null,
+          )}
         </div>
         <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
           {parts.map((p) => (
@@ -178,15 +237,31 @@ function VestingCard({ v, decimals }: { v: VestingProgress; decimals: number }) 
   return (
     <Card>
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-display text-lg font-bold">{v.name === "team" ? t("vestingTeam") : t("vestingEcosystem")}</h3>
+        <h3 className="font-display text-lg font-bold">
+          {v.name === "team" ? t("vestingTeam") : t("vestingEcosystem")}
+        </h3>
         <span className="num text-sm font-semibold">{pct.toFixed(1)}%</span>
       </div>
-      <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)}>
+      <div
+        className="mt-3 h-2.5 overflow-hidden rounded-full bg-surface-2"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pct)}
+      >
         <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
-      <p className="num mt-2 text-sm">{t("vestedOf", { vested: tokenAmount(vested, decimals, 0), total: tokenAmount(total, decimals, 0) })}</p>
+      <p className="num mt-2 text-sm">
+        {t("vestedOf", {
+          vested: tokenAmount(vested, decimals, 0),
+          total: tokenAmount(total, decimals, 0),
+        })}
+      </p>
       <p className="mt-1 font-mono text-xs text-muted">
-        {t("vestingRange", { start: formatDate(new Date(v.start * 1000), locale), end: formatDate(new Date(v.end * 1000), locale) })}
+        {t("vestingRange", {
+          start: formatDate(new Date(v.start * 1000), locale),
+          end: formatDate(new Date(v.end * 1000), locale),
+        })}
       </p>
       <AddressPill address={v.address} className="mt-3" />
     </Card>

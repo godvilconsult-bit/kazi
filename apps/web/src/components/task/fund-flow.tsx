@@ -44,8 +44,18 @@ export function FundFlow({ taskId, quoteClient }: { taskId: string; quoteClient:
     contracts:
       p && address
         ? [
-            { address: p.usdcAddress, abi: mockUsdcAbi, functionName: "balanceOf", args: [address] },
-            { address: p.usdcAddress, abi: mockUsdcAbi, functionName: "allowance", args: [address, p.escrowAddress] },
+            {
+              address: p.usdcAddress,
+              abi: mockUsdcAbi,
+              functionName: "balanceOf",
+              args: [address],
+            },
+            {
+              address: p.usdcAddress,
+              abi: mockUsdcAbi,
+              functionName: "allowance",
+              args: [address, p.escrowAddress],
+            },
           ]
         : [],
     query: { enabled: Boolean(p && address), refetchInterval: 10_000 },
@@ -64,11 +74,17 @@ export function FundFlow({ taskId, quoteClient }: { taskId: string; quoteClient:
     try {
       if (steps.find((s) => s.key === "approve")?.status === "done") {
         // approved in an earlier run
-      } else if (allowance !== null && allowance >= total) dispatch({ type: "skip", key: "approve" });
+      } else if (allowance !== null && allowance >= total)
+        dispatch({ type: "skip", key: "approve" });
       else {
         dispatch({ type: "wallet", key: "approve" });
         await write(
-          { address: p.usdcAddress, abi: mockUsdcAbi, functionName: "approve", args: [p.escrowAddress, total] },
+          {
+            address: p.usdcAddress,
+            abi: mockUsdcAbi,
+            functionName: "approve",
+            args: [p.escrowAddress, total],
+          },
           (hash) => dispatch({ type: "sent", key: "approve", hash }),
         );
         dispatch({ type: "done", key: "approve" });
@@ -114,18 +130,24 @@ export function FundFlow({ taskId, quoteClient }: { taskId: string; quoteClient:
       </div>
     );
   }
-  if (!rightWallet) return <Notice tone="warn">{t("wrongWallet", { wallet: shortAddress(quoteClient) })}</Notice>;
+  if (!rightWallet)
+    return <Notice tone="warn">{t("wrongWallet", { wallet: shortAddress(quoteClient) })}</Notice>;
 
   return (
     <div className="rounded-xl border border-ink bg-surface p-5 shadow-stamp-sm">
       <h2 className="font-display text-xl font-bold">{t("fundTitle")}</h2>
       <p className="mt-1 text-sm text-muted">{t("fundIntro")}</p>
       <div className="mt-4">
-        <TxStepper steps={steps} labels={{ approve: t("stepApprove", { amount }), fund: t("stepFund", { amount }) }} />
+        <TxStepper
+          steps={steps}
+          labels={{ approve: t("stepApprove", { amount }), fund: t("stepFund", { amount }) }}
+        />
       </div>
       {balance !== null ? (
         <p className={`mt-4 text-sm ${enough ? "text-muted" : "text-bad"}`}>
-          {enough ? t("balance", { amount: usdc(balance, cfg.usdcDecimals).display }) : t("insufficient", { amount })}{" "}
+          {enough
+            ? t("balance", { amount: usdc(balance, cfg.usdcDecimals).display })
+            : t("insufficient", { amount })}{" "}
           {!enough ? (
             <Link href="/get-usdc" className="font-semibold text-accent underline">
               {t("getUsdc")}
@@ -134,10 +156,29 @@ export function FundFlow({ taskId, quoteClient }: { taskId: string; quoteClient:
         </p>
       ) : null}
       <p className="mt-1 text-xs text-muted">{t("gasNote")}</p>
-      {params.error ? <Notice tone="bad" className="mt-3">{errorMessage(params.error)}</Notice> : null}
-      {error ? <Notice tone="bad" className="mt-3">{error}</Notice> : null}
-      <Button variant="accent" size="lg" className="mt-5 w-full" onClick={() => void run()} loading={isBusy(steps)} disabled={!p || !enough}>
-        {isBusy(steps) ? t("funding") : steps.some((s) => s.status === "done" || s.status === "error") ? t("fundContinue") : t("fundCta")}
+      {params.error ? (
+        <Notice tone="bad" className="mt-3">
+          {errorMessage(params.error)}
+        </Notice>
+      ) : null}
+      {error ? (
+        <Notice tone="bad" className="mt-3">
+          {error}
+        </Notice>
+      ) : null}
+      <Button
+        variant="accent"
+        size="lg"
+        className="mt-5 w-full"
+        onClick={() => void run()}
+        loading={isBusy(steps)}
+        disabled={!p || !enough}
+      >
+        {isBusy(steps)
+          ? t("funding")
+          : steps.some((s) => s.status === "done" || s.status === "error")
+            ? t("fundContinue")
+            : t("fundCta")}
       </Button>
     </div>
   );

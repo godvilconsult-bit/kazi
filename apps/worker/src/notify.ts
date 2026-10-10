@@ -11,9 +11,19 @@ export interface NotificationInput {
   link?: string;
 }
 
-export async function notify(prisma: PrismaClient, userId: string, n: NotificationInput): Promise<void> {
+export async function notify(
+  prisma: PrismaClient,
+  userId: string,
+  n: NotificationInput,
+): Promise<void> {
   await prisma.notification.create({
-    data: { userId, type: n.type, title: n.title.slice(0, 140), body: n.body.slice(0, 1_000), link: n.link ?? null },
+    data: {
+      userId,
+      type: n.type,
+      title: n.title.slice(0, 140),
+      body: n.body.slice(0, 1_000),
+      link: n.link ?? null,
+    },
   });
 }
 

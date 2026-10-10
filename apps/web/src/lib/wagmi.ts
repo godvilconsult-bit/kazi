@@ -14,7 +14,11 @@ export function makeChain(cfg: PublicConfig) {
     nativeCurrency: cfg.chain.nativeCurrency,
     rpcUrls: { default: { http: [cfg.chain.rpcUrl] } },
     ...(cfg.chain.explorerUrl
-      ? { blockExplorers: { default: { name: `${cfg.chain.name} explorer`, url: cfg.chain.explorerUrl } } }
+      ? {
+          blockExplorers: {
+            default: { name: `${cfg.chain.name} explorer`, url: cfg.chain.explorerUrl },
+          },
+        }
       : {}),
     testnet: cfg.chain.network !== "mainnet",
   });
@@ -26,7 +30,9 @@ export function makeWagmiConfig(cfg: PublicConfig): Config {
   const wcProjectId = process.env["NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID"];
   const connectors = [
     // E2E only (local anvil): a mock connector whose RPC signs with an unlocked anvil account.
-    ...(e2eWallet && cfg.chain.network === "local" ? [mock({ accounts: [e2eWallet], features: { reconnect: true } })] : []),
+    ...(e2eWallet && cfg.chain.network === "local"
+      ? [mock({ accounts: [e2eWallet], features: { reconnect: true } })]
+      : []),
     injected({ shimDisconnect: true }),
     coinbaseWallet({ appName: "Kazi", preference: "all" }),
     ...(wcProjectId

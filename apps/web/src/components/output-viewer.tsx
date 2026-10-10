@@ -11,7 +11,9 @@ import rehypeSanitize, { defaultSchema, type Options as Schema } from "rehype-sa
  */
 const schema: Schema = {
   ...defaultSchema,
-  tagNames: (defaultSchema.tagNames ?? []).filter((t) => !["img", "picture", "source", "video", "audio", "iframe", "input"].includes(t)),
+  tagNames: (defaultSchema.tagNames ?? []).filter(
+    (t) => !["img", "picture", "source", "video", "audio", "iframe", "input"].includes(t),
+  ),
   protocols: { ...defaultSchema.protocols, href: ["http", "https", "mailto"] },
 };
 

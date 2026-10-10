@@ -46,7 +46,12 @@ export function WalletPicker({ open, onClose }: { open: boolean; onClose: () => 
       {list.length === 0 ? <p className="text-sm text-muted">{t("noWallets")}</p> : null}
       <div className="flex flex-col gap-2">
         {list.map((c) => (
-          <ConnectorRow key={c.uid} connector={c} pending={isPending && variables?.connector === c} onClick={() => connect({ connector: c }, { onSuccess: onClose })} />
+          <ConnectorRow
+            key={c.uid}
+            connector={c}
+            pending={isPending && variables?.connector === c}
+            onClick={() => connect({ connector: c }, { onSuccess: onClose })}
+          />
         ))}
       </div>
       {error ? (
@@ -59,7 +64,15 @@ export function WalletPicker({ open, onClose }: { open: boolean; onClose: () => 
   );
 }
 
-function ConnectorRow({ connector, pending, onClick }: { connector: Connector; pending: boolean; onClick: () => void }) {
+function ConnectorRow({
+  connector,
+  pending,
+  onClick,
+}: {
+  connector: Connector;
+  pending: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"

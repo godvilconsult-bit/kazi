@@ -5,7 +5,13 @@
     "instructions": "Clean this customer list: consistent column names, Tanzanian phone numbers in international format, dates as YYYY-MM-DD, remove duplicates.",
     "input": "Customer Name ,Phone No.,Joined,Email\n  amina juma ,0754 123 456,03/02/2024,AMINA@Example.com\nJohn  Mushi,+255 713 222 333,15/11/2023,john@example.com\n  amina juma ,0754 123 456,03/02/2024,AMINA@Example.com\nRehema K,713444555,7/1/2025,rehema(at)mail\n,,,",
     "acceptance": {
-      "rubric": ["Duplicate Amina row removed and empty row removed", "Phones as +2557… numbers", "Dates converted day-first to YYYY-MM-DD (2024-02-03, 2023-11-15, 2025-01-07)", "Invalid email flagged, not silently changed", "Cleaned CSV included"],
+      "rubric": [
+        "Duplicate Amina row removed and empty row removed",
+        "Phones as +2557… numbers",
+        "Dates converted day-first to YYYY-MM-DD (2024-02-03, 2023-11-15, 2025-01-07)",
+        "Invalid email flagged, not silently changed",
+        "Cleaned CSV included"
+      ],
       "format": "markdown",
       "mustInclude": ["+255754123456"]
     },
@@ -17,7 +23,12 @@
     "instructions": "Make the amounts numeric and the region names consistent in title case.",
     "input": "date;region;amount_tzs\n2025-01-03;ARUSHA;1.250.000\n2025-01-04;arusha;980.500\n2025-01-04;Dar es salaam;2.400.000,50",
     "acceptance": {
-      "rubric": ["Semicolon-delimited file parsed", "Amounts converted to plain numbers (1250000, 980500, 2400000.50)", "Regions in title case", "Output as comma CSV"],
+      "rubric": [
+        "Semicolon-delimited file parsed",
+        "Amounts converted to plain numbers (1250000, 980500, 2400000.50)",
+        "Regions in title case",
+        "Output as comma CSV"
+      ],
       "format": "markdown"
     },
     "expectPass": true
@@ -51,7 +62,10 @@
     "instructions": "Clean my data.",
     "input": "Hello, please help me with my business plan.",
     "acceptance": {
-      "rubric": ["Reports that no usable CSV data was provided or returns a minimal honest result", "Does not invent rows"],
+      "rubric": [
+        "Reports that no usable CSV data was provided or returns a minimal honest result",
+        "Does not invent rows"
+      ],
       "format": "markdown"
     },
     "expectPass": false

@@ -152,7 +152,10 @@ async function applyEscrowEvent(prisma: PrismaClient, ev: ChainEvent, ctx: Ctx) 
           update: {},
           create: { taskId: task.id, reason: "Opened onchain without a written reason." },
         });
-        const admins = await prisma.user.findMany({ where: { roles: { has: "ADMIN" } }, select: { id: true } });
+        const admins = await prisma.user.findMany({
+          where: { roles: { has: "ADMIN" } },
+          select: { id: true },
+        });
         for (const a of admins) {
           await notify(prisma, a.id, {
             type: "DISPUTE_OPENED",
@@ -171,10 +174,22 @@ async function applyEscrowEvent(prisma: PrismaClient, ev: ChainEvent, ctx: Ctx) 
       if (canTransition("task", task.status, outcome)) {
         await moveTask(prisma, task, outcome, ev);
         const text: Record<string, { title: string; body: string }> = {
-          COMPLETE: { title: "Task completed", body: `"${task.title}" is complete and the providers have been paid.` },
-          REFUND: { title: "Task refunded", body: `"${task.title}" couldn't be completed; your USDC was refunded.` },
-          PARTIAL_REFUND: { title: "Task closed with a partial refund", body: `"${task.title}" closed: delivered steps were paid, the rest refunded.` },
-          RESOLVE: { title: "Dispute resolved", body: `The dispute on "${task.title}" was settled.` },
+          COMPLETE: {
+            title: "Task completed",
+            body: `"${task.title}" is complete and the providers have been paid.`,
+          },
+          REFUND: {
+            title: "Task refunded",
+            body: `"${task.title}" couldn't be completed; your USDC was refunded.`,
+          },
+          PARTIAL_REFUND: {
+            title: "Task closed with a partial refund",
+            body: `"${task.title}" closed: delivered steps were paid, the rest refunded.`,
+          },
+          RESOLVE: {
+            title: "Dispute resolved",
+            body: `The dispute on "${task.title}" was settled.`,
+          },
         };
         if (outcome === "RESOLVE") {
           await prisma.dispute.updateMany({
@@ -183,9 +198,13 @@ async function applyEscrowEvent(prisma: PrismaClient, ev: ChainEvent, ctx: Ctx) 
           });
         }
         const n = text[outcome];
-        if (n) await notify(prisma, task.clientId, { type: `TASK_${outcome}`, ...n, link: `/tasks/${task.id}` });
-      }
-      else
+        if (n)
+          await notify(prisma, task.clientId, {
+            type: `TASK_${outcome}`,
+            ...n,
+            link: `/tasks/${task.id}`,
+          });
+      } else
         await recordEvent(prisma, task.id, "CHAIN_TASK_CLOSED", ev, {
           status: task.status,
           outcome,
@@ -311,7 +330,9 @@ const providerRegistered = z.object({
 async function applyRegistryEvent(prisma: PrismaClient, ev: ChainEvent) {
   if (ev.name === "ProviderRegistered") {
     const a = providerRegistered.safeParse(ev.args);
-    const dbId = a.success ? /^kazi:\/\/providers\/([A-Za-z0-9_-]{1,64})$/.exec(a.data.metadataURI)?.[1] : undefined;
+    const dbId = a.success
+      ? /^kazi:\/\/providers\/([A-Za-z0-9_-]{1,64})$/.exec(a.data.metadataURI)?.[1]
+      : undefined;
     if (!a.success || !dbId) return;
     // Link only when the registering wallet owns the listing and the payout matches (no hijacking).
     const p = await prisma.provider.findUnique({ where: { id: dbId }, include: { owner: true } });
@@ -321,7 +342,10 @@ async function applyRegistryEvent(prisma: PrismaClient, ev: ChainEvent) {
       p.owner.wallet.toLowerCase() === a.data.owner.toLowerCase() &&
       p.payoutAddress.toLowerCase() === a.data.payout.toLowerCase()
     ) {
-      await prisma.provider.update({ where: { id: p.id }, data: { onchainId: BigInt(a.data.providerId) } });
+      await prisma.provider.update({
+        where: { id: p.id },
+        data: { onchainId: BigInt(a.data.providerId) },
+      });
     }
     return;
   }

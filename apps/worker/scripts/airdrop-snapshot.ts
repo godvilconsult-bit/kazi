@@ -18,7 +18,13 @@ import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { pino } from "pino";
 import { createPublicClient, erc20Abi, http, isAddress, type Address } from "viem";
-import { chainEnvSchema, dbEnvSchema, getChainConfig, loadEnv, runtimeEnvSchema } from "@kazi/config";
+import {
+  chainEnvSchema,
+  dbEnvSchema,
+  getChainConfig,
+  loadEnv,
+  runtimeEnvSchema,
+} from "@kazi/config";
 import { loadDeployment } from "@kazi/config/deployments";
 import { createPrismaClient } from "@kazi/db";
 import { formatUnits, parseUnits } from "@kazi/shared";
@@ -42,7 +48,8 @@ const { values } = parseArgs({
 });
 
 const airdropId = values["airdrop-id"];
-if (!airdropId || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(airdropId)) throw new Error("--airdrop-id is required (lowercase letters, digits, dashes)");
+if (!airdropId || !/^[a-z0-9][a-z0-9-]{0,62}$/.test(airdropId))
+  throw new Error("--airdrop-id is required (lowercase letters, digits, dashes)");
 if (!values.total) throw new Error("--total (KAZI) is required");
 
 const env = loadEnv(runtimeEnvSchema.extend(dbEnvSchema.shape).extend(chainEnvSchema.shape));
@@ -58,22 +65,40 @@ const client = createPublicClient({ transport: http(chain.rpcUrl) });
 const prisma = createPrismaClient(env.DATABASE_URL);
 
 try {
-  const decimals = Number(await client.readContract({ address: deployment.kaziToken, abi: erc20Abi, functionName: "decimals" }));
+  const decimals = Number(
+    await client.readContract({
+      address: deployment.kaziToken,
+      abi: erc20Abi,
+      functionName: "decimals",
+    }),
+  );
   const total = parseUnits(values.total, decimals);
   const maxShareBps = BigInt(values["max-share-bps"]);
-  if (maxShareBps < 0n || maxShareBps > 10_000n) throw new Error("--max-share-bps must be 0..10000 (0 = no cap)");
+  if (maxShareBps < 0n || maxShareBps > 10_000n)
+    throw new Error("--max-share-bps must be 0..10000 (0 = no cap)");
 
   if (!values["no-recompute"]) {
-    const usdcDecimals = Number(await client.readContract({ address: deployment.usdc, abi: erc20Abi, functionName: "decimals" }));
+    const usdcDecimals = Number(
+      await client.readContract({
+        address: deployment.usdc,
+        abi: erc20Abi,
+        functionName: "decimals",
+      }),
+    );
     await recomputePoints({ prisma, usdcDecimals: async () => usdcDecimals, log });
   }
 
   const sums = await prisma.pointsEntry.groupBy({ by: ["userId"], _sum: { points: true } });
-  const users = await prisma.user.findMany({ where: { id: { in: sums.map((s) => s.userId) } }, select: { id: true, wallet: true, roles: true } });
+  const users = await prisma.user.findMany({
+    where: { id: { in: sums.map((s) => s.userId) } },
+    select: { id: true, wallet: true, roles: true },
+  });
   const byId = new Map(users.map((u) => [u.id, u]));
   const holders = sums.flatMap((s) => {
     const u = byId.get(s.userId);
-    return u && (s._sum.points ?? 0) > 0 ? [{ wallet: u.wallet as Address, points: BigInt(s._sum.points ?? 0) }] : [];
+    return u && (s._sum.points ?? 0) > 0
+      ? [{ wallet: u.wallet as Address, points: BigInt(s._sum.points ?? 0) }]
+      : [];
   });
   // Kazi's own wallets: admins (by role and ADMIN_WALLETS) and whoever owns the house agents.
   const houseOwners = await prisma.provider.findMany({
@@ -82,14 +107,18 @@ try {
   });
   const admins = [
     ...users.filter((u) => u.roles.includes("ADMIN")).map((u) => u.wallet),
-    ...(process.env["ADMIN_WALLETS"] ?? "").split(",").map((w) => w.trim()).filter((w) => isAddress(w)),
+    ...(process.env["ADMIN_WALLETS"] ?? "")
+      .split(",")
+      .map((w) => w.trim())
+      .filter((w) => isAddress(w)),
     ...houseOwners.map((p) => p.owner.wallet),
   ] as Address[];
   const extraExcluded = (values.exclude ?? "")
     .split(",")
     .map((w) => w.trim())
     .filter(Boolean);
-  for (const w of extraExcluded) if (!isAddress(w)) throw new Error(`--exclude: not an address: ${w}`);
+  for (const w of extraExcluded)
+    if (!isAddress(w)) throw new Error(`--exclude: not an address: ${w}`);
 
   const plan = planAirdrop({
     holders,
@@ -113,8 +142,18 @@ try {
         total: plan.total.toString(),
         allocated: plan.allocated.toString(),
         unallocated: plan.unallocated.toString(),
-        rules: { minPoints: values["min-points"], maxShareBps: values["max-share-bps"], fixed: values.fixed ?? null, excluded: admins.length + extraExcluded.length },
-        allocations: plan.allocations.map((a) => ({ wallet: a.wallet, amount: a.amount.toString(), points: a.points.toString(), proof: a.proof })),
+        rules: {
+          minPoints: values["min-points"],
+          maxShareBps: values["max-share-bps"],
+          fixed: values.fixed ?? null,
+          excluded: admins.length + extraExcluded.length,
+        },
+        allocations: plan.allocations.map((a) => ({
+          wallet: a.wallet,
+          amount: a.amount.toString(),
+          points: a.points.toString(),
+          proof: a.proof,
+        })),
       },
       null,
       2,
@@ -123,21 +162,37 @@ try {
 
   if (values.write) {
     const existing = await prisma.airdropAllocation.count({ where: { airdropId } });
-    if (existing > 0 && !values.replace) throw new Error(`airdrop ${airdropId} already has ${existing} allocations; pass --replace to overwrite`);
+    if (existing > 0 && !values.replace)
+      throw new Error(
+        `airdrop ${airdropId} already has ${existing} allocations; pass --replace to overwrite`,
+      );
     await prisma.$transaction([
       prisma.airdropAllocation.deleteMany({ where: { airdropId } }),
       prisma.airdropAllocation.createMany({
-        data: plan.allocations.map((a) => ({ airdropId, wallet: a.wallet.toLowerCase(), amount: a.amount.toString(), proof: a.proof })),
+        data: plan.allocations.map((a) => ({
+          airdropId,
+          wallet: a.wallet.toLowerCase(),
+          amount: a.amount.toString(),
+          proof: a.proof,
+        })),
       }),
     ]);
   }
 
   console.log(`Airdrop ${airdropId}: ${plan.allocations.length} wallets`);
-  console.log(`  allocated   ${formatUnits(plan.allocated, decimals)} KAZI of ${formatUnits(plan.total, decimals)}`);
-  console.log(`  unallocated ${formatUnits(plan.unallocated, decimals)} KAZI (swept to the treasury after the claim deadline)`);
+  console.log(
+    `  allocated   ${formatUnits(plan.allocated, decimals)} KAZI of ${formatUnits(plan.total, decimals)}`,
+  );
+  console.log(
+    `  unallocated ${formatUnits(plan.unallocated, decimals)} KAZI (swept to the treasury after the claim deadline)`,
+  );
   console.log(`  root        ${plan.root}   → AIRDROP_MERKLE_ROOT`);
   console.log(`  plan        ${out}`);
-  console.log(values.write ? `  stored in the database; set AIRDROP_ID=${airdropId} on the API` : "  not stored (pass --write)");
+  console.log(
+    values.write
+      ? `  stored in the database; set AIRDROP_ID=${airdropId} on the API`
+      : "  not stored (pass --write)",
+  );
 } finally {
   await prisma.$disconnect();
 }

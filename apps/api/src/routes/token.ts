@@ -15,14 +15,53 @@ import { notFound, parse } from "../http/errors";
 const METRICS_CACHE_MS = 5 * 60_000;
 const DAY_MS = 86_400_000;
 const vestingAbi = [
-  { type: "function", name: "start", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "duration", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "released", stateMutability: "view", inputs: [{ name: "token", type: "address" }], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "vestedAmount", stateMutability: "view", inputs: [{ name: "token", type: "address" }, { name: "timestamp", type: "uint64" }], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "start",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "duration",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "released",
+    stateMutability: "view",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "vestedAmount",
+    stateMutability: "view",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "timestamp", type: "uint64" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 const airdropAbi = [
-  { type: "function", name: "totalClaimed", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
-  { type: "function", name: "claimDeadline", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
+  {
+    type: "function",
+    name: "totalClaimed",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "claimDeadline",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint64" }],
+  },
 ] as const;
 const walletParams = z.object({ wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/) });
 
@@ -45,16 +84,32 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
         client.readContract({ address: distributor, abi: feeDistributorAbi, functionName }),
       ),
     );
-    return { treasuryBps: Number(treasuryBps), stakerBps: Number(stakerBps), buybackBps: Number(buybackBps) };
+    return {
+      treasuryBps: Number(treasuryBps),
+      stakerBps: Number(stakerBps),
+      buybackBps: Number(buybackBps),
+    };
   };
 
-  const sumArgs = async (contract: Address | undefined, name: string, field: string, since?: Date) => {
+  const sumArgs = async (
+    contract: Address | undefined,
+    name: string,
+    field: string,
+    since?: Date,
+  ) => {
     if (!contract) return 0n;
     const rows = await s.prisma.chainEvent.findMany({
-      where: { contract: contract.toLowerCase(), name, ...(since ? { indexedAt: { gte: since } } : {}) },
+      where: {
+        contract: contract.toLowerCase(),
+        name,
+        ...(since ? { indexedAt: { gte: since } } : {}),
+      },
       select: { args: true },
     });
-    return rows.reduce((a, r) => a + BigInt(String((r.args as Record<string, unknown>)[field] ?? "0")), 0n);
+    return rows.reduce(
+      (a, r) => a + BigInt(String((r.args as Record<string, unknown>)[field] ?? "0")),
+      0n,
+    );
   };
 
   return async function routes(app: FastifyInstance) {
@@ -66,8 +121,18 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
       const client = s.publicClient;
       if (!token || !vault || !client) return { deployed: false, launched: false };
       const launch = s.tokenLaunch ?? null;
-      const read = <T>(address: Address, abi: readonly unknown[], functionName: string, args: readonly unknown[] = []) =>
-        client.readContract({ address, abi: abi as never, functionName: functionName as never, args: args as never }) as Promise<T>;
+      const read = <T>(
+        address: Address,
+        abi: readonly unknown[],
+        functionName: string,
+        args: readonly unknown[] = [],
+      ) =>
+        client.readContract({
+          address,
+          abi: abi as never,
+          functionName: functionName as never,
+          args: args as never,
+        }) as Promise<T>;
       const bal = (holder: Address) => read<bigint>(token, erc20Abi, "balanceOf", [holder]);
 
       const [supply, staked, active, notified, claimed] = await Promise.all([
@@ -89,8 +154,17 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
       // (e.g. liquidity and community held by the same multisig).
       const locked = new Map<string, bigint>();
       const lock = (holder: Address, balance: bigint) => locked.set(holder.toLowerCase(), balance);
-      const vesting: { name: string; address: Address; total: string; vested: string; released: string; start: number; end: number }[] = [];
-      let airdrop: { address: Address; balance: string; claimed: string; deadline: number } | null = null;
+      const vesting: {
+        name: string;
+        address: Address;
+        total: string;
+        vested: string;
+        released: string;
+        start: number;
+        end: number;
+      }[] = [];
+      let airdrop: { address: Address; balance: string; claimed: string; deadline: number } | null =
+        null;
       let treasuryUsdc: string | null = null;
       if (launch) {
         const now = BigInt(Math.floor(Date.now() / 1000));
@@ -106,7 +180,15 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
             read<bigint>(address, vestingAbi, "duration"),
           ]);
           lock(address, balance);
-          vesting.push({ name, address, total: (balance + released).toString(), vested: vested.toString(), released: released.toString(), start: Number(start), end: Number(start + duration) });
+          vesting.push({
+            name,
+            address,
+            total: (balance + released).toString(),
+            vested: vested.toString(),
+            released: released.toString(),
+            start: Number(start),
+            end: Number(start + duration),
+          });
         }
         const [airdropBal, airdropClaimed, deadline] = await Promise.all([
           bal(launch.airdrop),
@@ -114,11 +196,18 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
           read<bigint>(launch.airdrop, airdropAbi, "claimDeadline"),
         ]);
         lock(launch.airdrop, airdropBal);
-        airdrop = { address: launch.airdrop, balance: airdropBal.toString(), claimed: airdropClaimed.toString(), deadline: Number(deadline) };
+        airdrop = {
+          address: launch.airdrop,
+          balance: airdropBal.toString(),
+          claimed: airdropClaimed.toString(),
+          deadline: Number(deadline),
+        };
         for (const holder of [launch.treasury, launch.community, launch.liquidity]) {
           if (!locked.has(holder.toLowerCase())) lock(holder, await bal(holder));
         }
-        treasuryUsdc = (await read<bigint>(s.chain.usdcAddress, erc20Abi, "balanceOf", [launch.treasury])).toString();
+        treasuryUsdc = (
+          await read<bigint>(s.chain.usdcAddress, erc20Abi, "balanceOf", [launch.treasury])
+        ).toString();
       }
       const nonCirculating = [...locked.values()].reduce((a, b) => a + b, 0n);
       const circulating = supply > nonCirculating ? supply - nonCirculating : 0n;
@@ -131,7 +220,11 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
         staked: staked.toString(),
         stakedActive: active.toString(),
         stakedBps: circulating > 0n ? Number((staked * 10_000n) / circulating) : 0,
-        stakerRewards: { allTime: notified.toString(), last30d: stakers30d.toString(), claimed: claimed.toString() },
+        stakerRewards: {
+          allTime: notified.toString(),
+          last30d: stakers30d.toString(),
+          claimed: claimed.toString(),
+        },
         feesDistributed: distributedAll.toString(),
         split,
         buybackReserved: buybackAll.toString(),
@@ -142,7 +235,14 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
           kaziToken: getAddress(token),
           stakingVault: getAddress(vault),
           feeDistributor: distributor ? getAddress(distributor) : null,
-          ...(launch ? { teamVesting: launch.teamVesting, ecosystemVesting: launch.ecosystemVesting, airdrop: launch.airdrop, treasury: launch.treasury } : {}),
+          ...(launch
+            ? {
+                teamVesting: launch.teamVesting,
+                ecosystemVesting: launch.ecosystemVesting,
+                airdrop: launch.airdrop,
+                treasury: launch.treasury,
+              }
+            : {}),
         },
       };
       metricsCache = { at: Date.now(), body };
@@ -161,7 +261,11 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
         sumArgs(vault, "RewardNotified", "distributed", new Date(Date.now() - 30 * DAY_MS)),
         client.readContract({ address: vault, abi: stakingVaultAbi, functionName: "totalActive" }),
         client.readContract({ address: vault, abi: stakingVaultAbi, functionName: "WARMUP" }),
-        client.readContract({ address: vault, abi: stakingVaultAbi, functionName: "holderCooldown" }),
+        client.readContract({
+          address: vault,
+          abi: stakingVaultAbi,
+          functionName: "holderCooldown",
+        }),
         feeSplit(),
         kaziDecimalsOf(s),
       ]);
@@ -188,17 +292,36 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
       });
       const total = entries.reduce((a, e) => a + e.points, 0);
       const taskIds = [...new Set(entries.map((e) => e.taskId))];
-      const tasks = await s.prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, title: true } });
+      const tasks = await s.prisma.task.findMany({
+        where: { id: { in: taskIds } },
+        select: { id: true, title: true },
+      });
       const title = new Map(tasks.map((t) => [t.id, t.title]));
       return {
         total,
-        entries: entries.map((e) => ({ taskId: e.taskId, title: title.get(e.taskId) ?? null, role: e.role, points: e.points, flag: e.flag, feeUnits: e.feeUnits, at: e.updatedAt })),
+        entries: entries.map((e) => ({
+          taskId: e.taskId,
+          title: title.get(e.taskId) ?? null,
+          role: e.role,
+          points: e.points,
+          flag: e.flag,
+          feeUnits: e.feeUnits,
+          at: e.updatedAt,
+        })),
       };
     });
 
     app.get("/points/leaderboard", async () => {
-      const rows = await s.prisma.pointsEntry.groupBy({ by: ["userId"], _sum: { points: true }, orderBy: { _sum: { points: "desc" } }, take: 50 });
-      const users = await s.prisma.user.findMany({ where: { id: { in: rows.map((r) => r.userId) } }, select: { id: true, wallet: true } });
+      const rows = await s.prisma.pointsEntry.groupBy({
+        by: ["userId"],
+        _sum: { points: true },
+        orderBy: { _sum: { points: "desc" } },
+        take: 50,
+      });
+      const users = await s.prisma.user.findMany({
+        where: { id: { in: rows.map((r) => r.userId) } },
+        select: { id: true, wallet: true },
+      });
       const wallet = new Map(users.map((u) => [u.id, u.wallet]));
       return {
         leaders: rows
@@ -206,7 +329,11 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
           .map((r, i) => {
             const raw = wallet.get(r.userId);
             const w = raw ? getAddress(raw) : "";
-            return { rank: i + 1, wallet: `${w.slice(0, 6)}…${w.slice(-4)}`, points: r._sum.points ?? 0 };
+            return {
+              rank: i + 1,
+              wallet: `${w.slice(0, 6)}…${w.slice(-4)}`,
+              points: r._sum.points ?? 0,
+            };
           }),
       };
     });
@@ -215,9 +342,16 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
     app.get("/airdrop/:wallet", async (req) => {
       const { wallet } = parse(walletParams, req.params);
       if (!s.airdropId || !s.tokenLaunch) throw notFound("Airdrop");
-      const row = await s.prisma.airdropAllocation.findUnique({ where: { airdropId_wallet: { airdropId: s.airdropId, wallet: wallet.toLowerCase() } } });
+      const row = await s.prisma.airdropAllocation.findUnique({
+        where: { airdropId_wallet: { airdropId: s.airdropId, wallet: wallet.toLowerCase() } },
+      });
       if (!row) throw notFound("Allocation");
-      return { airdropId: row.airdropId, contract: s.tokenLaunch.airdrop, amount: row.amount, proof: row.proof };
+      return {
+        airdropId: row.airdropId,
+        contract: s.tokenLaunch.airdrop,
+        amount: row.amount,
+        proof: row.proof,
+      };
     });
   };
 }
@@ -225,5 +359,11 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
 async function kaziDecimalsOf(s: AppServices): Promise<number | null> {
   const token = s.contracts?.["kaziToken"];
   if (!token || !s.publicClient) return null;
-  return Number(await s.publicClient.readContract({ address: token, abi: kaziTokenAbi, functionName: "decimals" }));
+  return Number(
+    await s.publicClient.readContract({
+      address: token,
+      abi: kaziTokenAbi,
+      functionName: "decimals",
+    }),
+  );
 }
