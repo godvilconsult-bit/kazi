@@ -20,7 +20,7 @@ import {
 } from "@kazi/shared";
 import type { AppServices } from "../app";
 import { requireAuth } from "../auth/guards";
-import { badRequest, invalidState, notFound, parse } from "../http/errors";
+import { badRequest, invalidState, notFound, parse, quotesPaused } from "../http/errors";
 import { renderInvoice } from "../invoice";
 import { serializeTask, serializeTaskEvent } from "./serializers";
 
@@ -203,6 +203,7 @@ export function taskRoutes(s: AppServices) {
       if (updated.count === 0) throw invalidState("Task changed concurrently, retry");
       await s.prisma.taskEvent.create({ data: { taskId: task.id, type: "EDITED", data: {} } });
       let quoteStatus: "queued" | null = null;
+      if (body.requote && s.env.ROUTER_DISABLED) throw quotesPaused();
       if (body.requote) {
         await s.jobs.enqueue(
           "router",
@@ -226,6 +227,7 @@ export function taskRoutes(s: AppServices) {
         ],
       },
       async (req, reply) => {
+        if (s.env.ROUTER_DISABLED) throw quotesPaused();
         const { task } = await loadOwnTask(req);
         const { speed } = parse(quoteRequestSchema, req.body ?? {});
         const current = task.quote ? storedQuoteSchema.safeParse(task.quote) : undefined;

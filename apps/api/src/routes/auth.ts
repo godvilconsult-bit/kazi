@@ -5,7 +5,7 @@ import type { AppServices } from "../app";
 import { requireAuth } from "../auth/guards";
 import { ACCESS_TTL_SECONDS, REFRESH_TTL_SECONDS, type AuthContext } from "../auth/tokens";
 import { clearCookie, parseCookies, serializeCookie } from "../http/cookies";
-import { notFound, parse, unauthorized } from "../http/errors";
+import { forbidden, notFound, parse, unauthorized } from "../http/errors";
 import { serializeUser } from "./serializers";
 
 export const ACCESS_COOKIE = "kazi_access";
@@ -42,6 +42,7 @@ export function authRoutes(s: AppServices) {
       async (req, reply) => {
         const body = parse(siweVerifySchema, req.body);
         const wallet = await s.siwe.verify(body.message, body.signature as `0x${string}`);
+        if (await s.sanctions?.isSanctioned(wallet)) throw forbidden("This wallet can't use Kazi.");
 
         const isAdmin = s.adminWallets.has(wallet);
         const existing = await s.prisma.user.findUnique({ where: { wallet } });

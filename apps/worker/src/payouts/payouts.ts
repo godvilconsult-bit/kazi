@@ -26,6 +26,8 @@ const DEAD = new Set(["FAILED", "REFUNDED"]);
 export async function payoutsTick(deps: PayoutDeps): Promise<number> {
   const now = deps.now?.() ?? new Date();
   let enqueued = 0;
+  // While the escrow is paused releases would revert: hold them (refunds still work onchain).
+  const paused = await deps.operator.paused().catch(() => false);
   const tasks = await deps.prisma.task.findMany({
     where: { status: { in: ["FUNDED", "IN_PROGRESS", "DELIVERED"] } },
     include: { subtasks: { orderBy: { index: "asc" } } },
@@ -48,7 +50,7 @@ export async function payoutsTick(deps: PayoutDeps): Promise<number> {
       task.status === "DELIVERED" &&
       (task.approvedAt !== null || (task.reviewUntil !== null && task.reviewUntil <= now));
 
-    if (approved) {
+    if (approved && !paused) {
       for (const st of work) {
         if (st.status === "ACCEPTED") {
           await deps.jobs.add("payouts", "release", { subtaskId: st.id }, jobIds.release(st.id));
@@ -66,7 +68,7 @@ export async function payoutsTick(deps: PayoutDeps): Promise<number> {
           jobIds.refund(service.id),
         );
         enqueued++;
-      } else if (approved && work.some((s) => ACCEPTED_OR_DONE.has(s.status))) {
+      } else if (approved && !paused && work.some((s) => ACCEPTED_OR_DONE.has(s.status))) {
         await deps.jobs.add(
           "payouts",
           "release",
@@ -80,12 +82,15 @@ export async function payoutsTick(deps: PayoutDeps): Promise<number> {
   return enqueued;
 }
 
-/** Send one release/refund, after confirming the milestone is still FUNDED onchain. */
+/**
+ * Send one release/refund, after confirming the milestone is still FUNDED onchain. Returns "paused"
+ * (nothing sent) for a release while the escrow is paused; the job runner retries it later.
+ */
 export async function settleMilestone(
   deps: PayoutDeps,
   subtaskId: string,
   action: "release" | "refund",
-): Promise<"sent" | "already-settled" | "skipped"> {
+): Promise<"sent" | "already-settled" | "skipped" | "paused"> {
   const st = await deps.prisma.subtask.findUnique({
     where: { id: subtaskId },
     include: { task: true },
@@ -101,6 +106,7 @@ export async function settleMilestone(
         : "FAILED";
   if (st.status !== expected) return "skipped";
 
+  if (action === "release" && (await deps.operator.paused())) return "paused";
   const taskId = st.task.onchainId as Hex;
   const onchain = await deps.operator.milestone(taskId, st.index);
   if (onchain.status !== "FUNDED") return "already-settled"; // the indexer will (or did) record it

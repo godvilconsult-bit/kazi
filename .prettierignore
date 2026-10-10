@@ -13,3 +13,10 @@ packages/db/src/generated
 packages/shared/src/abis.ts
 pnpm-lock.yaml
 supabase/.temp
+# Versioned LLM prompts: content, validated by golden tests exactly as written
+**/prompt.md
+apps/worker/src/router/prompts
+apps/worker/src/evaluator/prompts
+# Written by forge scripts
+packages/config/deployments
+packages/contracts/broadcast

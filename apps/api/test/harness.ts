@@ -4,7 +4,7 @@ import { privateKeyToAccount, generatePrivateKey, type PrivateKeyAccount } from 
 import { createSiweMessage } from "viem/siwe";
 import { getChainConfig } from "@kazi/config";
 import { createPrismaClient, type PrismaClient } from "@kazi/db";
-import { buildApp } from "../src/app";
+import { buildApp, type AppDeps } from "../src/app";
 import { loadApiEnv, type ApiEnv } from "../src/env";
 import { MemoryJobQueue } from "../src/jobs";
 import { MemoryStorage } from "@kazi/config/storage";
@@ -39,9 +39,12 @@ const TABLES = [
   "IdempotencyKey",
   "Offer",
   "Notification",
+  "PointsEntry",
+  "AirdropAllocation",
 ];
 
-export async function createHarness(): Promise<Harness> {
+/** `overrides` replace or extend the default AppDeps (e.g. a token launch for the airdrop routes). */
+export async function createHarness(overrides: Partial<AppDeps> = {}): Promise<Harness> {
   const env = loadApiEnv();
   const prisma = createPrismaClient(env.DATABASE_URL);
   await prisma.$executeRawUnsafe(
@@ -69,6 +72,7 @@ export async function createHarness(): Promise<Harness> {
       agentRegistry: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
       stakingVault: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
     },
+    ...overrides,
   });
   await app.ready();
 

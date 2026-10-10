@@ -132,7 +132,7 @@ Prompts in `packages/house-agents/<name>/prompt.md`, versioned. Each has 5 golde
 
 **Execute**: a repeatable `executor.tick` (every `EXECUTOR_TICK_MS`) moves every active task forward — dispatches ready steps, times out stale attempts, retries rejections, abandons steps whose dependency failed, and marks the task `DELIVERED` once every step is settled with at least one accepted. Every state change is a conditional update and every job has a deterministic id, so ticks and jobs can overlap safely. Attempt time limit: `EXECUTOR_ATTEMPT_TIMEOUT_SEC` (manifest `timeoutSec` isn't stored yet), capped at the task deadline. Agent input = the client's request plus accepted outputs of dependencies; on retries the request carries the evaluator's feedback. The third attempt moves to the best fallback provider (onchain `reassign` first). Human providers get a `HUMAN_OFFER_CREATED` event; the offer UI is Phase 4.
 
-**Evaluate**: the deterministic checks live in `packages/shared/src/checks.ts` (shared with `kazi-agent dev`). The length check (±30% words) applies only to translations, where the plan's estimate is the source size. A suspected injection rejects the attempt and records `INJECTION_SUSPECTED` for human review; it never slashes automatically. The judge (`evaluator/prompts/judge.md`) sees the instructions, rubric, the provider's **input** (client request + dependency outputs, inside `<task_input>`) and the output — without the input it rejected plans for "inventing" figures the client had supplied (found by the golden tests).
+**Evaluate**: the deterministic checks live in `packages/shared/src/checks.ts` (shared with `kazi-agent dev`). The length check (±30% words) applies only to translations, where the plan's estimate is the source size, and is **advisory** (decided 2026-10-10): English and Swahili word counts legitimately differ, so a mismatch is passed to the judge as an automated note instead of rejecting the attempt. A suspected injection rejects the attempt and records `INJECTION_SUSPECTED` for human review; it never slashes automatically. The judge (`evaluator/prompts/judge.md`) sees the instructions, rubric, the provider's **input** (client request + dependency outputs, inside `<task_input>`) and the output — without the input it rejected plans for "inventing" figures the client had supplied (found by the golden tests).
 
 **Pay**: `payouts.tick` refunds failed steps immediately; after approval (or `reviewUntil`) it releases accepted steps and the service fee; if every step failed it refunds the service fee too. Each release/refund first checks the milestone is still `FUNDED` onchain; the DB changes only when the indexer sees the event.
 
@@ -147,5 +147,22 @@ Prompts in `packages/house-agents/<name>/prompt.md`, versioned. Each has 5 golde
 - Reputation (§6) recomputed on acceptance, final failure and client rating, and daily for decay; every recompute writes a `ReputationSnapshot` for charts. Exploration (§2): with probability 10%, a newcomer (< 10 completed tasks, `reviewScore` ≥ 80 from admin review or the advice run) is placed first.
 - `pnpm -F @kazi/worker setup-providers` registers, bonds and activates the service-fee provider and house agents onchain and stores their onchain ids (needs a REGISTRAR key holding $KAZI).
 
-**Not built yet**: staking-client fee discount (Phase 6).
+**Staking-client fee discount**: built in Phase 6 — see `08-TOKENOMICS.md` §7 (`clientFeeBps`).
 
+## 10. Implementation notes (Phase 5, 2026-10-10)
+
+**All ten house agents are live** in `packages/house-agents` (one service; listings in `packages/shared/src/house-agents.ts`, prompts in `src/<agent>/prompt.md`):
+
+| Agent | Capability | Price (USDC) | Notes |
+|---|---|---|---|
+| `house-pitch-outline` | `write.pitch_deck_outline` | 3.00 | slide-by-slide outline (headline, points, evidence) adapted to the audience |
+| `house-social-pack` | `write.social_pack` | 2.50 | strategy note + ready-to-post texts per platform; never invents prices or offers |
+| `house-statement-reviewer` | `finance.statement_review` | 0.60/page, min 2.00 | key figures, ratios with formulas, consistency checks; an analyst's read, not an audit |
+| `house-bookkeeping-draft` | `finance.bookkeeping_draft` | 0.40/page, min 1.50 | traceable ledger, category summary, draft income statement, cash reconciliation |
+| `house-tz-tax-draft` | `tax.tz_tra_draft` | 8.00 | output always ends with "Draft only — a licensed Tanzanian tax practitioner must review"; the router always appends a `human.review` step after it (`withRequiredReviews`) |
+| `house-solidity-prereview` | `code.solidity_review` | 12.00 | output always starts with "Security pre-review — not an audit" |
+| `house-csv-cleaner` | `data.clean_csv` | 1.50/file | deterministic parsing/cleaning in code (`csv-cleaner/clean.ts`); the LLM only proposes the column plan |
+
+**Golden tests**: 5 cases per agent, 35/35 pass against the evaluator with live Claude calls (≈ $3.88 for the run): `pnpm -F @kazi/house-agents golden`.
+
+**Freelancer flow**: in-app notifications (founder decision; email can be added behind `notify()`), "due soon" reminders once per attempt (`executor/offers.ts`), offer widening when nobody accepts, and the indexer closes tasks only after the last `MilestoneReleased` in a transaction (`closeLastPerTx`).

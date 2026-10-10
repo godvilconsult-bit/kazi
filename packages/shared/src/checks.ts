@@ -10,6 +10,13 @@ import type { Acceptance } from "./router";
 export interface CheckFailure {
   code: "EMPTY" | "FORMAT" | "MISSING_TERMS" | "LENGTH" | "INJECTION";
   message: string;
+  /** Advisory findings don't reject on their own; the evaluator hands them to the judge as notes. */
+  advisory?: true;
+}
+
+/** The findings that reject an attempt outright (advisory ones go to the judge instead). */
+export function blockingFailures(failures: readonly CheckFailure[]): CheckFailure[] {
+  return failures.filter((f) => !f.advisory);
 }
 
 export interface CheckInput {
@@ -75,9 +82,12 @@ export function runChecks(input: CheckInput): CheckFailure[] {
     const words = countWords(text);
     const ratio = words / input.expectedWords;
     if (ratio < 0.7 || ratio > 1.3) {
+      // Advisory: English and Swahili word counts legitimately differ by more than 30%, so the
+      // judge decides whether anything was left out or added (decision 2026-10-10, docs/06 §9).
       failures.push({
         code: "LENGTH",
         message: `Expected about ${Math.round(input.expectedWords)} words but got ${words} (outside ±30%).`,
+        advisory: true,
       });
     }
   }

@@ -9,6 +9,7 @@ import {
   acceptanceSchema,
   capabilityOutputSchema,
   parseUnits,
+  blockingFailures,
   runChecks,
   storedQuoteSchema,
   transition,
@@ -56,6 +57,7 @@ export function renderJudgeUser(
   acceptance: Acceptance,
   output: AgentOutput,
   input?: string,
+  notes: readonly string[] = [],
 ): string {
   const files = (output.files ?? [])
     .map((f) => `- ${f.mime} (sha256 ${f.sha256.slice(0, 12)}…)`)
@@ -84,6 +86,15 @@ export function renderJudgeUser(
           "",
         ]
       : []),
+    ...(notes.length > 0
+      ? [
+          "<automated_notes>",
+          ...notes.map((n) => `- ${n}`),
+          "These notes come from Kazi's own checks, not from the provider. Word counts differ between languages; only lower the score if content was actually left out or added.",
+          "</automated_notes>",
+          "",
+        ]
+      : []),
     "<agent_output>",
     text.length > MAX_JUDGED_CHARS
       ? `${text.slice(0, MAX_JUDGED_CHARS)}\n[… truncated for review]`
@@ -102,6 +113,8 @@ export async function judgeOutput(
     output: AgentOutput;
     /** What the provider was given (client request + dependency outputs). */
     input?: string;
+    /** Advisory findings from the deterministic checks (e.g. length outside ±30%). */
+    notes?: readonly string[];
     runs?: number;
     taskId?: string;
     subtaskId?: string;
@@ -114,7 +127,7 @@ export async function judgeOutput(
       purpose: "judge",
       model: deps.judgeModel,
       system: JUDGE_SYSTEM,
-      user: renderJudgeUser(input.instructions, input.acceptance, input.output, input.input),
+      user: renderJudgeUser(input.instructions, input.acceptance, input.output, input.input, input.notes),
       schema: judgeVerdictSchema,
       effort: "medium",
       taskId: input.taskId,
@@ -159,9 +172,10 @@ export async function evaluateSubmission(
       })
     : [{ code: "FORMAT", message: "The output does not match the required structure." }];
 
+  const blocking = blockingFailures(failures);
   let verdict: JudgeVerdict | null = null;
   let usage: LlmUsage | undefined;
-  if (failures.length === 0 && output.success) {
+  if (blocking.length === 0 && output.success) {
     const decimals = await deps.usdcDecimals();
     const runs = BigInt(st.amount) > parseUnits(deps.config.doubleJudgeAbove, decimals) ? 2 : 1;
     const agentInput = await buildAgentInput({ prisma: deps.prisma }, st);
@@ -170,6 +184,7 @@ export async function evaluateSubmission(
       acceptance: acceptance.data,
       output: output.data,
       input: agentInput.text ?? "",
+      notes: failures.filter((f) => f.advisory).map((f) => f.message),
       runs,
       taskId: st.taskId,
       subtaskId: st.id,
@@ -179,12 +194,12 @@ export async function evaluateSubmission(
   }
 
   const accepted =
-    failures.length === 0 &&
+    blocking.length === 0 &&
     verdict !== null &&
     verdict.passed &&
     verdict.score >= deps.config.passThreshold;
-  const feedback = failures.length
-    ? failures.map((f) => f.message).join(" ")
+  const feedback = blocking.length
+    ? blocking.map((f) => f.message).join(" ")
     : (verdict?.feedback ?? "The output could not be evaluated.");
   const evaluation = {
     checks: failures,

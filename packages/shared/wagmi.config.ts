@@ -16,6 +16,7 @@ export default defineConfig({
         "FeeDistributor.sol/**",
         "TaskEscrow.sol/**",
         "MockUSDC.sol/**",
+        "KaziAirdrop.sol/**",
       ],
     }),
   ],

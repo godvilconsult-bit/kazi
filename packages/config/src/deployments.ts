@@ -28,6 +28,27 @@ export class DeploymentNotFoundError extends Error {
   override readonly name = "DeploymentNotFoundError";
 }
 
+/** Token launch allocations written by script/DeployTokenLaunch.s.sol (Phase 6). */
+export const tokenLaunchSchema = z.object({
+  network: z.string(),
+  tge: z.number().int().nonnegative(),
+  total: z.union([z.string(), z.number()]).transform(String),
+  teamVesting: addressSchema,
+  ecosystemVesting: addressSchema,
+  airdrop: addressSchema,
+  treasury: addressSchema,
+  liquidity: addressSchema,
+  community: addressSchema,
+});
+export type TokenLaunch = z.infer<typeof tokenLaunchSchema>;
+
+/** The token launch for a network, or null when the token hasn't launched there yet. */
+export function loadTokenLaunch(network: KaziNetwork, dir: string = DEFAULT_DEPLOYMENTS_DIR): TokenLaunch | null {
+  const path = resolve(dir, `${network}-token-launch.json`);
+  if (!existsSync(path)) return null;
+  return tokenLaunchSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+}
+
 export function loadDeployment(
   network: KaziNetwork,
   dir: string = DEFAULT_DEPLOYMENTS_DIR,

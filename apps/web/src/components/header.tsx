@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useAccount, useSwitchChain } from "wagmi";
-import { Languages, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { KeyRound, Languages, LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { shortAddress } from "@/lib/format";
 import { useAuth } from "./auth";
@@ -148,6 +148,7 @@ function Banners() {
 
 function WalletButton() {
   const t = useTranslations("wallet");
+  const nav = useTranslations("nav");
   const { address, isConnected } = useAccount();
   const { user, signIn, signingIn, signOut, error } = useAuth();
   const [menu, setMenu] = useState(false);
@@ -171,6 +172,14 @@ function WalletButton() {
           <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-ink bg-surface p-2 shadow-stamp" onMouseLeave={() => setMenu(false)}>
             <p className="px-2 pt-1 text-xs text-muted">{t("signedInAs")}</p>
             <p className="break-all px-2 pb-2 font-mono text-xs">{user.wallet}</p>
+            <Link href="/points" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2" onClick={() => setMenu(false)}>
+              <Sparkles className="size-4" />
+              {nav("points")}
+            </Link>
+            <Link href="/settings/api-keys" className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-surface-2" onClick={() => setMenu(false)}>
+              <KeyRound className="size-4" />
+              {nav("apiKeys")}
+            </Link>
             <button
               type="button"
               className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-surface-2"

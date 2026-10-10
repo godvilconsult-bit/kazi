@@ -5,7 +5,7 @@ import { baseUnitsSchema, jobIds, storedQuoteSchema, taskOnchainId, TASK_SPEEDS 
 import type { AppServices } from "../app";
 import { generateApiKey, MAX_ACTIVE_KEYS } from "../auth/api-keys";
 import { requireAuth } from "../auth/guards";
-import { forbidden, invalidState, notFound, parse } from "../http/errors";
+import { forbidden, invalidState, notFound, parse, quotesPaused } from "../http/errors";
 import { PAYMENT_ADAPTERS } from "../payments/adapters";
 import { serializeTask } from "./serializers";
 
@@ -65,6 +65,7 @@ export function publicApiRoutes(s: AppServices) {
     // ─── Quick task: create + quote in one call ──────────────────────────────
     app.post("/v1/quick-tasks", { preHandler: s.limiter.guard("quick-tasks", 30, 60) }, async (req, reply) => {
       const auth = requireAuth(req);
+      if (s.env.ROUTER_DISABLED) throw quotesPaused();
       const body = parse(quickTaskSchema, req.body);
       const id = randomUUID();
       const title = body.title ?? (body.description.split(/\n|(?<=[.!?])\s/)[0] ?? body.description).slice(0, 120);

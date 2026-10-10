@@ -9,8 +9,9 @@
  * Uses only anvil's public dev keys. Never point it at a real network.
  */
 import { spawn, execFileSync, type ChildProcess } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { parseEnv } from "node:util";
 import { randomBytes } from "node:crypto";
 import { pino } from "pino";
@@ -18,14 +19,24 @@ import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { SecretBox, deriveHouseAgentSecret } from "@kazi/config/secrets";
 import { createPrismaClient } from "@kazi/db";
-import { CAPABILITY_DEFINITIONS, HOUSE_AGENT_LISTINGS, SERVICE_FEE_PROVIDER, mockUsdcAbi } from "@kazi/shared";
+import { CAPABILITY_DEFINITIONS, HOUSE_AGENT_LISTINGS, SERVICE_FEE_PROVIDER, kaziTokenAbi, mockUsdcAbi } from "@kazi/shared";
+import { planAirdrop } from "../src/points/airdrop";
 import { registerKaziProviders } from "../src/setup/providers";
-import { KEYS, startLocalChain } from "../test/anvil";
+import { KEYS, sendTx, startLocalChain } from "../test/anvil";
 
 const PORTS = { api: 4001, web: 3100, house: 4101 } as const;
+/** LOAD_TEST=1: the same stack for scripts/load-test.ts — no web app; the load driver sets X-Forwarded-For per simulated client. */
+const LOAD = process.env["LOAD_TEST"] === "1";
+const AIRDROP_ID = "e2e-1";
+const KAZI = 10n ** 18n;
 const root = resolve(import.meta.dirname, "../../..");
 const log = pino({ level: "info" });
 const children: ChildProcess[] = [];
+
+function forgeBin(): string {
+  const local = join(homedir(), ".foundry", "bin", process.platform === "win32" ? "forge.exe" : "forge");
+  return process.env["FORGE_BIN"] ?? (existsSync(local) ? local : "forge");
+}
 
 function stopAll(code = 0): never {
   for (const c of children) {
@@ -94,6 +105,8 @@ const common: Record<string, string> = {
   HOUSE_AGENTS_BASE_URL: `http://127.0.0.1:${PORTS.house}`,
   EXECUTOR_TICK_MS: "1000",
   INDEXER_POLL_MS: "500",
+  AIRDROP_ID,
+  ...(LOAD ? { TRUST_PROXY: "true", QUOTE_DAILY_LIMIT: "1000", LOG_LEVEL: "warn" } : {}),
 };
 
 // ── Database: clean slate + the providers this flow needs ────────────────────
@@ -149,6 +162,40 @@ await registerKaziProviders({
   setupKey: KEYS.admin,
   log,
 });
+// ── $KAZI launch (Phase 6): the real DeployTokenLaunch script, an airdrop for the mock wallet ──
+const airdropPlan = planAirdrop({
+  holders: [],
+  total: 4_000n * KAZI,
+  fixed: [
+    { wallet: client, amount: 1_000n * KAZI },
+    { wallet: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65", amount: 3_000n * KAZI }, // anvil #4
+  ],
+});
+// forge may only write under packages/config/deployments (foundry.toml fs_permissions).
+const launchOut = resolve(root, "packages/config/deployments/e2e/local-token-launch.json");
+mkdirSync(dirname(launchOut), { recursive: true });
+execFileSync(forgeBin(), ["script", "script/DeployTokenLaunch.s.sol", "--rpc-url", chain.rpcUrl, "--broadcast", "--private-key", KEYS.admin], {
+  cwd: resolve(root, "packages/contracts"),
+  stdio: ["ignore", "ignore", "inherit"],
+  env: {
+    ...process.env,
+    KAZI_NETWORK: "local",
+    KAZI_TOKEN: chain.deployment.kaziToken,
+    ADMIN_SAFE: admin,
+    TEAM_BENEFICIARY: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f", // anvil #8
+    ECOSYSTEM_BENEFICIARY: "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720", // anvil #9
+    TREASURY_ADDRESS: treasury,
+    LIQUIDITY_ADDRESS: admin, // admin keeps liquidity + community: it funds the staking test below
+    COMMUNITY_ADDRESS: admin,
+    AIRDROP_MERKLE_ROOT: airdropPlan.root,
+    TOKEN_LAUNCH_OUT: launchOut,
+  },
+});
+copyFileSync(launchOut, resolve(deploymentsDir, "local-token-launch.json"));
+await prisma.airdropAllocation.createMany({
+  data: airdropPlan.allocations.map((a) => ({ airdropId: AIRDROP_ID, wallet: a.wallet.toLowerCase(), amount: a.amount.toString(), proof: a.proof })),
+});
+await sendTx(chain, KEYS.admin, chain.deployment.kaziToken, kaziTokenAbi, "transfer", [client, 10_000n * KAZI]);
 await prisma.$disconnect();
 
 // The test client gets 1,000 test USDC.
@@ -190,18 +237,26 @@ async function waitFor(url: string, label: string, timeoutMs = 300_000) {
 start("house", ["--filter", "@kazi/house-agents", "start"]);
 start("api", ["--filter", "@kazi/api", "start"]);
 start("worker", ["--filter", "@kazi/worker", "start"]);
-start("web", ["--filter", "@kazi/web", "exec", "next", "dev", "--port", String(PORTS.web)], {
+if (!LOAD) start("web", ["--filter", "@kazi/web", "exec", "next", "dev", "--port", String(PORTS.web)], {
   NEXT_PUBLIC_API_URL: `http://localhost:${PORTS.api}`,
   NEXT_PUBLIC_E2E_WALLET: client,
   NEXT_DIST_DIR: ".next-e2e",
+  // Geo hooks: the spec sends cf-ipcountry: US to see the restricted staking page.
+  GEO_RESTRICTED_COUNTRIES: "US",
+  GEO_COUNTRY_HEADER: "cf-ipcountry",
 });
 try {
   await waitFor(`http://127.0.0.1:${PORTS.house}/health`, "house agents");
   await waitFor(`http://localhost:${PORTS.api}/health`, "api");
-  await waitFor(`http://localhost:${PORTS.web}/`, "web", 600_000);
+  if (!LOAD) await waitFor(`http://localhost:${PORTS.web}/`, "web", 600_000);
 } catch (err) {
   log.error({ err }, "e2e stack failed to start");
   chain.stop();
   stopAll(1);
 }
+// The load driver reads where everything runs from here.
+writeFileSync(
+  resolve(deploymentsDir, "stack.json"),
+  JSON.stringify({ api: `http://localhost:${PORTS.api}`, web: `http://localhost:${PORTS.web}`, rpcUrl: chain.rpcUrl, usdc: chain.deployment.usdc, escrow: chain.deployment.taskEscrow }, null, 2),
+);
 log.info({ web: `http://localhost:${PORTS.web}`, client, rpc: chain.rpcUrl }, "e2e stack ready");

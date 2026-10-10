@@ -6,12 +6,16 @@ import type { PrismaClient } from "@kazi/db";
 import type { ChainConfig } from "@kazi/config";
 import type { ApiEnv } from "./env";
 import { registerErrorHandling } from "./http/errors";
+import { registerMetrics, type ErrorReporter } from "./observability";
+import { chainalysisScreen, type SanctionsScreen } from "./security/sanctions";
 import { parseCookies } from "./http/cookies";
 import { RateLimiter } from "./security/rate-limit";
 import { SecretBox } from "@kazi/config/secrets";
 import { SiweService } from "./auth/siwe";
 import { TokenService, type AuthContext } from "./auth/tokens";
 import type { ObjectStorage } from "@kazi/config/storage";
+import type { TokenLaunch } from "@kazi/config/deployments";
+import { tokenRoutes } from "./routes/token";
 import type { JobQueue } from "./jobs";
 import { authRoutes, ACCESS_COOKIE } from "./routes/auth";
 import { taskRoutes } from "./routes/tasks";
@@ -43,6 +47,14 @@ export interface AppDeps {
   escrowAddress?: Address | undefined;
   /** Other deployed contracts, for the web app (registry, staking, token, fee distributor). */
   contracts?: Record<string, Address> | undefined;
+  /** Token launch allocations (Phase 6), when the token has launched on this network. */
+  tokenLaunch?: TokenLaunch | null | undefined;
+  /** Sentry (observability.ts) for unhandled 5xx errors; off when undefined. */
+  reportError?: ErrorReporter | undefined;
+  /** Wallet sanctions screening; built from CHAINALYSIS_API_KEY when not given (tests inject one). */
+  sanctions?: SanctionsScreen | undefined;
+  /** The published airdrop allocation set served to the claim page. */
+  airdropId?: string | undefined;
   publicClient?: PublicClient | undefined;
   logger?: FastifyServerOptions["logger"];
 }
@@ -62,7 +74,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     logger: deps.logger ?? false,
     bodyLimit: 1024 * 1024, // JSON bodies only; files go straight to storage via signed URLs
-    trustProxy: true,
+    trustProxy: deps.env.TRUST_PROXY,
   });
 
   const appUrl = new URL(deps.env.APP_URL);
@@ -92,9 +104,15 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     adminWallets: new Set(deps.env.ADMIN_WALLETS.map((w) => w.toLowerCase())),
     cookieSecure: appUrl.protocol === "https:" || deps.env.NODE_ENV === "production",
     usdcDecimals,
+    sanctions:
+      deps.sanctions ??
+      (deps.env.CHAINALYSIS_API_KEY
+        ? chainalysisScreen({ apiKey: deps.env.CHAINALYSIS_API_KEY, redis: deps.redis, prefix: deps.env.REDIS_KEY_PREFIX, log: app.log, failClosed: deps.env.SANCTIONS_FAIL_CLOSED })
+        : undefined),
   };
 
-  registerErrorHandling(app);
+  registerErrorHandling(app, deps.reportError);
+  registerMetrics(app, deps.env.METRICS_TOKEN);
 
   // CORS: only the Kazi web app origin, with credentials (cookies). No wildcard.
   app.addHook("onRequest", async (req, reply) => {
@@ -145,6 +163,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(agentRoutes(services));
   await app.register(publicRoutes(services));
   await app.register(publicApiRoutes(services));
+  await app.register(tokenRoutes(services));
   await app.register(freelancerRoutes(services));
   await app.register(notificationRoutes(services));
 

@@ -55,3 +55,25 @@ jobs:
       - run: pnpm db:test:prepare
       - run: pnpm test
       - run: pnpm -F contracts test:coverage
+      - name: Python agent SDK
+        run: python3 -m unittest discover -s packages/agent-sdk-python/tests
+
+  slither:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile # OpenZeppelin resolves from node_modules
+      - uses: foundry-rs/foundry-toolchain@v1
+      - uses: crytic/slither-action@v0.4.1
+        with:
+          target: packages/contracts
+          slither-args: --filter-paths "lib|node_modules|test|script|mocks" --exclude-dependencies
+          fail-on: high

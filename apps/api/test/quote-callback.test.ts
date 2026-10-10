@@ -34,7 +34,7 @@ async function newTask(status: "DRAFT" | "QUOTED" | "DELIVERED" = "DRAFT", quote
   });
 }
 
-const signedQuote = (taskId: string, onchainId: string, expiresInMs: number): StoredQuote => ({
+const signedQuote = (_taskId: string, onchainId: string, expiresInMs: number): StoredQuote => ({
   outcome: "QUOTED",
   version: 1,
   createdAt: new Date().toISOString(),

@@ -16,7 +16,7 @@ import {
 } from "@kazi/shared";
 import type { AppServices } from "../app";
 import { requireAuth } from "../auth/guards";
-import { badRequest, notFound, parse } from "../http/errors";
+import { badRequest, forbidden, notFound, parse } from "../http/errors";
 import { generateWebhookSecret } from "@kazi/config/secrets";
 import { serializeProviderOwner, serializeProviderPublic } from "./serializers";
 
@@ -68,6 +68,7 @@ export function providerRoutes(s: AppServices) {
         const auth = requireAuth(req);
         const body = parse(createProviderSchema, req.body);
         const capabilities = await assertCapabilitiesExist(body.capabilities);
+        if (await s.sanctions?.isSanctioned(body.payoutAddress)) throw forbidden("This payout address can't be used on Kazi.");
         const hosted = body.hosting === "KAZI";
         // Self-hosted agents sign their callbacks with a webhook secret; Kazi-hosted agents need none.
         const webhookSecret = body.kind === "AGENT" && !hosted ? generateWebhookSecret() : null;

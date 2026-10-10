@@ -44,8 +44,8 @@ describe("evaluator deterministic checks", () => {
         output: { text: words(140) },
         acceptance: { rubric: ["x"], format: "text" },
         expectedWords: 100,
-      }).map((f) => f.code),
-    ).toEqual(["LENGTH"]);
+      }).map((f) => [f.code, f.advisory]),
+    ).toEqual([["LENGTH", true]]); // advisory: goes to the judge, doesn't reject by itself
   });
 
   it("flags text aimed at the reviewer and hidden content", () => {

@@ -8,7 +8,8 @@ import { api, errorMessage } from "@/lib/api";
 import { relativeTime, shortAddress } from "@/lib/format";
 import { useTx } from "@/lib/tx";
 import { isUserRejection } from "@/lib/tx-steps";
-import type { AdminDispute, CalldataTx, ProviderOwner } from "@/lib/types";
+import { sharePct } from "@/lib/staking";
+import type { AdminDispute, CalldataTx, FeeSplit, ProviderOwner } from "@/lib/types";
 import { KindBadge } from "@/components/agent-card";
 import { useKaziConfig } from "@/components/config";
 import { PageBody } from "@/components/container";
@@ -18,7 +19,7 @@ import { RequireAuth } from "@/components/require-auth";
 import { StepStatusBadge } from "@/components/status";
 import { Badge, Button, Card, Chip, EmptyState, Field, Input, Notice, PageHeader, Skeleton, Tabs, Textarea } from "@/components/ui";
 
-type Tab = "providers" | "disputes" | "queues" | "reconciliation" | "settings";
+type Tab = "providers" | "disputes" | "queues" | "reconciliation" | "token" | "settings";
 
 export default function AdminPage() {
   const t = useTranslations("admin");
@@ -36,13 +37,20 @@ export default function AdminPage() {
             { value: "disputes", label: t("disputes") },
             { value: "queues", label: t("queues") },
             { value: "reconciliation", label: t("reconciliation") },
+            { value: "token", label: t("token") },
             { value: "settings", label: t("settings") },
           ]}
         />
         {tab === "providers" ? <Providers /> : null}
         {tab === "disputes" ? <Disputes /> : null}
         {tab === "queues" ? <Queues /> : null}
-        {tab === "reconciliation" ? <Reconciliation /> : null}
+        {tab === "reconciliation" ? (
+          <div className="space-y-6">
+            <EscrowStatus />
+            <Reconciliation />
+          </div>
+        ) : null}
+        {tab === "token" ? <TokenAdmin /> : null}
         {tab === "settings" ? <Settings /> : null}
       </RequireAuth>
     </PageBody>
@@ -340,6 +348,42 @@ function Queues() {
   );
 }
 
+function EscrowStatus() {
+  const t = useTranslations("admin");
+  const q = useQuery({
+    queryKey: ["admin", "escrow"],
+    queryFn: () => api<{ escrow: string; paused: boolean; feeBps: number }>("/admin/escrow"),
+    refetchInterval: 30_000,
+  });
+  const [result, setResult] = useState<{ txs: CalldataTx[]; signer: string } | null>(null);
+  const prepare = useMutation({
+    mutationFn: (action: "pause" | "unpause") => api<{ tx: CalldataTx; signer: string }>(`/admin/escrow/${action}`, { method: "POST" }),
+    onSuccess: (r) => setResult({ txs: [r.tx], signer: r.signer }),
+  });
+  if (!q.data) return null;
+  return (
+    <Card className={q.data.paused ? "border-bad" : ""}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-lg font-bold">{t("escrowTitle")}</h2>
+          <p className="mt-1 text-sm text-muted">{q.data.paused ? t("escrowPaused") : t("escrowActive")}</p>
+        </div>
+        <Button
+          variant={q.data.paused ? "outline" : "danger"}
+          loading={prepare.isPending}
+          onClick={() => {
+            if (q.data.paused || window.confirm(t("pauseConfirm"))) prepare.mutate(q.data.paused ? "unpause" : "pause");
+          }}
+        >
+          {q.data.paused ? t("unpause") : t("pause")}
+        </Button>
+      </div>
+      {prepare.error ? <Notice tone="bad" className="mt-3">{errorMessage(prepare.error)}</Notice> : null}
+      {result ? <CalldataActions txs={result.txs} signer={result.signer} /> : null}
+    </Card>
+  );
+}
+
 function Reconciliation() {
   const t = useTranslations("admin");
   const locale = useLocale();
@@ -371,6 +415,62 @@ function Reconciliation() {
         <dt className="text-muted">Checked</dt>
         <dd>{relativeTime(r.checkedAt, locale)}</dd>
       </dl>
+    </Card>
+  );
+}
+
+/** docs/08-TOKENOMICS.md §3: 50% treasury, 30% stakers, 20% buybacks once the token is live. */
+const LAUNCH_SPLIT: FeeSplit = { treasuryBps: 5_000, stakerBps: 3_000, buybackBps: 2_000 };
+
+function TokenAdmin() {
+  const t = useTranslations("admin");
+  const q = useQuery({ queryKey: ["admin", "fee-split"], queryFn: () => api<{ split: FeeSplit; stakingVault: string }>("/admin/fee-split") });
+  const [draft, setDraft] = useState<FeeSplit | null>(null);
+  const [result, setResult] = useState<{ txs: CalldataTx[]; signer: string } | null>(null);
+  const propose = useMutation({
+    mutationFn: (split: FeeSplit) => api<{ tx: CalldataTx; signer: string }>("/admin/fee-split", { method: "POST", body: split }),
+    onSuccess: (r) => setResult({ txs: [r.tx], signer: r.signer }),
+  });
+  if (q.isLoading) return <Skeleton className="h-40" />;
+  if (!q.data) return <Notice tone="bad">{q.error ? errorMessage(q.error) : t("noFeeSplit")}</Notice>;
+  const current = q.data.split;
+  const split = draft ?? current;
+  const sum = split.treasuryBps + split.stakerBps + split.buybackBps;
+  const field = (key: keyof FeeSplit, label: string) => (
+    <Field label={label} htmlFor={`split-${key}`}>
+      <Input
+        id={`split-${key}`}
+        inputMode="numeric"
+        value={String(split[key])}
+        onChange={(e) => setDraft({ ...split, [key]: Number(e.target.value.replace(/\D/g, "")) || 0 })}
+      />
+    </Field>
+  );
+  return (
+    <Card className="max-w-2xl space-y-4">
+      <div>
+        <h2 className="font-display text-lg font-bold">{t("feeSplit")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("feeSplitHint")}</p>
+      </div>
+      <p className="num text-sm">
+        {t("currentSplit", { treasury: sharePct(current.treasuryBps), stakers: sharePct(current.stakerBps), buyback: sharePct(current.buybackBps) })}
+      </p>
+      {current.stakerBps === 0 ? (
+        <Button variant="accent" loading={propose.isPending && draft === null} onClick={() => propose.mutate(LAUNCH_SPLIT)}>
+          {t("enableStakers")}
+        </Button>
+      ) : null}
+      <div className="grid gap-3 sm:grid-cols-3">
+        {field("treasuryBps", t("bpsTreasury"))}
+        {field("stakerBps", t("bpsStakers"))}
+        {field("buybackBps", t("bpsBuyback"))}
+      </div>
+      {sum !== 10_000 ? <p className="text-sm text-bad">{t("splitSum", { sum })}</p> : null}
+      {propose.error ? <Notice tone="bad">{errorMessage(propose.error)}</Notice> : null}
+      <Button variant="outline" disabled={sum !== 10_000 || draft === null} loading={propose.isPending && draft !== null} onClick={() => draft && propose.mutate(draft)}>
+        {t("proposeSplit")}
+      </Button>
+      {result ? <CalldataActions txs={result.txs} signer={result.signer} /> : null}
     </Card>
   );
 }

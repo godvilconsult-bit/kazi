@@ -17,6 +17,7 @@ export const ERROR_CODES = [
   "RATE_LIMITED",
   "INVALID_STATE",
   "STORAGE_ERROR",
+  "UNAVAILABLE",
   "INTERNAL",
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

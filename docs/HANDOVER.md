@@ -1,0 +1,90 @@
+# Kazi — handover (2026-10-10)
+
+Everything in `docs/10-BUILD-PLAN.md` Phases 0–7 is built and tested; Phase 8 (growth) has the Python agent SDK built and a written roadmap for the rest. Nothing is deployed to mainnet — that waits for the external audit and legal review, as the build plan says.
+
+## 1. Status by phase
+
+| Phase | State | Where to look |
+|---|---|---|
+| 0 Arc facts & scaffold | ✅ | `docs/00-ARC-FACTS.md`, monorepo, CI |
+| 1 Contracts | ✅ 100% line coverage on escrow + vault; fuzz + invariants | `packages/contracts`, `AUDIT.md` |
+| 2 DB, API skeleton, auth, indexer | ✅ | `packages/db`, `apps/api`, `apps/worker/src/indexer` |
+| 3 Router, executor, evaluator, SDK, first house agents | ✅ live-verified with Claude | `apps/worker/src/{router,executor,evaluator}`, `packages/agent-sdk` |
+| 4 Web app MVP | ✅ browser e2e passing | `apps/web`, `apps/web/e2e/happy-path.spec.ts` |
+| 5 All house agents, freelancer flow, public API | ✅ 10 house agents, golden tests pass | `packages/house-agents`, `docs/12-PUBLIC-API.md` |
+| 6 Token launch readiness | ✅ contracts, scripts, pages, points, airdrop, geo hooks | `docs/08-TOKENOMICS.md` §7 |
+| 7 Mainnet hardening | ✅ runbooks, KMS, monitoring, guarded launch, security pass, load test | `docs/09-SECURITY-COMPLIANCE.md` §6, `docs/runbooks/` |
+| 8 Growth | 🟡 Python SDK built; roadmap for M-Pesa, mobile, enterprise, subcontracting, governance, reputation roots | `docs/13-GROWTH-ROADMAP.md` |
+
+## 2. Deployed (Arc testnet, chain 5042002)
+
+| Contract | Address |
+|---|---|
+| Admin Safe (1-of-1 on testnet) | `0x91C47058E45A2496e28F898f32D2231aAd2DDc2c` |
+| TaskEscrow | `0xFbeeF1d2ac13F60E79a22943AA3502218D79C879` |
+| AgentRegistry | `0x8f67995364fc3F576CE204348c82586ef8A5C52E` |
+| StakingVault | `0xE93D0EBBe72aEed4d0FFD493EED04710778b9ed0` |
+| FeeDistributor | `0x2b06De5129C44129e6c442Cb74DC91eCa26673f5` |
+| KaziToken (test KAZI) | `0x05F357268B63D0259E4731C27396FdE2EdbFaAF0` |
+| USDC | `0x3600000000000000000000000000000000000000` |
+
+These were deployed in Phase 4. Contract changes since then: the escrow's guardian `PAUSER_ROLE` (Phase 7) and the token-launch contracts (Phase 6, not deployed). Redeploy testnet with `pnpm -F @kazi/contracts deploy:testnet` right before inviting testers, together with hosting the API/worker/web and running `setup-providers` against the testnet database.
+
+## 3. Run it
+
+See the root [`README.md`](../README.md): local stack (anvil + API + worker + house agents + web), all test commands, the isolated e2e stack, the load test. Every environment variable is documented in `.env.example`.
+
+## 4. Test results (this pass)
+
+RESULTS_TABLE
+
+## 5. Decisions made for you ("best recommended")
+
+You asked me to pick the recommended option whenever there was a question. Each is reversible; the doc that records it is in brackets.
+
+**Product & architecture**
+- Notifications are in-app only for now; email can be added in one place (`notify()`) [04 §11].
+- The public API is non-custodial: a client's own wallet funds the escrow; x402 is an adapter left for later [12].
+- The translation length check (±30%) is advisory to the judge, not a hard reject [06 §9].
+
+**Token (Phase 6)**
+- Airdrop vesting is built into the Merkle distributor (`KaziAirdrop`) instead of one VestingWallet per recipient (doesn't scale) [08 §1, §7].
+- Points follow USDC fees (clients 100/USDC, providers 50/USDC) with sybil filters; Kazi's own house agents earn no provider points [08 §7].
+- Airdrop snapshot defaults: ≥ 100 points, max 1% of the airdrop per wallet (excess re-split), Kazi wallets excluded, unallocated tokens swept to the treasury after the deadline [08 §7].
+- Staking shows realized 30-day rewards per 1,000 KAZI, never an APR; the fee keeper activates matured warm-up stake before each distribution [08 §7].
+- The 2-point fee discount counts only earning stake (warm-up excluded) so it can't be bought for one quote [08 §7].
+- Geo hooks: suggested list `US,CU,IR,KP,SY`; restricted visitors can't stake or claim airdropped tokens, but can always exit; bonds aren't restricted. The real list is a legal decision [08 §7].
+- Provider bond is on by default; networks with a zero minimum hide it [07 §7].
+
+**Hardening (Phase 7)**
+- A guardian wallet (`PAUSER_ROLE`) can pause the escrow; only the Safe can unpause [03 §9, runbooks/pause].
+- AWS KMS is the first signer backend (secp256k1, viem custom account); plaintext keys are refused on mainnet and in production without an explicit testnet override [runbooks/deploy §4].
+- Guarded-launch caps are enforced when quoting (backend), not onchain, to keep the audited escrow unchanged [09 §6].
+- Sanctions screening uses Chainalysis' free API and fails open (configurable) so an outage there doesn't lock everyone out [09 §6].
+- `TRUST_PROXY` defaults to off; production sets the proxy hop count [runbooks/deploy §5].
+- New dependencies (your rule 10, decided by the "best recommended" instruction): `@aws-sdk/client-kms` 3.1141.0, `@sentry/node` 10.75.3, `prom-client` 15.1.3.
+
+## 6. Remaining risks before mainnet
+
+1. **No external audit yet.** Scope and invariants are ready in `packages/contracts/AUDIT.md`; include `KaziAirdrop` and both deploy scripts.
+2. **Legal.** Token classification (fee sharing to stakers), escrow / money-transmission rules where you operate, data protection (Tanzania PDPA 2022, Kenya DPA), terms of service, provider agreement, privacy policy — none written yet (`docs/09` §4 checklist).
+3. **Operational single points.** One worker process holds the operator key and settles payouts one at a time; Redis/BullMQ and the database are single instances. Fine for a guarded launch; plan HA before volume.
+4. **KMS tested against a local stand-in only.** Do one testnet deploy with real AWS KMS keys before mainnet.
+5. **LLM dependency.** If Anthropic is down, quoting stops and house-agent work stalls (funded tasks still refund after deadline + grace). `ROUTER_DISABLED` exists for incidents.
+6. **Database latency.** The Railway dev database is remote and slow from this machine; production must run the API/worker in the same region as Postgres/Redis (see the load-test notes).
+7. **Not wired yet:** Sentry in the web app, a public status page, Aderyn (needs Linux; runs in CI), the M-Pesa on-ramp (needs a licensed partner).
+8. **Testnet is behind the code** (no guardian role; house agents not registered there yet) — redeploy as in §2.
+
+## 7. What you need to do
+
+1. **Delete the `DEPLOYER_PRIVATE_KEY` line from `D:\KAZI\kazi\.env`.** It is your personal wallet's key (the treasury address `0x43DA…8470`, which holds funds on Arc mainnet). Nothing in Kazi uses it; it shouldn't sit in a project file.
+2. Choose hosting for the API, worker, house agents and web app (same region as the database); set `TRUST_PROXY`, `SENTRY_DSN`, `ALERT_WEBHOOK_URL`, `METRICS_TOKEN`.
+3. Create the production signers in AWS KMS and the mainnet admin Safe (≥ 3/5 hardware wallets) and guardian wallet.
+4. Commission the audit (send `AUDIT.md` + the commit hash) and the legal review.
+5. Get a Chainalysis sanctions API key; set up a status page.
+6. Testnet launch: host the backend, redeploy contracts, `setup-providers`, invite 10–20 users and 3–5 agent developers (build plan, after Phase 4).
+7. Token launch only after real mainnet volume (docs/08 §4) — follow docs/08 §7 and `runbooks/deploy.md` §6.
+
+## 8. This package
+
+`kazi-package-2026-10-10.zip` contains the repository without `node_modules`, build outputs, caches, `.env` and `.env.testnet` (secrets never leave your machine). `git log` has the full history; commits are local only (no remote configured).

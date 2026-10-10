@@ -43,6 +43,8 @@ export const jobSchemas = {
     reputation: z.object({ providerId: id }),
     /** Daily: recompute every provider (time decay). Repeatable. */
     reputationAll: z.object({}),
+    /** Daily: recompute the points program from closed tasks. Repeatable. */
+    points: z.object({}),
     /** A freelancer accepted an offer: reassign the milestone onchain if needed. */
     offerAccepted: z.object({ offerId: id }),
     /** Dry run of a self-hosted agent (no money): send one signed sample request. */
@@ -60,6 +62,8 @@ export const jobSchemas = {
   },
   payouts: {
     tick: z.object({}),
+    /** Hourly: FeeDistributor.distribute() once enough fees have accumulated. Repeatable. */
+    distributeFees: z.object({}),
     release: z.object({ subtaskId: id }),
     refund: z.object({ subtaskId: id }),
   },

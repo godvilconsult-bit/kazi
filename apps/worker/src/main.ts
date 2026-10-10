@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { Worker, type Job } from "bullmq";
+import { DelayedError, Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import { pino } from "pino";
-import { createPublicClient, defineChain, http, type Hex } from "viem";
+import { createPublicClient, defineChain, http } from "viem";
 import { z } from "zod";
 import {
   authEnvSchema,
@@ -14,7 +14,6 @@ import {
   redisEnvSchema,
   redisPrefixEnvSchema,
   runtimeEnvSchema,
-  signerEnvSchema,
   storageEnvSchema,
   urlEnvSchema,
 } from "@kazi/config";
@@ -22,9 +21,10 @@ import { SupabaseStorage } from "@kazi/config/storage";
 import { loadDeployment } from "@kazi/config/deployments";
 import { SecretBox } from "@kazi/config/secrets";
 import { createPrismaClient } from "@kazi/db";
-import { jobSchemas } from "@kazi/shared";
+import { formatUnits, jobSchemas } from "@kazi/shared";
 import { createEscrowOperator } from "./chain/operator";
-import { executorEnvSchema, feeEnvSchema, llmModelsEnvSchema } from "./env";
+import { loadSigners } from "./chain/signers";
+import { executorEnvSchema, feeEnvSchema, guardEnvSchema, llmModelsEnvSchema, monitoringEnvSchema, signerBackendEnvSchema } from "./env";
 import { evaluateSubmission } from "./evaluator/evaluate";
 import { dispatchSubtask } from "./executor/dispatch";
 import { applyAgentResult } from "./executor/results";
@@ -37,12 +37,20 @@ import { bullmqSink } from "./jobs/sink";
 import { reconcileEscrow } from "./jobs/reconcile";
 import { AnthropicLlm, anthropicBatchApi, createE2eMockLlm, type LlmClient } from "./llm";
 import { payoutsTick, settleMilestone } from "./payouts/payouts";
+import { distributeFeesIfDue } from "./payouts/fees";
+import { recomputePoints } from "./points/points";
 import { recomputeAllReputations, recomputeReputation } from "./reputation/reputation";
 import { createQueues } from "./queues";
 import { runProviderTest } from "./executor/provider-test";
 import { redisPlanCache } from "./router/cache";
 import { quoteTask } from "./router/quote";
 import { createQuoteSigner, createRouterChain } from "./router/signer";
+import { createAlerter } from "./monitoring/alerts";
+import { chainEventAlerts } from "./monitoring/chain-alerts";
+import { redisSpendRecorder, trackLlmSpend } from "./monitoring/llm-spend";
+import { createWorkerMetrics, startMetricsServer } from "./monitoring/metrics";
+import { monitorTick } from "./monitoring/monitor";
+import { initSentry } from "./monitoring/sentry";
 
 const env = loadEnv(
   runtimeEnvSchema
@@ -52,7 +60,9 @@ const env = loadEnv(
     .extend(chainEnvSchema.shape)
     .extend(llmEnvSchema.shape)
     .extend(llmModelsEnvSchema.shape)
-    .extend(signerEnvSchema.shape)
+    .extend(signerBackendEnvSchema.shape)
+    .extend(guardEnvSchema.shape)
+    .extend(monitoringEnvSchema.shape)
     .extend(feeEnvSchema.shape)
     .extend(executorEnvSchema.shape)
     .extend(storageEnvSchema.shape)
@@ -77,7 +87,7 @@ const env = loadEnv(
 );
 if (env.KAZI_LLM_MOCK && env.NODE_ENV === "production") throw new Error("KAZI_LLM_MOCK is not allowed in production");
 const log = pino({
-  level: "info",
+  level: process.env["LOG_LEVEL"] || "info",
   ...(env.NODE_ENV === "development" ? { transport: { target: "pino-pretty" } } : {}),
 });
 
@@ -107,25 +117,38 @@ const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 3 });
 const queues = createQueues(connection, env.REDIS_KEY_PREFIX);
 const jobs = bullmqSink(queues);
 
-const llm: LlmClient = env.KAZI_LLM_MOCK
+// ── Monitoring: Sentry, Prometheus metrics, alerts (docs/runbooks/) ──
+const reporter = initSentry({ dsn: env.SENTRY_DSN, environment: `${env.KAZI_NETWORK}-${env.NODE_ENV}`, service: "worker" });
+const metrics = createWorkerMetrics();
+if (env.WORKER_METRICS_PORT) startMetricsServer(metrics.registry, env.WORKER_METRICS_PORT, env.METRICS_TOKEN);
+const alerter = createAlerter({
+  log: log.child({ component: "alerts" }),
+  redis,
+  prefix: env.REDIS_KEY_PREFIX,
+  webhookUrl: env.ALERT_WEBHOOK_URL,
+  report: (message, severity, details) => reporter.message(message, severity, details),
+  onSent: (kind, severity) => metrics.alerts.inc({ kind, severity }),
+});
+
+const baseLlm: LlmClient = env.KAZI_LLM_MOCK
   ? createE2eMockLlm()
   : new AnthropicLlm({
       apiKey: env.ANTHROPIC_API_KEY,
       log: log.child({ component: "llm" }),
     });
+// Every call's cost feeds the hourly LLM_COST_SPIKE check and the metrics.
+const llm = trackLlmSpend(baseLlm, redisSpendRecorder(redis, env.REDIS_KEY_PREFIX, (usd) => metrics.llmCostUsd.inc(usd)));
 if (env.KAZI_LLM_MOCK) log.warn("KAZI_LLM_MOCK=e2e: Claude is replaced by a scripted mock");
 const routerChain = createRouterChain(client, chain.chainId, deployment);
-const signer = createQuoteSigner(
-  env.QUOTER_PRIVATE_KEY as Hex,
-  chain.chainId,
-  deployment.taskEscrow,
-);
+// OPERATOR + QUOTER: KMS in production, dev keys locally (chain/signers.ts refuses them on mainnet).
+const accounts = await loadSigners(env);
+const signer = createQuoteSigner(accounts.quoter, chain.chainId, deployment.taskEscrow);
 const operator = createEscrowOperator({
   publicClient: client,
   rpcUrl: chain.rpcUrl,
   chain: viemChain,
   escrow: deployment.taskEscrow,
-  privateKey: env.OPERATOR_PRIVATE_KEY as Hex,
+  account: accounts.operator,
   minMaxFeePerGasWei: chain.minMaxFeePerGasWei,
   log: log.child({ component: "operator" }),
 });
@@ -145,6 +168,7 @@ const indexer = new ChainIndexer(
     confirmations: chain.confirmations,
     batchSize: BigInt(env.INDEXER_BATCH_BLOCKS),
     reorgDepth: BigInt(env.INDEXER_REORG_DEPTH),
+    onEvent: chainEventAlerts({ alerter, prisma, usdcDecimals: () => routerChain.usdcDecimals(), largeReleaseUsdc: env.ALERT_LARGE_RELEASE_USDC ?? null }),
   },
   log.child({ component: "indexer" }),
 );
@@ -180,6 +204,13 @@ await queues.payouts.upsertJobScheduler(
   { every: env.PAYOUTS_TICK_MS },
   { name: "tick" },
 );
+await queues.payouts.upsertJobScheduler(
+  "distribute-fees",
+  { every: env.FEE_DISTRIBUTE_EVERY_MS },
+  { name: "distributeFees" },
+);
+await queues.executor.upsertJobScheduler("points-daily", { every: 24 * 3_600_000 }, { name: "points" });
+await queues.indexer.upsertJobScheduler("monitor", { every: env.MONITOR_EVERY_MS }, { name: "monitor" });
 
 const workerOpts = { connection, prefix: env.REDIS_KEY_PREFIX };
 const executorConfig = {
@@ -201,13 +232,16 @@ const hostedDeps = {
   storage,
 };
 
-function handler(queue: string, routes: Record<string, (job: Job) => Promise<unknown>>) {
-  return async (job: Job) => {
+function handler(queue: string, routes: Record<string, (job: Job, token?: string) => Promise<unknown>>) {
+  return async (job: Job, token?: string) => {
     const route = routes[job.name];
     if (!route) throw new Error(`unknown ${queue} job ${job.name}`);
-    return route(job);
+    return route(job, token);
   };
 }
+
+/** A release while the escrow is paused: check again in a minute without using up an attempt. */
+const RELEASE_PAUSED_RETRY_MS = 60_000;
 
 const workers = [
   new Worker(
@@ -220,8 +254,8 @@ const workers = [
         }
         return { processed: await indexer.processPending() };
       },
-      reconcile: () =>
-        reconcileEscrow(
+      reconcile: async () => {
+        const result = await reconcileEscrow(
           prisma,
           client,
           deployment,
@@ -229,7 +263,43 @@ const workers = [
           redis,
           env.REDIS_KEY_PREFIX,
           log.child({ component: "reconcile" }),
-        ),
+        );
+        if (result) {
+          const decimals = await usdcDecimals();
+          metrics.reconciliationOk.set(result.ok ? 1 : 0);
+          metrics.escrowBalanceUsdc.set(Number(formatUnits(BigInt(result.onchainBalance), decimals)));
+          if (!result.ok) {
+            await alerter.send(
+              "ESCROW_RECONCILIATION_MISMATCH",
+              `escrow holds ${formatUnits(BigInt(result.onchainBalance), decimals)} USDC, the database expects ${formatUnits(BigInt(result.expectedBalance), decimals)}`,
+              { ...result },
+              { dedupeSec: 30 * 60 },
+            );
+          }
+        }
+        return result;
+      },
+      monitor: () =>
+        monitorTick({
+          prisma,
+          redis,
+          prefix: env.REDIS_KEY_PREFIX,
+          queues,
+          publicClient: client,
+          operator: operator.address,
+          escrow: deployment.taskEscrow,
+          nativeDecimals: chain.nativeCurrency.decimals,
+          usdcDecimals,
+          alerter,
+          metrics,
+          thresholds: {
+            queueBacklog: env.ALERT_QUEUE_BACKLOG,
+            operatorMinGas: env.ALERT_OPERATOR_MIN_GAS,
+            dailyReleaseUsdc: env.ALERT_DAILY_RELEASE_USDC ?? null,
+            llmHourlyUsd: env.ALERT_LLM_HOURLY_USD ?? null,
+          },
+          log: log.child({ component: "monitor" }),
+        }),
     }),
     { ...workerOpts, concurrency: 1 },
   ),
@@ -238,6 +308,10 @@ const workers = [
     handler("router", {
       quote: async (job) => {
         const { taskId } = jobSchemas.router.quote.parse(job.data);
+        if (env.ROUTER_DISABLED) {
+          log.warn({ taskId }, "ROUTER_DISABLED: quote skipped");
+          return { outcome: "skipped" };
+        }
         const quote = await quoteTask(
           {
             prisma,
@@ -253,6 +327,11 @@ const workers = [
             log: log.child({ component: "router" }),
             planCache,
             files: { storage, fastModel: env.LLM_MODEL_FAST },
+            limits: {
+              maxTaskUsdc: env.MAX_TASK_USDC ?? null,
+              maxOpenEscrowUsdc: env.MAX_OPEN_ESCROW_USDC ?? null,
+              providerAllowlist: env.PROVIDER_ALLOWLIST,
+            },
           },
           taskId,
         );
@@ -301,6 +380,7 @@ const workers = [
         return recomputeReputation(prisma, providerId, log.child({ component: "reputation" }));
       },
       reputationAll: () => recomputeAllReputations(prisma, log.child({ component: "reputation" })),
+      points: () => recomputePoints({ prisma, usdcDecimals, log: log.child({ component: "points" }) }),
       providerTest: async (job) =>
         runProviderTest(
           {
@@ -366,12 +446,28 @@ const workers = [
     "payouts",
     handler("payouts", {
       tick: () => payoutsTick({ prisma, jobs, operator, log: log.child({ component: "payouts" }) }),
-      release: async (job) =>
-        settleMilestone(
+      distributeFees: () =>
+        distributeFeesIfDue({
+          prisma,
+          publicClient: client,
+          operator,
+          deployment,
+          usdcDecimals,
+          minUsdc: env.FEE_DISTRIBUTE_MIN_USDC,
+          log: log.child({ component: "fees" }),
+        }),
+      release: async (job, token) => {
+        const result = await settleMilestone(
           { prisma, jobs, operator, log: log.child({ component: "payouts" }) },
           jobSchemas.payouts.release.parse(job.data).subtaskId,
           "release",
-        ),
+        );
+        if (result === "paused" && token) {
+          await job.moveToDelayed(Date.now() + RELEASE_PAUSED_RETRY_MS, token);
+          throw new DelayedError();
+        }
+        return result;
+      },
       refund: async (job) =>
         settleMilestone(
           { prisma, jobs, operator, log: log.child({ component: "payouts" }) },
@@ -384,9 +480,13 @@ const workers = [
   ),
 ];
 for (const w of workers) {
-  w.on("failed", (job, err) =>
-    log.error({ err, queue: w.name, jobId: job?.id, name: job?.name }, "job failed"),
-  );
+  w.on("failed", (job, err) => {
+    log.error({ err, queue: w.name, jobId: job?.id, name: job?.name }, "job failed");
+    metrics.jobs.inc({ queue: w.name, name: job?.name ?? "unknown", result: "failed" });
+    // Only the final failure is an incident; earlier attempts are retried with backoff.
+    if (job && job.attemptsMade >= (job.opts.attempts ?? 1)) reporter.exception(err, { queue: w.name, jobId: job.id, name: job.name });
+  });
+  w.on("completed", (job) => metrics.jobs.inc({ queue: w.name, name: job.name, result: "completed" }));
 }
 
 log.info(

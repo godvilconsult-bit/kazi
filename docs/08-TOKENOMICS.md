@@ -16,7 +16,7 @@
 | Treasury (operations, audits, partnerships) | 10% | Multisig; spending reported publicly |
 | Early users & arcdex community airdrop | 10% | 25% at TGE, rest linear 6 months; based on real usage snapshot |
 
-Use OpenZeppelin `VestingWallet` for team and airdrop vesting; publish all addresses.
+Use OpenZeppelin `VestingWallet` for team (and ecosystem) vesting; the airdrop's vesting is built into the Merkle distributor `KaziAirdrop` (one `VestingWallet` per recipient doesn't scale to thousands of wallets — see §7). Publish all addresses.
 
 ## 2. Utility
 
@@ -57,3 +57,38 @@ Example: 100,000 USDC monthly task volume → 12,000 USDC fees → 3,600 USDC/mo
 ## 6. Metrics page (`/token`) shows
 
 Circulating supply, staked %, fees distributed to stakers (all-time, 30d), buybacks executed, treasury balance, vesting progress, contract addresses. All read from chain/indexer.
+
+## 7. Implementation (Phase 6, 2026-10-10)
+
+Everything below is built and tested on local anvil; nothing is deployed to mainnet (that waits for the audit and legal review).
+
+**Contracts**
+- `KaziAirdrop.sol`: Merkle airdrop with vesting built in — each allocation unlocks `immediateBps` (25%) at `start` and the rest linearly over `vestingDuration` (180 days); recipients claim what has vested, as often as they like. Leaves use the OpenZeppelin encoding `keccak256(bytes.concat(keccak256(abi.encode(account, amount))))` with sorted-pair hashing. After `claimDeadline` the admin Safe can `sweep` the unclaimed rest to the treasury. `totalClaimed` is public for the metrics page.
+- `script/DeployTokenLaunch.s.sol` (run by the wallet holding the supply): team `VestingWallet` (12-month cliff, then 24 months linear), ecosystem `VestingWallet` (48 months linear), `KaziAirdrop`, then transfers 15/30/10/10/15/20% to team vesting, ecosystem vesting, airdrop, treasury, liquidity and community wallets. On mainnet it refuses to run unless the broadcaster holds the whole supply. Writes `packages/config/deployments/<network>-token-launch.json`, which the API loads (`loadTokenLaunch`).
+- Airdrop vesting lives in `KaziAirdrop` instead of one `VestingWallet` per recipient. Team and ecosystem use OpenZeppelin `VestingWallet`; the team wallet's beneficiary should be a Safe (several founders), not an EOA.
+
+**Points (pre-token)** — `apps/worker/src/points/points.ts`, rules in `packages/shared/src/points.ts`
+- Clients earn 100 points per 1 USDC of fees their released milestones paid; providers 50 per 1 USDC of fees their accepted work generated. Service-fee milestones count in full for the client.
+- Sybil heuristics: self-dealing (client = provider owner or payout address) → 0; tasks under 1 USDC → 0; more than 5 tasks between the same client and provider owner in 30 days → 20%; at most 50,000 points per user per day. Kazi's own house agents earn no provider points (their clients still do).
+- Recomputed daily (`points-daily` job) and idempotent (one row per user, task and role, rewritten each run). `/points` shows the total, each entry with the reason when it was reduced, the leaderboard (shortened wallets) and the rules, with "points are not a promise of tokens".
+
+**Airdrop snapshot** — `pnpm -F @kazi/worker airdrop:snapshot -- --airdrop-id <id> --total <KAZI> [--fixed list.csv] [--min-points 100] [--max-share-bps 100] [--write]`
+- Recomputes points, drops Kazi's own wallets (admins, `ADMIN_WALLETS`, house-agent owners) and `--exclude`, pays `--fixed` allocations first (e.g. a published arcdex community list), then splits the rest pro rata to points among wallets with at least `--min-points`, capping any wallet at `--max-share-bps` of the total and re-splitting the excess. Rounding dust and anything left unallocated stays in the contract and is swept to the treasury after the deadline.
+- Writes the plan (root, every allocation and proof) to a JSON file; `--write` stores the allocations (`AirdropAllocation`) so `GET /airdrop/:wallet` can serve proofs. The same inputs always produce the same root.
+
+**Launch order (runbook)**
+1. Freeze the snapshot: `airdrop:snapshot … --write`; publish the plan file.
+2. Run `DeployTokenLaunch` with `AIRDROP_MERKLE_ROOT` = the root (and the multisig addresses); publish every address.
+3. Set `AIRDROP_ID` on the API and restart it; `/airdrop` goes live.
+4. Turn on the stakers' share: Admin → Token → "Turn on the stakers' share (50 / 30 / 20)" produces `FeeDistributor.setSplit` calldata for the admin Safe.
+5. Seed the DEX pool from the liquidity multisig and lock the LP tokens (outside this repo).
+
+**Staking (`/stake`)** — exact approval + `stake`, `requestUnstake` (takes warm-up stake first; restarts the cooldown for everything already unstaking, and the page says so), `withdraw` after the cooldown, `claim` USDC. Warm-up (1 day) and cooldown (7 days) are read from the vault. Rewards are shown only as *realized*: USDC distributed to stakers over the last 30 days per 1,000 KAZI of earning stake — never an APR. The vault activates matured warm-up stake lazily, so the fee keeper pokes every matured account before each `distribute()` and the page offers an "Activate" button.
+
+**Staker fee discount** — clients with at least 5,000 KAZI of *earning* stake (warm-up excluded) are quoted a 10% take rate instead of 12% (`clientFeeBps` in the router; the signed quote carries the fee, which the escrow caps at its published fee).
+
+**Provider bond** — on by default in the web app (`NEXT_PUBLIC_FEATURE_BOND=0` restores the pre-launch notice). Networks whose registry minimum is 0 show no bond step.
+
+**Geo restriction hooks** — `GEO_RESTRICTED_COUNTRIES` (comma-separated ISO codes, read by the web server) and `GEO_COUNTRY_HEADER` (the header your CDN sets: Cloudflare `cf-ipcountry`, Vercel `x-vercel-ip-country`, CloudFront `cloudfront-viewer-country`). Visitors from a listed country can't stake or claim airdropped tokens; unstaking, withdrawing and claiming earned USDC always stay available. The contracts remain permissionless — this only changes the UI. Bonds are not restricted (they're required to list). The country list is a legal decision; `.env.example` suggests a starting point.
+
+**Not built (deliberately)**: a public sale page (higher legal risk; if added, gate it with the same geo hook), automated buybacks (the buyback reserve is spent by the multisig), governance voting UI (`ERC20Votes` is in the token; Phase 8), and a USD-pegged bond minimum.

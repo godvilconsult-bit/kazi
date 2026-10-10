@@ -7,6 +7,8 @@ import {
   ECONOMY_MIN_HEADROOM_MS,
   QUOTE_TTL_SECONDS,
   SERVICE_FEE_PROVIDER_SLUG,
+  STAKER_DISCOUNT_BPS,
+  STAKER_DISCOUNT_MIN_KAZI,
   aiCostEstimateSchema,
   formatUnits,
   nanoUsdToUnits,
@@ -55,6 +57,38 @@ export interface QuoteDeps {
   planCache?: PlanCache;
   /** Reads client attachments (text, DOCX, PDF) for the planner; metadata only when absent. */
   files?: { storage: ObjectStorage; fastModel: string };
+  /** Guarded-launch limits (docs/09 §2.4, docs/runbooks/deploy.md §2.6). */
+  limits?: GuardedLaunchLimits;
+}
+
+export interface GuardedLaunchLimits {
+  /** Largest task total (USDC, decimal); null = no cap. */
+  maxTaskUsdc: string | null;
+  /** Largest sum of open escrow (funded, not yet settled tasks) incl. this quote; null = no cap. */
+  maxOpenEscrowUsdc: string | null;
+  /** Provider slugs that may be quoted besides Kazi's house agents; empty = every active provider. */
+  providerAllowlist: readonly string[];
+}
+
+/** Tasks whose escrow is still open (counted against MAX_OPEN_ESCROW_USDC). */
+const OPEN_ESCROW: TaskStatus[] = ["FUNDED", "IN_PROGRESS", "DELIVERED", "DISPUTED"];
+
+/**
+ * Take rate for this client: STAKER_DISCOUNT_BPS less with at least STAKER_DISCOUNT_MIN_KAZI of earning
+ * stake (docs/08-TOKENOMICS.md §2.4). Warm-up stake doesn't count, so a stake can't be opened just to
+ * buy one cheaper quote. If the chain can't be read, the standard fee applies.
+ */
+export async function clientFeeBps(deps: Pick<QuoteDeps, "chain" | "fees" | "log">, wallet: Address): Promise<number> {
+  const base = deps.fees.takeRateBps;
+  const chain = deps.chain;
+  if (!chain.earningStake || !chain.kaziDecimals) return base;
+  try {
+    const [stake, decimals] = await Promise.all([chain.earningStake(wallet), chain.kaziDecimals()]);
+    return stake >= parseUnits(STAKER_DISCOUNT_MIN_KAZI, decimals) ? Math.max(0, base - STAKER_DISCOUNT_BPS) : base;
+  } catch (err) {
+    deps.log.warn({ err }, "stake lookup failed; quoting the standard fee");
+    return base;
+  }
 }
 
 export class QuoteError extends Error {
@@ -154,7 +188,8 @@ export async function quoteTask(deps: QuoteDeps, taskId: string): Promise<Stored
   }
 
   // ── Match ──
-  const providers = await loadCandidates(deps.prisma, decimals);
+  const allowlist = deps.limits?.providerAllowlist ?? [];
+  const providers = await loadCandidates(deps.prisma, decimals, allowlist.length > 0 ? new Set(allowlist) : null);
   // Economy needs room for a worst-case 24 h batch (docs/11-HOSTED-AGENTS.md §3).
   const speed =
     task.speed === "ECONOMY" && task.deadline.getTime() - now.getTime() >= ECONOMY_MIN_HEADROOM_MS
@@ -181,7 +216,7 @@ export async function quoteTask(deps: QuoteDeps, taskId: string): Promise<Stored
 
   // ── Price ── best-scored first; if over budget, fall back to the cheapest candidates.
   const fees = {
-    feeBps: deps.fees.takeRateBps, // TODO(phase 6): 10% for clients staking ≥ 5,000 $KAZI (08-TOKENOMICS §26)
+    feeBps: await clientFeeBps({ chain: deps.chain, fees: deps.fees, log }, task.client.wallet as Address),
     publishedFeeBps: await deps.chain.publishedFeeBps(),
     serviceFeeBps: deps.fees.serviceFeeBps,
     minServiceFee: parseUnits(deps.fees.minServiceFee, decimals),
@@ -214,6 +249,23 @@ export async function quoteTask(deps: QuoteDeps, taskId: string): Promise<Stored
     ({ parts, pricing } = price(chosen));
   }
   const overBudget = budget !== undefined && pricing.total > budget;
+
+  // ── Guarded launch: per-task and total open-escrow caps ──
+  const limits = deps.limits;
+  if (limits?.maxTaskUsdc && pricing.total > parseUnits(limits.maxTaskUsdc, decimals)) {
+    return reject(
+      `During Kazi's launch period a task can be at most ${limits.maxTaskUsdc} USDC (this one would be ${formatUnits(pricing.total, decimals)}). Split it into smaller tasks.`,
+      plan,
+    );
+  }
+  if (limits?.maxOpenEscrowUsdc) {
+    const open = await deps.prisma.task.findMany({ where: { status: { in: OPEN_ESCROW } }, select: { totalAmount: true } });
+    const locked = open.reduce((sum, t) => sum + BigInt(t.totalAmount ?? "0"), 0n);
+    if (locked + pricing.total > parseUnits(limits.maxOpenEscrowUsdc, decimals)) {
+      log.warn({ locked: locked.toString(), cap: limits.maxOpenEscrowUsdc }, "open escrow cap reached");
+      return reject("Kazi is at its launch capacity right now. Please try again in a few hours.", plan);
+    }
+  }
 
   // ── Service-fee milestone (paid to Kazi's treasury via its registered provider) ──
   let service: { id: string; name: string; onchainId: bigint } | null = null;
@@ -422,12 +474,14 @@ async function loadAttachments(
   return files.map((f) => ({ filename: f.filename, mime: f.mime, size: f.size }));
 }
 
-async function loadCandidates(prisma: PrismaClient, decimals: number): Promise<Candidate[]> {
+async function loadCandidates(prisma: PrismaClient, decimals: number, allowlist: ReadonlySet<string> | null): Promise<Candidate[]> {
   const rows = await prisma.provider.findMany({
     where: {
       status: "ACTIVE",
       onchainId: { not: null },
       slug: { not: SERVICE_FEE_PROVIDER_SLUG },
+      // Guarded launch: house agents plus the reviewed providers on the allowlist.
+      ...(allowlist ? { OR: [{ isHouse: true }, { slug: { in: [...allowlist] } }] } : {}),
     },
   });
   return rows.flatMap((r) => {

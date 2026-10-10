@@ -671,6 +671,33 @@ contract TaskEscrowTest is KaziBase {
         escrow.setFeeBps(100);
     }
 
+    function test_pauser_canPauseButOnlyAdminUnpauses() public {
+        address guardian = makeAddr("guardian");
+        bytes32 pauserRole = escrow.PAUSER_ROLE();
+        vm.prank(admin);
+        escrow.grantRole(pauserRole, guardian);
+
+        vm.prank(guardian);
+        escrow.pause();
+        assertTrue(escrow.paused());
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccessControl.AccessControlUnauthorizedAccount.selector, guardian, bytes32(0)
+            )
+        );
+        vm.prank(guardian);
+        escrow.unpause();
+
+        vm.prank(admin);
+        escrow.unpause();
+        assertFalse(escrow.paused());
+
+        vm.expectRevert(TaskEscrow.Unauthorized.selector);
+        vm.prank(operator);
+        escrow.pause();
+    }
+
     function test_views_unknownTaskAndIndex() public {
         vm.expectRevert(abi.encodeWithSelector(TaskEscrow.InvalidIndex.selector, TASK, 0));
         escrow.getMilestone(TASK, 0);

@@ -21,7 +21,8 @@ import {IAgentRegistry} from "../src/interfaces/IKazi.sol";
 /// Optional:     TOKEN_NAME, TOKEN_SYMBOL, TOKEN_SUPPLY, FEE_BPS, GRACE_PERIOD, MIN_AGENT_STAKE,
 ///               MIN_HUMAN_STAKE, TREASURY_BPS, STAKER_BPS, BUYBACK_BPS, MOCK_USDC_DECIMALS,
 ///               EXTRA_REGISTRAR_ADDRESS (a second registrar, e.g. the admin's wallet next to the
-///               setup key that activates house agents)
+///               setup key that activates house agents), PAUSER_ADDRESS (incident guardian that can
+///               pause the escrow; only the Safe can unpause)
 ///
 /// Run: forge script script/Deploy.s.sol --rpc-url $ARC_RPC_URL --broadcast --private-key <deployer>
 contract Deploy is Script {
@@ -33,6 +34,7 @@ contract Deploy is Script {
         address registrar;
         address extraRegistrar;
         address slasher;
+        address pauser;
         address treasury;
         address buybackReserve;
         address tokenDistributor;
@@ -78,6 +80,7 @@ contract Deploy is Script {
         c.registrar = vm.envAddress("REGISTRAR_ADDRESS");
         c.extraRegistrar = vm.envOr("EXTRA_REGISTRAR_ADDRESS", address(0));
         c.slasher = vm.envAddress("SLASHER_ADDRESS");
+        c.pauser = vm.envOr("PAUSER_ADDRESS", address(0));
         c.treasury = vm.envAddress("TREASURY_ADDRESS");
         c.buybackReserve = vm.envAddress("BUYBACK_RESERVE_ADDRESS");
         c.tokenDistributor = vm.envAddress("TOKEN_DISTRIBUTOR_ADDRESS");
@@ -137,10 +140,13 @@ contract Deploy is Script {
 
         // Backend signer roles (limited powers)
         d.registry.grantRole(d.registry.REGISTRAR_ROLE(), c.registrar);
-        if (c.extraRegistrar != address(0)) d.registry.grantRole(d.registry.REGISTRAR_ROLE(), c.extraRegistrar);
+        if (c.extraRegistrar != address(0)) {
+            d.registry.grantRole(d.registry.REGISTRAR_ROLE(), c.extraRegistrar);
+        }
         d.vault.grantRole(d.vault.SLASHER_ROLE(), c.slasher);
         d.escrow.grantRole(d.escrow.OPERATOR_ROLE(), c.operator);
         d.escrow.grantRole(d.escrow.QUOTER_ROLE(), c.quoter);
+        if (c.pauser != address(0)) d.escrow.grantRole(d.escrow.PAUSER_ROLE(), c.pauser);
 
         // Safe gets arbitration and every admin power; deployer renounces.
         d.escrow.grantRole(d.escrow.ARBITER_ROLE(), c.adminSafe);
@@ -171,7 +177,8 @@ contract Deploy is Script {
 
         // DEPLOYMENT_OUT lets the browser e2e stack keep its own addresses apart from local dev.
         string memory path = vm.envOr(
-            "DEPLOYMENT_OUT", string.concat(vm.projectRoot(), "/../config/deployments/", c.network, ".json")
+            "DEPLOYMENT_OUT",
+            string.concat(vm.projectRoot(), "/../config/deployments/", c.network, ".json")
         );
         vm.writeJson(json, path);
         console2.log("Deployment written to", path);

@@ -49,4 +49,27 @@
 
 ## 5. Incident response
 
-Severity levels, on-call contact, pause procedure, public status page, post-mortem template in `docs/runbooks/` (Claude Code to create in Phase 7).
+Severity levels, roles, first-15-minutes checklist, message templates, pause procedure, key compromise, dispute handling and the post-mortem template live in [`docs/runbooks/`](runbooks/README.md). A public status page still has to be set up (any hosted status page works; link it from the app footer).
+
+## 6. Phase 7 hardening (2026-10-10)
+
+**Built**
+- **Runbooks** (`docs/runbooks/`): deploy, pause, key compromise, dispute handling, incident response, post-mortem template; alert → runbook map.
+- **Guardian pause**: `TaskEscrow.PAUSER_ROLE` can pause (not unpause) so an incident is contained in minutes, not after collecting Safe signatures. The payout worker holds releases while paused (refunds continue) and resumes by itself.
+- **Signers**: `SIGNER_BACKEND=aws-kms` turns the OPERATOR and QUOTER into KMS-backed viem accounts (`apps/worker/src/chain/kms.ts`: DER parsing, low-s, recovery bit; tested against a local key and on anvil). Plaintext keys are refused on mainnet and in production unless `ALLOW_PLAINTEXT_KEYS=true` (testnet).
+- **Monitoring**: Sentry (API, worker) when `SENTRY_DSN` is set; Prometheus metrics (`GET /metrics` on the API behind `METRICS_TOKEN`, worker on `WORKER_METRICS_PORT`); alerts to logs + Sentry + `ALERT_WEBHOOK_URL` with Redis de-duplication: reconciliation mismatch, large release, 24 h release volume, role changes, pause/unpause, admin parameter changes, payout-change requests (the provider owner also gets an in-app notice), queue backlog, new failed jobs, LLM spend per hour, operator gas. Failed release/refund jobs are retried automatically (10 min apart, at most 6 times) before they wait for a human.
+- **Guarded launch**: `MAX_TASK_USDC`, `MAX_OPEN_ESCROW_USDC` (checked when quoting), `PROVIDER_ALLOWLIST` (house agents + listed providers only); incident switch `ROUTER_DISABLED` (API answers 503 to new quotes, funded work continues).
+- **Sanctions screening**: with `CHAINALYSIS_API_KEY`, sign-in and provider payout addresses are checked against Chainalysis' sanctions API (cached; fails open unless `SANCTIONS_FAIL_CLOSED=true`).
+- **Secret rotation**: `pnpm -F @kazi/api rotate-secrets` re-encrypts stored webhook secrets (`NEW_ENCRYPTION_KEY`) and re-derives house-agent secrets (`NEW_HOUSE_AGENTS_SECRET`).
+- **Audit prep**: `packages/contracts/AUDIT.md` (scope, roles, invariants, known issues, every external function and its guard).
+
+**Access-control review** — every state-changing function in the six contracts was checked against its intended caller (table in `AUDIT.md` §6). No function lets a backend key move funds to an address it chooses: releases go to the registry's payout (changes delayed 48 h, owner notified), refunds to the client, slashing to the insurance pool within `maxSlashBps`. Admin powers sit with the Safe and are bounded (fee ≤ 20%, cooldowns ≤ 60 days, slash ≤ 50%).
+
+**Findings fixed in this pass**
+1. The API trusted `X-Forwarded-For` from any client (`trustProxy: true`), so per-IP limits on sign-in could be bypassed by spoofing the header → `TRUST_PROXY` (default off; set the proxy hop count in production).
+2. Pausing needed the multisig → guardian `PAUSER_ROLE`.
+3. Release/refund jobs that failed 5 times (e.g. an RPC outage) were never retried → automatic retry with a cap + `JOB_FAILURES` alert.
+4. Matured warm-up stake didn't earn until its owner interacted → keeper pokes before each distribution.
+5. Token metrics double-counted a wallet holding two allocations (negative circulating supply, page crash) → de-duplicated (found by the browser e2e).
+
+**Remaining risks before mainnet** — see the Phase 7 summary in `docs/HANDOVER.md`.

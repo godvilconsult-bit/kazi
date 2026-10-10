@@ -43,7 +43,12 @@ export default tseslint.config(
   {
     // Node scripts (plain .mjs): the runtime globals they use.
     files: ["**/*.mjs"],
-    languageOptions: { globals: { process: "readonly", console: "readonly" } },
+    languageOptions: { globals: { process: "readonly", console: "readonly", URL: "readonly" } },
+  },
+  {
+    // k6 load scripts run in k6's JS runtime, which provides these globals.
+    files: ["load/**/*.js"],
+    languageOptions: { globals: { __ENV: "readonly", __VU: "readonly", __ITER: "readonly" } },
   },
   {
     // React hooks rules for the web app (calls in order, complete effect dependencies).

@@ -373,3 +373,18 @@ Approved by the founder where noted; everything else is an implementation choice
 **Public**: `GET /config` (chain incl. a browser-safe `rpcUrl` — `PUBLIC_RPC_URL` or the network's public RPC, never the keyed `ARC_RPC_URL` — fee floor, faucet, contract addresses, `usdcDecimals`/`kaziDecimals` read from the tokens, display settings), `GET /stats` (60 s cache), `GET /capabilities`, `GET /providers/:slug/reputation|reviews`.
 
 **Local/e2e**: `DEPLOYMENTS_DIR` overrides where API, worker and `setup-providers` read contract addresses; `KAZI_LLM_MOCK=e2e` swaps Claude for a scripted mock in the worker and house agents (refused in production). `pnpm -F @kazi/worker e2e:stack` boots the isolated browser-e2e stack.
+
+## 12. Phase 6 endpoints and decisions (2026-10-10)
+
+**$KAZI (public)** — realized numbers only, never prices or projections (docs/08-TOKENOMICS.md §4, §6)
+- `GET /token/metrics` (5-min cache) → `{ deployed: false }` without a token, else `{ deployed, launched, tge, totalSupply, circulating, staked, stakedActive, stakedBps, stakerRewards { allTime, last30d, claimed }, feesDistributed, split { treasuryBps, stakerBps, buybackBps }, buybackReserved, treasuryUsdc, vesting[] { name, address, total, vested, released, start, end }, airdrop { balance, claimed, deadline }, contracts }`. Circulating = supply minus the vesting wallets, the airdrop, treasury, community and liquidity wallets. 30-day figures sum indexed `RewardNotified` events by `ChainEvent.indexedAt`.
+- `GET /token/staking` → `{ deployed, rewards30d, per1000Kazi30d, totalActive, warmupSeconds, cooldownSeconds, stakerBps }` (vault constants are read from the chain, not hardcoded in the page).
+- `GET /config` adds `contracts.airdrop` once `<network>-token-launch.json` exists (`DEPLOYMENTS_DIR`).
+
+**Points**: `GET /points/me` (session) → `{ total, entries[] { taskId, title, role, points, flag, feeUnits, at } }`; `GET /points/leaderboard` → top 50 `{ rank, wallet (shortened, checksummed), points }`.
+
+**Airdrop**: `GET /airdrop/:wallet` → `{ airdropId, contract, amount, proof[] }` from `AirdropAllocation` for the airdrop named by `AIRDROP_ID`; 404 when the wallet has no allocation (or no airdrop is configured).
+
+**Admin**: `GET /admin/fee-split` (current split + vault) and `POST /admin/fee-split { treasuryBps, stakerBps, buybackBps }` (must sum to 10,000) → `FeeDistributor.setSplit` calldata for the admin Safe.
+
+**Worker**: the fee keeper (`payouts.distributeFees`) first pokes every vault account whose warm-up has ended (candidates from indexed `Staked`/`Bonded` events, last 90 days), so lazily-activated stake earns from the distribution. The router quotes `takeRateBps − 200` to clients with ≥ 5,000 KAZI of earning stake (`clientFeeBps`). `pnpm -F @kazi/worker airdrop:snapshot` builds the airdrop (08-TOKENOMICS §7).

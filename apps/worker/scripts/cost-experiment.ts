@@ -10,7 +10,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { pino } from "pino";
 import { z } from "zod";
 import { loadEnv, llmEnvSchema } from "@kazi/config";
-import { renderTask } from "@kazi/house-agents";
+// By path, not as a dependency: house agents depend on the worker (see test/e2e.test.ts).
+import { renderTask } from "../../../packages/house-agents/src/index";
 import { acceptanceSchema, runChecks, type AgentRequest } from "@kazi/shared";
 import { judgeOutput } from "../src/evaluator/evaluate";
 import { AnthropicLlm, anthropicBatchApi, batchText, type Effort, type LlmUsage } from "../src/llm";

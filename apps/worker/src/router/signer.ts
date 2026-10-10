@@ -1,11 +1,13 @@
-import { createPublicClient, http, type Address, type Hex, type PublicClient } from "viem";
+import { createPublicClient, http, type Address, type Hex, type LocalAccount, type PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { Deployment } from "@kazi/config/deployments";
 import {
   QUOTE_EIP712_TYPES,
   agentRegistryAbi,
+  holderKey,
   mockUsdcAbi,
   quoteDomain,
+  stakingVaultAbi,
   taskEscrowAbi,
 } from "@kazi/shared";
 
@@ -25,8 +27,9 @@ export interface QuoteSigner {
   sign(quote: OnchainQuoteArgs, client: Address): Promise<Hex>;
 }
 
-export function createQuoteSigner(privateKey: Hex, chainId: number, escrow: Address): QuoteSigner {
-  const account = privateKeyToAccount(privateKey);
+/** `key`: a KMS-backed account in production (chain/signers.ts), or a dev private key. */
+export function createQuoteSigner(key: Hex | LocalAccount, chainId: number, escrow: Address): QuoteSigner {
+  const account = typeof key === "string" ? privateKeyToAccount(key) : key;
   const domain = quoteDomain(chainId, escrow);
   return {
     address: account.address,
@@ -57,6 +60,10 @@ export interface RouterChain {
   /** The escrow's published fee; quotes may not exceed it. */
   publishedFeeBps(): Promise<number>;
   minAgentStake(): Promise<bigint>;
+  /** $KAZI decimals, when the token is deployed. */
+  kaziDecimals?(): Promise<number>;
+  /** A holder's earning stake: active plus warm-up stake whose warm-up has ended. */
+  earningStake?(holder: Address): Promise<bigint>;
 }
 
 export function createRouterChain(
@@ -65,6 +72,7 @@ export function createRouterChain(
   d: Deployment,
 ): RouterChain {
   let decimals: number | undefined;
+  let tokenDecimals: number | undefined;
   return {
     chainId,
     escrow: d.taskEscrow,
@@ -90,6 +98,21 @@ export function createRouterChain(
         functionName: "minStake",
         args: [0],
       });
+    },
+    async kaziDecimals() {
+      tokenDecimals ??= Number(
+        await client.readContract({ address: d.kaziToken, abi: mockUsdcAbi, functionName: "decimals" }),
+      );
+      return tokenDecimals;
+    },
+    async earningStake(holder) {
+      const [a, warmup, block] = await Promise.all([
+        client.readContract({ address: d.stakingVault, abi: stakingVaultAbi, functionName: "getAccount", args: [holderKey(holder)] }),
+        client.readContract({ address: d.stakingVault, abi: stakingVaultAbi, functionName: "WARMUP" }),
+        client.getBlock(),
+      ]);
+      const matured = a.pending > 0n && block.timestamp >= a.pendingSince + warmup;
+      return a.active + (matured ? a.pending : 0n);
     },
   };
 }

@@ -26,6 +26,11 @@ export function parseUsdcInput(value: string, decimals: number): bigint | null {
   }
 }
 
+/** Any token amount typed by the user ("250", "1000.5") → base units; null when invalid. */
+export function parseTokenInput(value: string, decimals: number): bigint | null {
+  return parseUsdcInput(value, decimals);
+}
+
 /** Token amounts with a few more decimals (stake, rewards). */
 export function tokenAmount(v: string | bigint | null | undefined, decimals: number, places = 2): string {
   const exact = formatUnits(toBigInt(v), decimals);
@@ -63,6 +68,13 @@ export function relativeTime(iso: string | Date, locale: string, now = Date.now(
     if (abs >= ms) return rtf.format(Math.round(diff / ms), unit);
   }
   return rtf.format(Math.round(diff / 1000), "second");
+}
+
+/** "7 days" / "siku 7": whole days when exact, else hours, else minutes. */
+export function durationLabel(seconds: number, locale: string): string {
+  const [unit, n] =
+    seconds % 86_400 === 0 ? (["day", seconds / 86_400] as const) : seconds % 3_600 === 0 ? (["hour", seconds / 3_600] as const) : (["minute", Math.round(seconds / 60)] as const);
+  return new Intl.NumberFormat(locale, { style: "unit", unit, unitDisplay: "long" }).format(n);
 }
 
 export function formatDate(iso: string | Date, locale: string): string {

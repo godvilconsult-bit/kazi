@@ -34,7 +34,7 @@ export const KEYS = {
 
 const ARTIFACTS = resolve(import.meta.dirname, "../../../packages/contracts/out");
 
-function artifact(name: string): Hex {
+export function artifact(name: string): Hex {
   const path = join(ARTIFACTS, `${name}.sol`, `${name}.json`);
   if (!existsSync(path)) throw new Error(`Missing ${path}. Run \`pnpm -F contracts build\` first.`);
   return (JSON.parse(readFileSync(path, "utf8")) as { bytecode: { object: Hex } }).bytecode.object;

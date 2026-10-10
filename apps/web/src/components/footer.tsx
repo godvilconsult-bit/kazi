@@ -12,7 +12,7 @@ export function Footer() {
   const cfg = useKaziConfig();
   return (
     <footer className="mt-16 border-t border-ink/15 bg-surface">
-      <Container className="grid gap-8 py-10 sm:grid-cols-[2fr_1fr_1fr]">
+      <Container className="grid gap-8 py-10 sm:grid-cols-[2fr_1fr_1fr_1fr]">
         <div className="max-w-sm">
           <Logo />
           <p className="mt-3 text-sm text-muted">{t("about")}</p>
@@ -51,6 +51,18 @@ export function Footer() {
                 {nav("provide")}
               </Link>
             </li>
+          </ul>
+        </div>
+        <div>
+          <p className="mb-2 font-mono text-xs uppercase tracking-widest text-muted">{t("token")}</p>
+          <ul className="space-y-1.5 text-sm">
+            {(["token", "stake", "points", "airdrop"] as const).map((page) => (
+              <li key={page}>
+                <Link href={`/${page}`} className="hover:text-accent">
+                  {nav(page)}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       </Container>

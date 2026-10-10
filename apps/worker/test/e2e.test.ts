@@ -9,7 +9,9 @@ import type { Address, Hex } from "viem";
 import { verifySignature } from "@kazi/agent-sdk";
 import { SecretBox, deriveHouseAgentSecret } from "@kazi/config/secrets";
 import { createPrismaClient, type PrismaClient } from "@kazi/db";
-import { buildHouseAgents, createHouseServer } from "@kazi/house-agents";
+// House agents depend on the worker (LLM client), so the worker only reaches them by path in
+// tests: a package dependency back would make the workspace graph cyclic (turbo refuses it).
+import { buildHouseAgents, createHouseServer } from "../../../packages/house-agents/src/index";
 import {
   CAPABILITY_DEFINITIONS,
   HOUSE_AGENT_LISTINGS,

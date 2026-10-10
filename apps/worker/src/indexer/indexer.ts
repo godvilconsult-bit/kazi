@@ -1,6 +1,6 @@
 import { decodeEventLog, type Abi, type Address, type Log, type PublicClient } from "viem";
 import type { Logger } from "pino";
-import type { PrismaClient } from "@kazi/db";
+import type { ChainEvent, PrismaClient } from "@kazi/db";
 import type { Deployment } from "@kazi/config/deployments";
 import { agentRegistryAbi, feeDistributorAbi, stakingVaultAbi, taskEscrowAbi } from "@kazi/shared";
 import { applyChainEvent, type ContractKind } from "./handlers";
@@ -12,6 +12,8 @@ export interface IndexerOptions {
   batchSize: bigint;
   /** On process start, re-scan this many blocks below the cursor (defensive reorg handling). */
   reorgDepth: bigint;
+  /** Called once per event after it was applied (monitoring alerts). Errors are logged, never fatal. */
+  onEvent?: (event: ChainEvent, kind: ContractKind) => Promise<void>;
 }
 
 const CONTRACTS: readonly { key: keyof Deployment; kind: ContractKind; abi: Abi }[] = [
@@ -93,6 +95,11 @@ export class ChainIndexer {
         });
         await this.prisma.chainEvent.update({ where: { id: event.id }, data: { processed: true } });
         done++;
+        if (this.opts.onEvent) {
+          await this.opts.onEvent(event, contract.kind).catch((err: unknown) =>
+            this.log.warn({ err, chainEventId: event.id, name: event.name }, "event observer failed"),
+          );
+        }
       } catch (err) {
         // Stop here so later events for the same task aren't applied out of order; the job retries.
         this.log.error(

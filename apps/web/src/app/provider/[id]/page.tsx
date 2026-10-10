@@ -20,12 +20,14 @@ import { PageBody } from "@/components/container";
 import { CopyButton, Usdc } from "@/components/money";
 import { Markdown } from "@/components/output-viewer";
 import { RequireAuth } from "@/components/require-auth";
+import { ReputationChart } from "@/components/reputation-chart";
 import { ProviderStatusBadge } from "@/components/status";
 import { TxStepper } from "@/components/tx-stepper";
 import { ConnectWalletButton } from "@/components/wallet";
 import { Badge, Button, Card, EmptyState, Field, Notice, Select, Skeleton, Textarea } from "@/components/ui";
 
-const BOND_ENABLED = process.env["NEXT_PUBLIC_FEATURE_BOND"] === "1";
+// On by default since Phase 6; NEXT_PUBLIC_FEATURE_BOND=0 shows the pre-launch notice instead.
+const BOND_ENABLED = process.env["NEXT_PUBLIC_FEATURE_BOND"] !== "0";
 
 export default function ProviderDashboardPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -74,6 +76,7 @@ function Dashboard({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="min-w-0 space-y-6">
           <Stats id={id} />
+          {p.status !== "PENDING" ? <ReputationCard slug={p.slug} /> : null}
           {p.hosting === "KAZI" ? <HostedSettings p={p} /> : null}
           {p.kind === "AGENT" && p.hosting === "SELF" ? <TestConsole p={p} /> : null}
           <Submissions id={id} />
@@ -107,6 +110,22 @@ function Stats({ id }: { id: string }) {
       ) : (
         <Skeleton className="mt-4 h-20" />
       )}
+    </Card>
+  );
+}
+
+function ReputationCard({ slug }: { slug: string }) {
+  const t = useTranslations("agent");
+  const q = useQuery({
+    queryKey: ["provider", slug, "reputation"],
+    queryFn: () => api<{ points: { value: number; createdAt: string }[] }>(`/providers/${slug}/reputation`).then((r) => r.points),
+  });
+  return (
+    <Card>
+      <h2 className="font-display text-lg font-bold">{t("history")}</h2>
+      <div className="mt-3">
+        <ReputationChart points={q.data ?? []} emptyLabel={t("historyEmpty")} ariaLabel={t("historyAria")} />
+      </div>
     </Card>
   );
 }
@@ -168,7 +187,7 @@ function Onchain({ p }: { p: ProviderOwner }) {
   );
 }
 
-/** $KAZI bond (behind NEXT_PUBLIC_FEATURE_BOND until the token launches; Phase 6). */
+/** $KAZI bond: approve exactly what's missing, then StakingVault.bond (docs/08-TOKENOMICS.md §2). */
 function Bond({ p }: { p: ProviderOwner }) {
   const t = useTranslations("dashboard");
   const cfg = useKaziConfig();
@@ -196,7 +215,8 @@ function Bond({ p }: { p: ProviderOwner }) {
   const allowance = reads.data?.[2]?.status === "success" ? (reads.data[2].result as bigint) : 0n;
   const need = min !== null && staked !== null && staked < min ? min - staked : 0n;
   const amount = tokenAmount(need, decimals, 0);
-  if (!vault || !token || !p.onchainId) return null;
+  // No bond on this network (minimum 0, e.g. testnet listings reviewed by Kazi): nothing to show.
+  if (!vault || !token || !p.onchainId || min === 0n) return null;
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">{t("bondTitle")}</h2>

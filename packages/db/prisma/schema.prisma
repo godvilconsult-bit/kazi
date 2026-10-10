@@ -24,6 +24,7 @@ model User {
   files         FileObject[]
   notifications Notification[]
   apiKeys       ApiKey[]
+  points        PointsEntry[]
 }
 
 enum Role {
@@ -285,9 +286,12 @@ model ChainEvent {
   blockNumber BigInt
   args        Json
   processed   Boolean @default(false)
+  /// When Kazi stored the event (≈ block time on Arc); used for trailing-window token metrics.
+  indexedAt   DateTime @default(now())
 
   @@unique([chainId, txHash, logIndex])
   @@index([processed])
+  @@index([contract, name, indexedAt])
 }
 
 model IndexerCursor {
@@ -425,4 +429,40 @@ model ApiKey {
   createdAt  DateTime  @default(now())
 
   @@index([userId])
+}
+
+/// Points program (docs/08-TOKENOMICS.md §5): pre-token rewards for real usage, weighted by the
+/// USDC fees a task paid — never by task count. One row per user, task and role; recomputed daily.
+model PointsEntry {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  taskId    String
+  role      PointsRole
+  feeUnits  String // USDC base units of fees this entry is based on
+  points    Int
+  /// Why points were reduced or withheld by the sybil heuristics, if they were.
+  flag      String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([userId, taskId, role])
+  @@index([userId])
+}
+
+enum PointsRole {
+  CLIENT
+  PROVIDER
+}
+
+/// Airdrop allocations with their Merkle proofs, served to the claim page (KaziAirdrop).
+model AirdropAllocation {
+  id        String   @id @default(cuid())
+  airdropId String
+  wallet    String // lowercase
+  amount    String // $KAZI base units
+  proof     Json
+  createdAt DateTime @default(now())
+
+  @@unique([airdropId, wallet])
 }

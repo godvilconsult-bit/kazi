@@ -756,6 +756,263 @@ export const feeDistributorAbi = [
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// KaziAirdrop
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const kaziAirdropAbi = [
+  {
+    type: "constructor",
+    inputs: [
+      { name: "admin", internalType: "address", type: "address" },
+      { name: "token_", internalType: "contract IERC20", type: "address" },
+      { name: "merkleRoot_", internalType: "bytes32", type: "bytes32" },
+      { name: "start_", internalType: "uint64", type: "uint64" },
+      { name: "vestingDuration_", internalType: "uint64", type: "uint64" },
+      { name: "immediateBps_", internalType: "uint16", type: "uint16" },
+      { name: "claimDeadline_", internalType: "uint64", type: "uint64" },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "DEFAULT_ADMIN_ROLE",
+    outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "allocation", internalType: "uint256", type: "uint256" },
+      { name: "proof", internalType: "bytes32[]", type: "bytes32[]" },
+    ],
+    name: "claim",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "claimDeadline",
+    outputs: [{ name: "", internalType: "uint64", type: "uint64" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "account", internalType: "address", type: "address" },
+      { name: "allocation", internalType: "uint256", type: "uint256" },
+    ],
+    name: "claimable",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "account", internalType: "address", type: "address" }],
+    name: "claimed",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "role", internalType: "bytes32", type: "bytes32" }],
+    name: "getRoleAdmin",
+    outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "account", internalType: "address", type: "address" },
+    ],
+    name: "grantRole",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "account", internalType: "address", type: "address" },
+    ],
+    name: "hasRole",
+    outputs: [{ name: "", internalType: "bool", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "immediateBps",
+    outputs: [{ name: "", internalType: "uint16", type: "uint16" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "merkleRoot",
+    outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "callerConfirmation", internalType: "address", type: "address" },
+    ],
+    name: "renounceRole",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "account", internalType: "address", type: "address" },
+    ],
+    name: "revokeRole",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "start",
+    outputs: [{ name: "", internalType: "uint64", type: "uint64" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "interfaceId", internalType: "bytes4", type: "bytes4" }],
+    name: "supportsInterface",
+    outputs: [{ name: "", internalType: "bool", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "to", internalType: "address", type: "address" }],
+    name: "sweep",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "token",
+    outputs: [{ name: "", internalType: "contract IERC20", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "totalClaimed",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "allocation", internalType: "uint256", type: "uint256" },
+      { name: "timestamp", internalType: "uint64", type: "uint64" },
+    ],
+    name: "vested",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "vestingDuration",
+    outputs: [{ name: "", internalType: "uint64", type: "uint64" }],
+    stateMutability: "view",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "account", internalType: "address", type: "address", indexed: true },
+      { name: "amount", internalType: "uint256", type: "uint256", indexed: false },
+      { name: "totalClaimed", internalType: "uint256", type: "uint256", indexed: false },
+    ],
+    name: "Claimed",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "previousAdminRole", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "newAdminRole", internalType: "bytes32", type: "bytes32", indexed: true },
+    ],
+    name: "RoleAdminChanged",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "account", internalType: "address", type: "address", indexed: true },
+      { name: "sender", internalType: "address", type: "address", indexed: true },
+    ],
+    name: "RoleGranted",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "account", internalType: "address", type: "address", indexed: true },
+      { name: "sender", internalType: "address", type: "address", indexed: true },
+    ],
+    name: "RoleRevoked",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "to", internalType: "address", type: "address", indexed: true },
+      { name: "amount", internalType: "uint256", type: "uint256", indexed: false },
+    ],
+    name: "Swept",
+  },
+  { type: "error", inputs: [], name: "AccessControlBadConfirmation" },
+  {
+    type: "error",
+    inputs: [
+      { name: "account", internalType: "address", type: "address" },
+      { name: "neededRole", internalType: "bytes32", type: "bytes32" },
+    ],
+    name: "AccessControlUnauthorizedAccount",
+  },
+  {
+    type: "error",
+    inputs: [{ name: "deadline", internalType: "uint64", type: "uint64" }],
+    name: "ClaimingClosed",
+  },
+  {
+    type: "error",
+    inputs: [{ name: "start", internalType: "uint64", type: "uint64" }],
+    name: "ClaimingNotStarted",
+  },
+  {
+    type: "error",
+    inputs: [{ name: "deadline", internalType: "uint64", type: "uint64" }],
+    name: "DeadlineNotReached",
+  },
+  { type: "error", inputs: [], name: "InvalidProof" },
+  { type: "error", inputs: [], name: "InvalidSchedule" },
+  { type: "error", inputs: [], name: "NothingToClaim" },
+  { type: "error", inputs: [], name: "ReentrancyGuardReentrantCall" },
+  {
+    type: "error",
+    inputs: [{ name: "token", internalType: "address", type: "address" }],
+    name: "SafeERC20FailedOperation",
+  },
+  { type: "error", inputs: [], name: "ZeroAddress" },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // KaziToken
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -2035,6 +2292,13 @@ export const taskEscrowAbi = [
     type: "function",
     inputs: [],
     name: "OPERATOR_ROLE",
+    outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "PAUSER_ROLE",
     outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
     stateMutability: "view",
   },

@@ -17,6 +17,8 @@ packages/contracts/broadcast/*/31337/
 
 # Local anvil deployments change on every restart
 packages/config/deployments/local.json
+packages/config/deployments/local-token-launch.json
+packages/config/deployments/e2e/
 
 # Supabase CLI local cache
 supabase/.temp/
@@ -34,3 +36,8 @@ packages/contracts/.anvil/
 .next-e2e/
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Build artefacts
+*.tsbuildinfo
+__pycache__/
+*.pyc

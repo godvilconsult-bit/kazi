@@ -1,4 +1,4 @@
-import type { HostedAdvice, HostedConfig, StoredQuote, SubtaskStatus, TaskStatus } from "@kazi/shared";
+import type { HostedAdvice, HostedConfig, PointsFlag, StoredQuote, SubtaskStatus, TaskStatus } from "@kazi/shared";
 
 export type { HostedAdvice, HostedConfig };
 
@@ -27,6 +27,8 @@ export interface PublicConfig {
     stakingVault?: Address;
     kaziToken?: Address;
     feeDistributor?: Address;
+    /** KaziAirdrop, once the token has launched on this network. */
+    airdrop?: Address;
   };
 }
 
@@ -293,4 +295,73 @@ export interface AdminDispute {
       latest: { output: unknown; score: number | null; evaluation: unknown } | null;
     }[];
   };
+}
+
+/* ─── $KAZI (Phase 6): GET /token/metrics, /token/staking, /points/*, /airdrop/:wallet ─── */
+
+export interface FeeSplit {
+  treasuryBps: number;
+  stakerBps: number;
+  buybackBps: number;
+}
+
+export interface VestingProgress {
+  name: "team" | "ecosystem";
+  address: Address;
+  total: string;
+  vested: string;
+  released: string;
+  start: number;
+  end: number;
+}
+
+export type TokenMetrics =
+  | { deployed: false; launched: false }
+  | {
+      deployed: true;
+      launched: boolean;
+      tge: number | null;
+      totalSupply: string;
+      circulating: string;
+      staked: string;
+      stakedActive: string;
+      stakedBps: number;
+      stakerRewards: { allTime: string; last30d: string; claimed: string };
+      feesDistributed: string;
+      split: FeeSplit | null;
+      buybackReserved: string;
+      treasuryUsdc: string | null;
+      vesting: VestingProgress[];
+      airdrop: { address: Address; balance: string; claimed: string; deadline: number } | null;
+      contracts: Record<string, Address | null>;
+    };
+
+export type StakingInfo =
+  | { deployed: false }
+  | {
+      deployed: true;
+      rewards30d: string;
+      per1000Kazi30d: string;
+      totalActive: string;
+      warmupSeconds: number;
+      cooldownSeconds: number;
+      stakerBps: number;
+    };
+
+export interface PointsMe {
+  total: number;
+  entries: { taskId: string; title: string | null; role: "CLIENT" | "PROVIDER"; points: number; flag: PointsFlag | null; feeUnits: string; at: string }[];
+}
+
+export interface PointsLeader {
+  rank: number;
+  wallet: string;
+  points: number;
+}
+
+export interface AirdropProof {
+  airdropId: string;
+  contract: Address;
+  amount: string;
+  proof: `0x${string}`[];
 }

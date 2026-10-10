@@ -1,11 +1,12 @@
 import { Redis } from "ioredis";
 import { createPublicClient, http } from "viem";
 import { getChainConfig } from "@kazi/config";
-import { DeploymentNotFoundError, loadDeployment } from "@kazi/config/deployments";
+import { DeploymentNotFoundError, loadDeployment, loadTokenLaunch } from "@kazi/config/deployments";
 import { createPrismaClient } from "@kazi/db";
 import { buildApp } from "./app";
 import { bullmqJobQueue } from "./jobs";
 import { loadApiEnv } from "./env";
+import { initSentry } from "./observability";
 import { SupabaseStorage } from "@kazi/config/storage";
 
 const env = loadApiEnv(); // fails fast with a list of every missing/invalid variable
@@ -42,6 +43,9 @@ const app = await buildApp({
   redis,
   jobs,
   escrowAddress: deployment?.taskEscrow,
+  tokenLaunch: loadTokenLaunch(env.KAZI_NETWORK, process.env["DEPLOYMENTS_DIR"] || undefined),
+  airdropId: process.env["AIRDROP_ID"] || undefined,
+  reportError: initSentry(env.SENTRY_DSN, `${env.KAZI_NETWORK}-${env.NODE_ENV}`),
   contracts: deployment
     ? {
         agentRegistry: deployment.agentRegistry,
@@ -55,10 +59,11 @@ const app = await buildApp({
   logger:
     env.NODE_ENV === "development"
       ? {
+          level: process.env["LOG_LEVEL"] || "info",
           transport: { target: "pino-pretty" },
           redact: ["req.headers.cookie", "req.headers.authorization"],
         }
-      : { redact: ["req.headers.cookie", "req.headers.authorization"] },
+      : { level: process.env["LOG_LEVEL"] || "info", redact: ["req.headers.cookie", "req.headers.authorization"] },
 });
 
 const shutdown = async () => {

@@ -3,6 +3,7 @@ import { encodeFunctionData, keccak256, toBytes, type Address, type Hex } from "
 import { z } from "zod";
 import {
   agentRegistryAbi,
+  feeDistributorAbi,
   kaziTokenAbi,
   parseUnits,
   stakingVaultAbi,
@@ -44,6 +45,14 @@ const resolveSchema = z
   })
   .strict()
   .refine((v) => new Set(v.resolutions.map((r) => r.index)).size === v.resolutions.length, "duplicate index");
+const feeSplitSchema = z
+  .object({
+    treasuryBps: z.number().int().min(0).max(10_000),
+    stakerBps: z.number().int().min(0).max(10_000),
+    buybackBps: z.number().int().min(0).max(10_000),
+  })
+  .strict()
+  .refine((v) => v.treasuryBps + v.stakerBps + v.buybackBps === 10_000, "The split must add up to 10,000 bps");
 export const settingsSchema = z
   .object({
     announcement: z.string().max(500).nullable().optional(),
@@ -247,6 +256,58 @@ export function adminRoutes(s: AppServices) {
         },
       });
       return { txs, signer: "arbiterSafe" };
+    });
+
+    // ─── Escrow pause (docs/runbooks/pause.md) ──────────────────────────────
+
+    app.get("/admin/escrow", async (req) => {
+      requireAdmin(req, s.adminWallets);
+      if (!s.publicClient) throw invalidState("No RPC configured");
+      const escrow = contract("taskEscrow");
+      const [paused, feeBps] = await Promise.all([
+        s.publicClient.readContract({ address: escrow, abi: taskEscrowAbi, functionName: "paused" }),
+        s.publicClient.readContract({ address: escrow, abi: taskEscrowAbi, functionName: "feeBps" }),
+      ]);
+      return { escrow, paused, feeBps: Number(feeBps) };
+    });
+
+    /** Pause: the guardian (PAUSER_ROLE) or the admin Safe. Unpause: the admin Safe only. */
+    for (const action of ["pause", "unpause"] as const) {
+      app.post(`/admin/escrow/${action}`, async (req) => {
+        requireAdmin(req, s.adminWallets);
+        return {
+          tx: tx(contract("taskEscrow"), encodeFunctionData({ abi: taskEscrowAbi, functionName: action })),
+          signer: action === "pause" ? "guardian" : "adminSafe",
+        };
+      });
+    }
+
+    // ─── Fee split (FeeDistributor) ─────────────────────────────────────────
+
+    app.get("/admin/fee-split", async (req) => {
+      requireAdmin(req, s.adminWallets);
+      if (!s.publicClient) throw invalidState("No RPC configured");
+      const distributor = contract("feeDistributor");
+      const [treasuryBps, stakerBps, buybackBps, stakingVault] = await Promise.all([
+        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "treasuryBps" }),
+        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "stakerBps" }),
+        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "buybackBps" }),
+        s.publicClient.readContract({ address: distributor, abi: feeDistributorAbi, functionName: "stakingVault" }),
+      ]);
+      return { split: { treasuryBps: Number(treasuryBps), stakerBps: Number(stakerBps), buybackBps: Number(buybackBps) }, stakingVault };
+    });
+
+    /** Calldata for the admin Safe: FeeDistributor.setSplit (e.g. switch the staker share on at launch). */
+    app.post("/admin/fee-split", async (req) => {
+      requireAdmin(req, s.adminWallets);
+      const body = parse(feeSplitSchema, req.body);
+      return {
+        tx: tx(
+          contract("feeDistributor"),
+          encodeFunctionData({ abi: feeDistributorAbi, functionName: "setSplit", args: [body.treasuryBps, body.stakerBps, body.buybackBps] }),
+        ),
+        signer: "adminSafe",
+      };
     });
 
     // ─── Display settings ───────────────────────────────────────────────────

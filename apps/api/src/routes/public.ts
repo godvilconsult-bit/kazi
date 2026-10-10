@@ -52,7 +52,13 @@ export function publicRoutes(s: AppServices) {
         minMaxFeePerGasWei: s.chain.minMaxFeePerGasWei.toString(),
         faucetUrl: s.chain.faucetUrl ?? null,
       },
-      contracts: { usdc: s.chain.usdcAddress, escrow: s.escrowAddress ?? null, ...(s.contracts ?? {}) },
+      contracts: {
+        usdc: s.chain.usdcAddress,
+        escrow: s.escrowAddress ?? null,
+        ...(s.contracts ?? {}),
+        // Token launch (Phase 6): the airdrop claim page needs the distributor contract.
+        ...(s.tokenLaunch ? { airdrop: s.tokenLaunch.airdrop } : {}),
+      },
     }));
 
     /** Enabled capabilities, for the directory filters and the provider wizard. */

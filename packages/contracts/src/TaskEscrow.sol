@@ -26,6 +26,8 @@ contract TaskEscrow is AccessControl, Pausable, ReentrancyGuard, EIP712 {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant QUOTER_ROLE = keccak256("QUOTER_ROLE");
     bytes32 public constant ARBITER_ROLE = keccak256("ARBITER_ROLE");
+    /// @notice Guardian that can pause fast in an incident; only the admin (Safe) can unpause.
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
 
     bytes32 public constant QUOTE_TYPEHASH = keccak256(
         "Quote(bytes32 taskId,address client,uint256[] providerIds,uint128[] amounts,uint64 deadline,uint16 feeBps,uint64 expiry)"
@@ -81,6 +83,8 @@ contract TaskEscrow is AccessControl, Pausable, ReentrancyGuard, EIP712 {
     uint16 public feeBps; // published fee; quotes may only carry a fee at or below it
 
     mapping(bytes32 taskId => Task) private _tasks;
+    // Written through storage pointers in _createTask (Slither misreads it as never initialized).
+    // slither-disable-next-line uninitialized-state
     mapping(bytes32 taskId => Milestone[]) private _milestones;
 
     error ZeroAddress();
@@ -325,7 +329,11 @@ contract TaskEscrow is AccessControl, Pausable, ReentrancyGuard, EIP712 {
     }
 
     /// @notice Blocks new funding and releases. Refunds, refundExpired, disputes and arbitration stay open.
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ///         The admin or a PAUSER_ROLE guardian can pause; only the admin can unpause.
+    function pause() external {
+        if (!hasRole(PAUSER_ROLE, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+            revert Unauthorized();
+        }
         _pause();
     }
 
