@@ -37,3 +37,5 @@ Addresses for each network: `packages/config/deployments/<network>.json` (+ `<ne
 | `QUEUE_BACKLOG`, `JOB_FAILURES` | [incident-response.md](incident-response.md) |
 | `LLM_COST_HIGH`, `LLM_COST_SPIKE` | [incident-response.md](incident-response.md) (cost section) |
 | `OPERATOR_GAS_LOW` | Top up the operator (native USDC on Arc) |
+
+On a new deployment the indexer replays the deployment's own role grants and settings: expect one burst of `ROLE_CHANGED` / `ADMIN_SETTING_CHANGED` alerts on the first start, and check that each matches the deploy plan.

@@ -67,6 +67,8 @@ function stopAll(code = 0): never {
 const dotenv = parseEnv(readFileSync(resolve(root, ".env"), "utf8")) as Record<string, string>;
 const dbUrl = new URL(dotenv["DATABASE_URL"] ?? "");
 dbUrl.pathname = "/kazi_test_e2e";
+// Load test: a bigger pool per process (API + worker); the default 10 queues requests behind latency.
+if (process.env["LOAD_TEST"] === "1") dbUrl.searchParams.set("connection_limit", "40");
 const tmp = resolve(root, "..", ".tmp");
 const deploymentsDir = resolve(tmp, "e2e-deployments");
 mkdirSync(deploymentsDir, { recursive: true });

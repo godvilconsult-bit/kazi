@@ -30,6 +30,8 @@ import { mockUsdcAbi, taskEscrowAbi } from "@kazi/shared";
 import { KEYS } from "../test/anvil";
 
 const { values } = parseArgs({
+  // `pnpm run x -- --flag` forwards a literal "--", which would end option parsing.
+  args: process.argv.slice(2).filter((a) => a !== "--"),
   options: {
     tasks: { type: "string", default: "500" },
     "ramp-sec": { type: "string", default: "60" },
@@ -287,7 +289,8 @@ async function sampleQueues(stop: () => boolean) {
         queuePeaks[name] = Math.max(queuePeaks[name] ?? 0, depth);
       }
     } catch {
-      // sampling is best effort
+      // Admin endpoints need a sign-in from the last 10 minutes: sign in again and keep sampling.
+      await admin.login().catch(() => undefined);
     }
     await sleep(5_000);
   }

@@ -10,12 +10,18 @@ export function pgPoolConfig(databaseUrl: string): PoolConfig {
   const url = new URL(databaseUrl);
   const sslmode = url.searchParams.get("sslmode");
   url.searchParams.delete("sslmode");
-  const connectionString = url.toString();
+  // Pool size per process (Prisma's `connection_limit` URL convention); node-postgres defaults to 10.
+  const limit = Number(url.searchParams.get("connection_limit") ?? "");
+  url.searchParams.delete("connection_limit");
+  const pool: PoolConfig = {
+    connectionString: url.toString(),
+    ...(Number.isInteger(limit) && limit > 0 ? { max: limit } : {}),
+  };
   if (sslmode === "require" || sslmode === "prefer" || sslmode === "no-verify") {
-    return { connectionString, ssl: { rejectUnauthorized: false } };
+    return { ...pool, ssl: { rejectUnauthorized: false } };
   }
   if (sslmode === "verify-full" || sslmode === "verify-ca") {
-    return { connectionString, ssl: { rejectUnauthorized: true } };
+    return { ...pool, ssl: { rejectUnauthorized: true } };
   }
-  return { connectionString };
+  return pool;
 }

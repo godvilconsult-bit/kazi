@@ -55,6 +55,7 @@ Set `SIGNER_BACKEND=aws-kms` and `OPERATOR_KMS_KEY_ID` / `QUOTER_KMS_KEY_ID` (se
 
 ## 5. Monitoring on
 
+- Database pool: append `connection_limit=<n>` to `DATABASE_URL` (default 10 per process). Run API and worker in the same region as Postgres and keep the sum of all pools below Postgres `max_connections`.
 - `TRUST_PROXY` = the number of proxies in front of the API (e.g. `1` behind Railway or Cloudflare). Without it every request looks like it comes from the proxy and the sign-in rate limits are shared by everyone; `true` would let clients spoof their IP.
 - `SENTRY_DSN` set for the API and the worker; `ALERT_WEBHOOK_URL` (Slack/Discord-compatible) set for the worker.
 - Prometheus scrapes `GET /metrics` on the API (`METRICS_TOKEN` bearer) and the worker's metrics port.

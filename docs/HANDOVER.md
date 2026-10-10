@@ -36,7 +36,19 @@ See the root [`README.md`](../README.md): local stack (anvil + API + worker + ho
 
 ## 4. Test results (this pass)
 
-RESULTS_TABLE
+| Suite | Result |
+|---|---|
+| Contracts — Foundry unit, fuzz (1,000 runs), invariants | **132 passed.** Coverage: TaskEscrow and StakingVault 100% lines and branches; AgentRegistry, FeeDistributor 100%; KaziToken 100% lines; KaziAirdrop 97.7% lines (its constructor revert paths are tested but not traced by `forge coverage`) |
+| API — Vitest on Postgres + Redis | **53 passed** (8 files) |
+| Worker — Vitest on anvil + Postgres | **55 passed** (9 files), incl. the KMS signer sending a real transaction and TypeScript Merkle proofs claimed through `KaziAirdrop` |
+| Web unit · shared · config · agent SDK · house agents | **16 · 30 · 11 · 7 · 4 passed** |
+| Python agent SDK | **8 passed**, incl. a signature produced by the TypeScript SDK |
+| Browser e2e (Edge, isolated stack) | **3 passed**: task happy path (5.9 min); airdrop claim → stake → unstake → token page; restricted-country view |
+| Golden cases with live Claude | 49 of 50 at their last runs (Phase 5's 35/35; Phase 3: translator 5/5, business plan 5/5, market research 4/5 before its prompt v2 — rerun it once) |
+| Static analysis — Slither 0.11.3 | 19 results, none actionable ([triage](security/static-analysis.md)) |
+| Web production build (`next build`) | succeeds, 21 routes |
+| Lint · typecheck · Prettier | clean across the monorepo (typecheck now covers worker and API scripts and tests too) |
+| Load test — 500 full task lifecycles (laptop + remote DB) | all 500 quoted, funded and delivered; 268 completed within 75 min; 0 errors in 179,200 requests. Bottlenecks: router queue and one-at-a-time payouts ([details](../load/README.md)) |
 
 ## 5. Decisions made for you ("best recommended")
 
@@ -71,7 +83,7 @@ You asked me to pick the recommended option whenever there was a question. Each 
 3. **Operational single points.** One worker process holds the operator key and settles payouts one at a time; Redis/BullMQ and the database are single instances. Fine for a guarded launch; plan HA before volume.
 4. **KMS tested against a local stand-in only.** Do one testnet deploy with real AWS KMS keys before mainnet.
 5. **LLM dependency.** If Anthropic is down, quoting stops and house-agent work stalls (funded tasks still refund after deadline + grace). `ROUTER_DISABLED` exists for incidents.
-6. **Database latency.** The Railway dev database is remote and slow from this machine; production must run the API/worker in the same region as Postgres/Redis (see the load-test notes).
+6. **Throughput.** The load test (`load/README.md`) shows two bottlenecks to fix before real volume: quoting (raise `ROUTER_CONCURRENCY`, add worker replicas) and payouts (one operator key, one release at a time — pipeline nonces or shard operator keys). Run API/worker in the same region as Postgres/Redis and size pools with `connection_limit`.
 7. **Not wired yet:** Sentry in the web app, a public status page, Aderyn (needs Linux; runs in CI), the M-Pesa on-ramp (needs a licensed partner).
 8. **Testnet is behind the code** (no guardian role; house agents not registered there yet) — redeploy as in §2.
 

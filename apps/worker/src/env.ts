@@ -34,6 +34,8 @@ export const executorEnvSchema = z.object({
   PAYOUTS_TICK_MS: z.coerce.number().int().min(1_000).default(15_000),
   /** How often finished Economy (batch) runs of hosted agents are collected. */
   HOSTED_POLL_MS: z.coerce.number().int().min(5_000).default(60_000),
+  /** Quotes planned in parallel per worker process (each is a router LLM call + DB work). */
+  ROUTER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(4),
 });
 
 /** Empty env values count as unset. */

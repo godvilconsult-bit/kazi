@@ -376,7 +376,7 @@ const workers = [
         return { outcome: quote.outcome, version: quote.version };
       },
     }),
-    { ...workerOpts, concurrency: 4 },
+    { ...workerOpts, concurrency: env.ROUTER_CONCURRENCY },
   ),
   new Worker(
     "executor",
