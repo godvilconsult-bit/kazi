@@ -13,7 +13,8 @@ import { useKaziConfig } from "./config";
 import { Container } from "./container";
 import { Logo } from "./logo";
 import { NotificationsBell } from "./notifications-bell";
-import { Button, Dialog } from "./ui";
+import { Dialog } from "./dialog";
+import { Button } from "./ui";
 
 export function Header() {
   const t = useTranslations("nav");

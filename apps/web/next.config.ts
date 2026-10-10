@@ -1,7 +1,12 @@
+import path from "node:path";
 import type { NextConfig } from "next";
-import createNextIntlPlugin from "next-intl/plugin";
 
-const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+/**
+ * next-intl's request config, wired by hand instead of `next-intl/plugin`: the plugin loads
+ * @swc/core, whose native binary caches itself under %LOCALAPPDATA% (this machine keeps everything
+ * off C:). The plugin does nothing else for an app without i18n routing.
+ */
+const I18N_REQUEST = "./src/i18n/request.ts";
 
 const apiOrigin = (() => {
   try {
@@ -35,6 +40,15 @@ const config: NextConfig = {
   poweredByHeader: false,
   transpilePackages: ["@kazi/shared", "@kazi/config"],
   typedRoutes: false,
+  turbopack: { resolveAlias: { "next-intl/config": I18N_REQUEST } },
+  webpack(cfg: { resolve: { alias: Record<string, string | false> } }) {
+    cfg.resolve.alias["next-intl/config"] = path.resolve(process.cwd(), I18N_REQUEST);
+    // wagmi/connectors re-exports the Base Account connector, whose SDK (→ @coinbase/cdp-sdk → x402
+    // clients that aren't installed) is only imported when someone connects with it. Kazi doesn't
+    // offer that connector, so its SDK resolves to an empty module.
+    cfg.resolve.alias["@base-org/account"] = false;
+    return cfg;
+  },
   async headers() {
     return [
       {
@@ -50,4 +64,4 @@ const config: NextConfig = {
   },
 };
 
-export default withNextIntl(config);
+export default config;

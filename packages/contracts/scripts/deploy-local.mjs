@@ -36,6 +36,9 @@ execFileSync(
       OPERATOR_ADDRESS: ANVIL[2],
       QUOTER_ADDRESS: ANVIL[3],
       REGISTRAR_ADDRESS: ANVIL[4],
+      // anvil #1 also gets the registrar role: it holds the $KAZI, so `setup-providers` can register,
+      // bond and activate the house agents with that one key locally.
+      EXTRA_REGISTRAR_ADDRESS: ANVIL[1],
       SLASHER_ADDRESS: ANVIL[5],
       TREASURY_ADDRESS: ANVIL[6],
       BUYBACK_RESERVE_ADDRESS: ANVIL[7],

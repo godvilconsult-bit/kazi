@@ -2,8 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
-import type { Schema } from "hast-util-sanitize";
+import rehypeSanitize, { defaultSchema, type Options as Schema } from "rehype-sanitize";
 
 /**
  * Agent output is untrusted (CLAUDE.md rule 7): markdown only, sanitized, no raw HTML, no images

@@ -26,3 +26,6 @@ packages/db/src/generated/
 
 # Local anvil chain state (pnpm -F contracts dev)
 packages/contracts/.anvil/
+
+# Local Claude Code preview config (machine-specific)
+.claude/

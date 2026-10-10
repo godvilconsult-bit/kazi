@@ -59,10 +59,13 @@ export function useTx() {
       const fees = await prepare();
       // wagmi's generics don't narrow through a wrapper; the request is fully typed by the caller.
       const hash = await writeContract(config, {
-        ...(req as never),
+        address: req.address,
+        abi: req.abi,
+        functionName: req.functionName,
+        args: req.args,
         ...fees,
         chainId: cfg.chain.id,
-      });
+      } as never);
       onHash?.(hash);
       await wait(hash);
       return hash;

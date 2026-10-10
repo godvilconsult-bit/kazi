@@ -1,10 +1,7 @@
-"use client";
+/** Kazi UI kit. No hooks here, so these work in server and client components (Dialog lives in dialog.tsx). */
 
 import {
   forwardRef,
-  useEffect,
-  useId,
-  useRef,
   type ButtonHTMLAttributes,
   type HTMLAttributes,
   type InputHTMLAttributes,
@@ -13,7 +10,7 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import Link from "next/link";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /* ─── Buttons ─────────────────────────────────────────────────────────────── */
@@ -254,62 +251,6 @@ export function Chip({
     >
       {children}
     </button>
-  );
-}
-
-/* ─── Dialog (native <dialog>: focus trap + Esc for free) ─────────────────── */
-
-export function Dialog({
-  open,
-  onClose,
-  title,
-  children,
-  footer,
-  className,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: ReactNode;
-  children: ReactNode;
-  footer?: ReactNode;
-  className?: string;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
-  useEffect(() => {
-    const d = ref.current;
-    if (!d) return;
-    if (open && !d.open) d.showModal();
-    if (!open && d.open) d.close();
-  }, [open]);
-  return (
-    <dialog
-      ref={ref}
-      aria-labelledby={titleId}
-      onClose={onClose}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
-      className={cn(
-        "m-auto w-[min(100%-2rem,32rem)] rounded-xl border border-ink bg-surface p-0 text-ink shadow-stamp backdrop:bg-ink/50 backdrop:backdrop-blur-[2px]",
-        className,
-      )}
-    >
-      {open ? (
-        <div className="flex max-h-[85vh] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-dashed border-line px-5 py-4">
-            <h2 id={titleId} className="font-display text-lg font-bold">
-              {title}
-            </h2>
-            <button type="button" onClick={onClose} className="rounded p-1 text-muted hover:bg-surface-2 hover:text-ink" aria-label="Close">
-              <X className="size-4" />
-            </button>
-          </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
-          {footer ? <div className="flex flex-wrap justify-end gap-2 border-t border-dashed border-line px-5 py-3">{footer}</div> : null}
-        </div>
-      ) : null}
-    </dialog>
   );
 }
 
