@@ -16,6 +16,7 @@
     "deploy:local": "node scripts/deploy-local.mjs",
     "dev": "anvil --state .anvil/state.json",
     "deploy:testnet": "tsx scripts/deploy-testnet.ts",
+    "deploy:mainnet": "tsx scripts/deploy-mainnet.ts",
     "token-launch:local": "node scripts/token-launch-local.mjs"
   },
   "devDependencies": {

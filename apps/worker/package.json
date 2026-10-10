@@ -17,7 +17,8 @@
     "setup-providers": "tsx --env-file=../../.env scripts/setup-providers.ts",
     "airdrop:snapshot": "tsx --env-file=../../.env scripts/airdrop-snapshot.ts",
     "e2e:stack": "tsx scripts/e2e-stack.ts",
-    "load-test": "tsx scripts/load-test.ts"
+    "load-test": "tsx scripts/load-test.ts",
+    "kms-address": "tsx scripts/kms-address.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.128.0",

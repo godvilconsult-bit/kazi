@@ -66,8 +66,10 @@ async function main(): Promise<void> {
       });
     }
 
-    // House agents always belong to — and pay out to — the current admin wallet, so a re-seed
-    // after setting ADMIN_WALLETS moves them off any earlier (e.g. public test) address.
+    // House agents always belong to the current admin wallet (a re-seed after setting ADMIN_WALLETS
+    // moves them off any earlier test address). They pay out to HOUSE_AGENTS_PAYOUT_ADDRESS when
+    // set — on mainnet, the treasury Safe — else to the admin wallet.
+    const housePayout = normalizeWallet(process.env["HOUSE_AGENTS_PAYOUT_ADDRESS"] || adminWallet);
     for (const agent of HOUSE_AGENT_LISTINGS) {
       const webhookSecretEnc =
         box && master ? box.encrypt(deriveHouseAgentSecret(master, agent.slug)) : undefined;
@@ -81,7 +83,7 @@ async function main(): Promise<void> {
           endpointUrl: `${houseBaseUrl}/${agent.slug}/run`,
           pricing: { ...agent.pricing },
           ownerId: admin.id,
-          payoutAddress: adminWallet,
+          payoutAddress: housePayout,
           ...(webhookSecretEnc ? { webhookSecretEnc } : {}),
         },
         create: {
@@ -94,7 +96,7 @@ async function main(): Promise<void> {
           languages: [...agent.languages],
           endpointUrl: `${houseBaseUrl}/${agent.slug}/run`,
           pricing: { ...agent.pricing },
-          payoutAddress: adminWallet,
+          payoutAddress: housePayout,
           status: "ACTIVE",
           isHouse: true,
           ...(webhookSecretEnc ? { webhookSecretEnc } : {}),

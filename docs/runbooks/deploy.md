@@ -2,6 +2,8 @@
 
 Never deploy to mainnet without: a completed external audit of the exact commit, legal sign-off (docs/09 §4), the guarded-launch limits set (below), and two people on the call.
 
+**Exception chosen by the owner (2026-10-10): a pre-audit guarded launch.** Limits are 100 USDC per task and 2,000 USDC in open escrow, with Kazi's house agents only. There are no bonds and no staker share. Step by step, with Railway hosting: [`deploy/README.md`](../../deploy/README.md). That launch uses `pnpm -F @kazi/contracts deploy:mainnet -- --i-accept-unaudited-contracts`, which automates §2 below. It was rehearsed on a local fork of Arc mainnet: Safe 2-of-3, all role checks passed, and zero-stake provider registration worked. Raise the limits only after the audit.
+
 ## 0. Pre-flight (every deploy)
 
 - [ ] `pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test` green; `pnpm -F contracts test:coverage` shows 100% lines on `TaskEscrow` and `StakingVault`.

@@ -1,0 +1,22 @@
+# Never ship secrets or local state into an image or a Railway upload.
+.env
+.env.*
+!.env.example
+**/node_modules
+**/.next
+**/.next-e2e
+**/.turbo
+**/coverage
+**/test-results
+**/playwright-report
+**/__pycache__
+**/*.tsbuildinfo
+.git
+.claude
+packages/contracts/out
+packages/contracts/cache
+packages/contracts/broadcast
+packages/contracts/.anvil
+packages/config/deployments/local.json
+packages/config/deployments/local-token-launch.json
+packages/config/deployments/e2e

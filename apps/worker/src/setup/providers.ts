@@ -104,8 +104,11 @@ export async function registerKaziProviders(opts: SetupOptions): Promise<SetupRe
       `kazi://providers/${slug}`,
       keccak256(stringToHex(slug)),
     ]);
-    await send(d.kaziToken, kaziTokenAbi, "approve", [d.stakingVault, minStake]);
-    await send(d.stakingVault, stakingVaultAbi, "bond", [id, minStake]);
+    // Networks without bonds yet (minimum 0, e.g. the mainnet guarded launch) skip the bond.
+    if (minStake > 0n) {
+      await send(d.kaziToken, kaziTokenAbi, "approve", [d.stakingVault, minStake]);
+      await send(d.stakingVault, stakingVaultAbi, "bond", [id, minStake]);
+    }
     await send(d.agentRegistry, agentRegistryAbi, "activate", [id]);
     await opts.prisma.provider.update({
       where: { id: p.id },

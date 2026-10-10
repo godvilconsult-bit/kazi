@@ -1,6 +1,6 @@
 # Kazi — handover (2026-10-10)
 
-Everything in `docs/10-BUILD-PLAN.md` Phases 0–7 is built and tested; Phase 8 (growth) has the Python agent SDK built and a written roadmap for the rest. Nothing is deployed to mainnet — that waits for the external audit and legal review, as the build plan says.
+Everything in `docs/10-BUILD-PLAN.md` Phases 0–7 is built and tested; Phase 8 (growth) has the Python agent SDK built and a written roadmap for the rest. Mainnet: you chose a **guarded pre-audit launch**: 100 USDC per task, 2,000 USDC in open escrow, house agents only. Everything for it is built and was rehearsed on a local fork of Arc mainnet. It waits only on the inputs listed in [`deploy/README.md`](../deploy/README.md) §0: domain, Safe owners, guardian, AWS KMS keys, secrets, and gas.
 
 ## 1. Status by phase
 
@@ -99,4 +99,4 @@ You asked me to pick the recommended option whenever there was a question. Each 
 
 ## 8. This package
 
-`kazi-package-2026-10-10.zip` contains the repository without `node_modules`, build outputs, caches, `.env` and `.env.testnet` (secrets never leave your machine). `git log` has the full history; commits are local only (no remote configured). After unzipping: `git submodule update --init` (Foundry's forge-std), `pnpm install`, then copy `.env.example` to `.env` and fill it in.
+`kazi-package-2026-10-10.zip` contains the repository without `node_modules`, build outputs, caches, `.env` and `.env.testnet` (secrets never leave your machine). `git log` has the full history; the repository is also on GitHub (private): `godvilconsult-bit/kazi`. After unzipping: `git submodule update --init` (Foundry's forge-std), `pnpm install`, then copy `.env.example` to `.env` and fill it in.
