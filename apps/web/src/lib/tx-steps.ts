@@ -17,7 +17,7 @@ export type StepAction =
   | { type: "sent"; key: string; hash: `0x${string}` }
   | { type: "done"; key: string }
   | { type: "skip"; key: string }
-  | { type: "error"; key: string; error: string }
+  | { type: "error"; key: string; error?: string | undefined }
   | { type: "reset" };
 
 export function initSteps(keys: readonly string[]): TxStep[] {

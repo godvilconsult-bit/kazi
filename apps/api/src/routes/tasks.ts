@@ -29,6 +29,8 @@ const MAX_DEADLINE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 const SSE_POLL_MS = 2_000;
 const SSE_HEARTBEAT_MS = 15_000;
 const idParams = z.object({ id: z.string().min(1).max(64) });
+/** Operator-only audit events: Kazi's own costs and review signals never reach the client's stream. */
+const INTERNAL_EVENT_TYPES = ["LLM_COST_HIGH", "INJECTION_SUSPECTED", "CHAIN_ANOMALY"];
 const revisionSchema = z.object({
   subtaskIndex: z.number().int().min(0),
   note: z.string().trim().min(10).max(2_000),
@@ -492,6 +494,7 @@ export function taskRoutes(s: AppServices) {
         const events = await s.prisma.taskEvent.findMany({
           where: {
             taskId: task.id,
+            type: { notIn: INTERNAL_EVENT_TYPES },
             OR: [{ createdAt: { gt: lastSeen } }, { createdAt: lastSeen, id: { gt: lastId } }],
           },
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],
