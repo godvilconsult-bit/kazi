@@ -185,7 +185,7 @@ function Providers() {
                 </Button>
               ) : null}
             </div>
-            {calldata[p.id] ? <CalldataActions txs={calldata[p.id]!.txs} signer={calldata[p.id]!.signer} /> : null}
+            {calldata[p.id] ? <CalldataActions {...calldata[p.id]} /> : null}
           </Card>
         ))
       )}

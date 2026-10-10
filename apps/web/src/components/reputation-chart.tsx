@@ -10,20 +10,21 @@ export function ReputationChart({
   emptyLabel: string;
   ariaLabel: string;
 }) {
-  if (points.length < 2) {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last || points.length < 2) {
     return <p className="rounded-lg border border-dashed border-line px-4 py-8 text-center text-sm text-muted">{emptyLabel}</p>;
   }
   const W = 600;
   const H = 160;
   const pad = { l: 28, r: 8, t: 10, b: 20 };
-  const t0 = new Date(points[0]!.createdAt).getTime();
-  const t1 = new Date(points[points.length - 1]!.createdAt).getTime();
+  const t0 = new Date(first.createdAt).getTime();
+  const t1 = new Date(last.createdAt).getTime();
   const span = Math.max(1, t1 - t0);
   const x = (t: string) => pad.l + ((new Date(t).getTime() - t0) / span) * (W - pad.l - pad.r);
   const y = (v: number) => pad.t + (1 - Math.max(0, Math.min(100, v)) / 100) * (H - pad.t - pad.b);
   const d = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(p.createdAt).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
-  const area = `${d} L${x(points[points.length - 1]!.createdAt).toFixed(1)},${H - pad.b} L${pad.l},${H - pad.b} Z`;
-  const last = points[points.length - 1]!;
+  const area = `${d} L${x(last.createdAt).toFixed(1)},${H - pad.b} L${pad.l},${H - pad.b} Z`;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel} className="h-auto w-full">
       {[0, 50, 100].map((g) => (

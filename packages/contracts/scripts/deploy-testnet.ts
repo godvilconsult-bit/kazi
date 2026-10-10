@@ -54,7 +54,7 @@ function readEnvFile(path: string): Record<string, string> {
   for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
     const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
     if (!m?.[1]) continue;
-    out[m[1]] = (m[2] ?? "").split(" #")[0]!.trim().replace(/^["']|["']$/g, "");
+    out[m[1]] = (m[2] ?? "").split(" #")[0]?.trim().replace(/^["']|["']$/g, "") ?? "";
   }
   return out;
 }
@@ -153,7 +153,8 @@ const owners = await pub.readContract({
   abi: parseAbi(["function getOwners() view returns (address[])", "function getThreshold() view returns (uint256)"]),
   functionName: "getOwners",
 });
-if (owners.length !== 1 || getAddress(owners[0]!) !== adminWallet) {
+const owner = owners.length === 1 ? owners[0] : undefined;
+if (!owner || getAddress(owner) !== adminWallet) {
   throw new Error(`Safe ${adminSafe} owners are ${owners.join(", ")}, expected only ${adminWallet}`);
 }
 

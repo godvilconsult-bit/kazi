@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import { Bot, Cpu, Trash2, UserRound } from "lucide-react";
-import { CAPABILITY_DEFINITIONS, HOSTED_MODELS } from "@kazi/shared";
+import { CAPABILITY_DEFINITIONS, type HostedModel } from "@kazi/shared";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/cn";
 import type { Capability, ProviderOwner } from "@/lib/types";
@@ -58,7 +58,7 @@ function Wizard() {
   const [endpointUrl, setEndpointUrl] = useState("");
   const [manifestUrl, setManifestUrl] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [llm, setLlm] = useState<(typeof HOSTED_MODELS)[number]>("claude-sonnet-5-5");
+  const [llm, setLlm] = useState<HostedModel>("claude-sonnet-5-5");
   const [effort, setEffort] = useState<"low" | "medium" | "high">("medium");
   const [webSearch, setWebSearch] = useState(0);
   const [samples, setSamples] = useState<{ instructions: string; input: string }[]>([]);
@@ -289,7 +289,7 @@ function Wizard() {
               </Field>
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label={t("model")} htmlFor="p-model">
-                  <Select id="p-model" value={llm} onChange={(e) => setLlm(e.target.value as (typeof HOSTED_MODELS)[number])}>
+                  <Select id="p-model" value={llm} onChange={(e) => setLlm(e.target.value as HostedModel)}>
                     <option value="claude-opus-5-5">{t("modelOpus")}</option>
                     <option value="claude-sonnet-5-5">{t("modelSonnet")}</option>
                     <option value="claude-haiku-5-5">{t("modelHaiku")}</option>
