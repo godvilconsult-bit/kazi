@@ -98,6 +98,10 @@ function CalldataActions({ txs, signer }: { txs: CalldataTx[]; signer: string })
   );
 }
 
+function MaybeCalldata({ entry }: { entry: { txs: CalldataTx[]; signer: string } | undefined }) {
+  return entry ? <CalldataActions txs={entry.txs} signer={entry.signer} /> : null;
+}
+
 function Providers() {
   const t = useTranslations("admin");
   const qc = useQueryClient();
@@ -185,7 +189,7 @@ function Providers() {
                 </Button>
               ) : null}
             </div>
-            {calldata[p.id] ? <CalldataActions {...calldata[p.id]} /> : null}
+            <MaybeCalldata entry={calldata[p.id]} />
           </Card>
         ))
       )}
