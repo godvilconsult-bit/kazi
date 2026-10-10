@@ -1,5 +1,19 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "REDIS_URL",
+    "REDIS_KEY_PREFIX",
+    "JWT_SECRET",
+    "ENCRYPTION_KEY",
+    "SUPABASE_URL",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "HOUSE_AGENTS_SECRET",
+    "ANTHROPIC_API_KEY",
+    "ANVIL_BIN",
+    "FORGE_BIN"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

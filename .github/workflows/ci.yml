@@ -72,8 +72,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile # OpenZeppelin resolves from node_modules
       - uses: foundry-rs/foundry-toolchain@v1
-      - uses: crytic/slither-action@v0.4.1
+      - uses: actions/setup-python@v5
         with:
-          target: packages/contracts
-          slither-args: --filter-paths "lib|node_modules|test|script|mocks" --exclude-dependencies
-          fail-on: high
+          python-version: "3.12"
+      # Not crytic/slither-action: it runs plain `npm install`, which can't resolve pnpm workspaces.
+      - run: pip install slither-analyzer==0.11.3
+      - name: Slither (fail on high severity; triage in docs/security/static-analysis.md)
+        working-directory: packages/contracts
+        run: slither . --filter-paths "lib|node_modules|test|script|mocks" --exclude-dependencies --fail-high
