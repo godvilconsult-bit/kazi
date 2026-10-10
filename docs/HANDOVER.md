@@ -99,4 +99,4 @@ You asked me to pick the recommended option whenever there was a question. Each 
 
 ## 8. This package
 
-`kazi-package-2026-10-10.zip` contains the repository without `node_modules`, build outputs, caches, `.env` and `.env.testnet` (secrets never leave your machine). `git log` has the full history; commits are local only (no remote configured).
+`kazi-package-2026-10-10.zip` contains the repository without `node_modules`, build outputs, caches, `.env` and `.env.testnet` (secrets never leave your machine). `git log` has the full history; commits are local only (no remote configured). After unzipping: `git submodule update --init` (Foundry's forge-std), `pnpm install`, then copy `.env.example` to `.env` and fill it in.
