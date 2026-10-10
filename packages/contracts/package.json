@@ -2,6 +2,7 @@
   "name": "@kazi/contracts",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@openzeppelin/contracts": "5.6.1"
   },
@@ -13,6 +14,13 @@
     "lint": "forge lint src",
     "fmt": "forge fmt",
     "deploy:local": "node scripts/deploy-local.mjs",
-    "dev": "anvil --state .anvil/state.json"
+    "dev": "anvil --state .anvil/state.json",
+    "deploy:testnet": "tsx scripts/deploy-testnet.ts"
+  },
+  "devDependencies": {
+    "@kazi/config": "workspace:*",
+    "@kazi/shared": "workspace:*",
+    "tsx": "4.23.15",
+    "viem": "^2.57.4"
   }
 }

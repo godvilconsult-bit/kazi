@@ -19,7 +19,9 @@ import {IAgentRegistry} from "../src/interfaces/IKazi.sol";
 ///               SLASHER_ADDRESS, TREASURY_ADDRESS, BUYBACK_RESERVE_ADDRESS, TOKEN_DISTRIBUTOR_ADDRESS
 /// USDC:         USDC_ADDRESS (required on testnet/mainnet; on local a MockUSDC is deployed if unset)
 /// Optional:     TOKEN_NAME, TOKEN_SYMBOL, TOKEN_SUPPLY, FEE_BPS, GRACE_PERIOD, MIN_AGENT_STAKE,
-///               MIN_HUMAN_STAKE, TREASURY_BPS, STAKER_BPS, BUYBACK_BPS, MOCK_USDC_DECIMALS
+///               MIN_HUMAN_STAKE, TREASURY_BPS, STAKER_BPS, BUYBACK_BPS, MOCK_USDC_DECIMALS,
+///               EXTRA_REGISTRAR_ADDRESS (a second registrar, e.g. the admin's wallet next to the
+///               setup key that activates house agents)
 ///
 /// Run: forge script script/Deploy.s.sol --rpc-url $ARC_RPC_URL --broadcast --private-key <deployer>
 contract Deploy is Script {
@@ -29,6 +31,7 @@ contract Deploy is Script {
         address operator;
         address quoter;
         address registrar;
+        address extraRegistrar;
         address slasher;
         address treasury;
         address buybackReserve;
@@ -73,6 +76,7 @@ contract Deploy is Script {
         c.operator = vm.envAddress("OPERATOR_ADDRESS");
         c.quoter = vm.envAddress("QUOTER_ADDRESS");
         c.registrar = vm.envAddress("REGISTRAR_ADDRESS");
+        c.extraRegistrar = vm.envOr("EXTRA_REGISTRAR_ADDRESS", address(0));
         c.slasher = vm.envAddress("SLASHER_ADDRESS");
         c.treasury = vm.envAddress("TREASURY_ADDRESS");
         c.buybackReserve = vm.envAddress("BUYBACK_RESERVE_ADDRESS");
@@ -133,6 +137,7 @@ contract Deploy is Script {
 
         // Backend signer roles (limited powers)
         d.registry.grantRole(d.registry.REGISTRAR_ROLE(), c.registrar);
+        if (c.extraRegistrar != address(0)) d.registry.grantRole(d.registry.REGISTRAR_ROLE(), c.extraRegistrar);
         d.vault.grantRole(d.vault.SLASHER_ROLE(), c.slasher);
         d.escrow.grantRole(d.escrow.OPERATOR_ROLE(), c.operator);
         d.escrow.grantRole(d.escrow.QUOTER_ROLE(), c.quoter);

@@ -16,6 +16,7 @@ contract DeployScriptTest is Test {
         vm.setEnv("OPERATOR_ADDRESS", vm.toString(makeAddr("operator")));
         vm.setEnv("QUOTER_ADDRESS", vm.toString(makeAddr("quoter")));
         vm.setEnv("REGISTRAR_ADDRESS", vm.toString(makeAddr("registrar")));
+        vm.setEnv("EXTRA_REGISTRAR_ADDRESS", vm.toString(makeAddr("registrar2")));
         vm.setEnv("SLASHER_ADDRESS", vm.toString(makeAddr("slasher")));
         vm.setEnv("TREASURY_ADDRESS", vm.toString(makeAddr("treasury")));
         vm.setEnv("BUYBACK_RESERVE_ADDRESS", vm.toString(makeAddr("buyback")));
@@ -43,6 +44,8 @@ contract DeployScriptTest is Test {
         assertFalse(d.vault.hasRole(0x00, deployer));
         assertFalse(d.distributor.hasRole(0x00, deployer));
         assertTrue(d.vault.hasRole(d.vault.REWARD_NOTIFIER_ROLE(), address(d.distributor)));
+        assertTrue(d.registry.hasRole(d.registry.REGISTRAR_ROLE(), makeAddr("registrar")));
+        assertTrue(d.registry.hasRole(d.registry.REGISTRAR_ROLE(), makeAddr("registrar2")));
         assertEq(address(d.registry.stakingVault()), address(d.vault));
         assertEq(escrow.feeBps(), 1_200);
         assertEq(d.token.balanceOf(makeAddr("tokenDistributor")), 1_000_000_000e18);
