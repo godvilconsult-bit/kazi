@@ -1,0 +1,59 @@
+[
+  {
+    "name": "agritech seed round",
+    "capability": "write.pitch_deck_outline",
+    "instructions": "Outline a 12-slide seed investor deck for MkulimaPay, a mobile app that gives smallholder farmers in Tanzania input loans repaid at harvest. Raising USD 500k.",
+    "input": "Traction: 3,200 farmers in Mbeya and Iringa, 94% repayment rate, USD 410k loans disbursed in 2025. Team: CEO ex-NMB Bank agri lending, CTO ex-Selcom. Revenue: 9% fee per loan.",
+    "acceptance": {
+      "rubric": ["10-14 slides with headline, points, evidence and speaker note each", "Uses the traction figures given (3,200 farmers, 94%, USD 410k)", "Has a clear ask slide for USD 500k with use of funds", "Missing figures marked for the founder rather than invented"],
+      "format": "markdown",
+      "mustInclude": ["500"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "grant committee audience",
+    "capability": "write.pitch_deck_outline",
+    "instructions": "Outline a 10-slide deck for a USD 50k innovation grant committee for a solar cold-room cooperative in Mwanza that reduces fish spoilage.",
+    "input": "Cooperative of 140 fishers. Spoilage today ~30% of catch. Pilot cold room cut spoilage to 8% over 4 months.",
+    "acceptance": {
+      "rubric": ["Framed for a grant committee (impact, sustainability) rather than investor returns", "Uses 140 fishers and 30% to 8% spoilage figures", "Budget / use of grant slide", "10 slides or close"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "swahili outline",
+    "capability": "write.pitch_deck_outline",
+    "instructions": "Andaa muhtasari wa slaidi 10 kwa Kiswahili kwa ajili ya kuwasilisha kwa benki ombi la mkopo wa TZS 40M kwa duka la vifaa vya ujenzi Dodoma.",
+    "input": "Mauzo ya mwezi TZS 18M, faida ghafi 22%, duka lina miaka 6.",
+    "acceptance": {
+      "rubric": ["Written in Swahili", "Uses sales, margin and years given", "States the TZS 40M ask and repayment plan", "Each slide has headline and points"],
+      "format": "markdown",
+      "mustInclude": ["40"]
+    },
+    "expectPass": true
+  },
+  {
+    "name": "crypto project without price promises",
+    "capability": "write.pitch_deck_outline",
+    "instructions": "Outline an investor deck for an on-chain remittance app between Kenya and Uganda using USDC. Do not promise token price or returns.",
+    "input": "Fees 0.8% vs 6% average incumbents. 1,100 monthly active users in beta. Licensing: applying for a PSP licence in Kenya.",
+    "acceptance": {
+      "rubric": ["No token price predictions or promised returns", "Regulatory / licensing slide", "Uses fee comparison and user figures given", "Competition slide naming alternatives"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "very thin brief",
+    "capability": "write.pitch_deck_outline",
+    "instructions": "Pitch deck outline for my bakery in Moshi.",
+    "input": "",
+    "acceptance": {
+      "rubric": ["Usable outline despite a thin brief", "Gaps marked for the founder instead of invented figures", "Reasonable slide structure for a small business"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  }
+]

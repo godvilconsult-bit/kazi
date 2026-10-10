@@ -13,7 +13,7 @@ const env = loadApiEnv(); // fails fast with a list of every missing/invalid var
 /** Deployed addresses, if this network has been deployed (local: `pnpm -F contracts deploy:local`). */
 function loadDeployed() {
   try {
-    return loadDeployment(env.KAZI_NETWORK);
+    return loadDeployment(env.KAZI_NETWORK, process.env["DEPLOYMENTS_DIR"] || undefined);
   } catch (err) {
     if (err instanceof DeploymentNotFoundError) return undefined;
     throw err;

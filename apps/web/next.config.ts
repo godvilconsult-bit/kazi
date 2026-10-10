@@ -28,7 +28,8 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   // API, chain RPCs and WalletConnect relays.
-  `connect-src 'self' ${apiOrigin} https: wss:${process.env["NODE_ENV"] === "development" ? " http://127.0.0.1:8545 http://localhost:8545 ws://localhost:3000" : ""}`,
+  // Local dev and e2e: anvil on any port, Next's HMR websocket.
+  `connect-src 'self' ${apiOrigin} https: wss:${process.env["NODE_ENV"] === "development" ? " http://127.0.0.1:* http://localhost:* ws://localhost:*" : ""}`,
   "frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org",
   "frame-ancestors 'none'",
   "base-uri 'self'",
@@ -37,6 +38,8 @@ const csp = [
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // A second dev server (the browser e2e stack) needs its own build directory.
+  distDir: process.env["NEXT_DIST_DIR"] ?? ".next",
   poweredByHeader: false,
   transpilePackages: ["@kazi/shared", "@kazi/config"],
   typedRoutes: false,

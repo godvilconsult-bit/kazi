@@ -169,8 +169,10 @@ contract Deploy is Script {
         vm.serializeAddress(key, "taskEscrow", address(d.escrow));
         string memory json = vm.serializeAddress(key, "adminSafe", c.adminSafe);
 
-        string memory path =
-            string.concat(vm.projectRoot(), "/../config/deployments/", c.network, ".json");
+        // DEPLOYMENT_OUT lets the browser e2e stack keep its own addresses apart from local dev.
+        string memory path = vm.envOr(
+            "DEPLOYMENT_OUT", string.concat(vm.projectRoot(), "/../config/deployments/", c.network, ".json")
+        );
         vm.writeJson(json, path);
         console2.log("Deployment written to", path);
     }

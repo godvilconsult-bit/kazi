@@ -20,6 +20,9 @@ import { fileRoutes } from "./routes/files";
 import { adminRoutes } from "./routes/admin";
 import { agentRoutes } from "./routes/agent";
 import { publicRoutes } from "./routes/public";
+import { publicApiRoutes } from "./routes/public-api";
+import { authenticateApiKey } from "./auth/api-keys";
+import { unauthorized } from "./http/errors";
 import { freelancerRoutes } from "./routes/freelancer";
 import { notificationRoutes } from "./routes/notifications";
 
@@ -112,14 +115,24 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
     }
   });
 
-  // Auth context from the access cookie (browser) or a Bearer token (non-browser clients).
+  // Auth context from the access cookie (browser), a Bearer access token, or a Bearer API key
+  // (`kz_…`, programmatic clients; never admin — docs/12-PUBLIC-API.md).
   app.decorateRequest("auth", null);
   app.addHook("onRequest", async (req) => {
     const bearer = req.headers.authorization?.startsWith("Bearer ")
       ? req.headers.authorization.slice(7)
       : undefined;
+    if (bearer?.startsWith("kz_")) {
+      req.auth = await authenticateApiKey(deps.prisma, bearer);
+      if (!req.auth) throw unauthorized("Invalid or revoked API key");
+      return;
+    }
     const token = bearer ?? parseCookies(req.headers.cookie)[ACCESS_COOKIE];
     req.auth = token ? await services.tokens.verifyAccess(token) : null;
+  });
+  // Every API-key request also counts against a per-key budget.
+  app.addHook("preHandler", async (req, reply) => {
+    if (req.auth?.apiKeyId) await services.limiter.guard("api-key", deps.env.API_KEY_RATE_LIMIT, 60)(req, reply);
   });
 
   app.get("/health", async () => ({ status: "ok" }));
@@ -131,6 +144,7 @@ export async function buildApp(deps: AppDeps): Promise<FastifyInstance> {
   await app.register(adminRoutes(services));
   await app.register(agentRoutes(services));
   await app.register(publicRoutes(services));
+  await app.register(publicApiRoutes(services));
   await app.register(freelancerRoutes(services));
   await app.register(notificationRoutes(services));
 

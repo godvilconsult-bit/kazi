@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useAccount, useConnect, useSwitchChain, type Connector } from "wagmi";
-import { Languages, LogOut, Menu, Moon, Sun, Wallet, X } from "lucide-react";
+import { useAccount, useSwitchChain } from "wagmi";
+import { Languages, LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { shortAddress } from "@/lib/format";
 import { useAuth } from "./auth";
@@ -13,8 +13,8 @@ import { useKaziConfig } from "./config";
 import { Container } from "./container";
 import { Logo } from "./logo";
 import { NotificationsBell } from "./notifications-bell";
-import { Dialog } from "./dialog";
 import { Button } from "./ui";
+import { ConnectWalletButton } from "./wallet";
 
 export function Header() {
   const t = useTranslations("nav");
@@ -150,8 +150,10 @@ function WalletButton() {
   const t = useTranslations("wallet");
   const { address, isConnected } = useAccount();
   const { user, signIn, signingIn, signOut, error } = useAuth();
-  const [picker, setPicker] = useState(false);
   const [menu, setMenu] = useState(false);
+
+  // Signed in (session cookie) but the wallet isn't connected, e.g. after a reload: reconnect.
+  if (user && !isConnected) return <ConnectWalletButton compact />;
 
   if (user) {
     return (
@@ -197,66 +199,7 @@ function WalletButton() {
     );
   }
 
-  return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setPicker(true)}>
-        <Wallet className="size-4" />
-        <span className="hidden sm:inline">{t("connect")}</span>
-      </Button>
-      <WalletPicker open={picker} onClose={() => setPicker(false)} />
-    </>
-  );
-}
-
-function WalletPicker({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const t = useTranslations("wallet");
-  const { connectors, connect, isPending, variables, error } = useConnect();
-  // Prefer wallets discovered via EIP-6963 over the generic "Injected" entry when both exist.
-  const discovered = connectors.filter((c) => c.type === "injected" && c.id !== "injected");
-  const list = connectors.filter((c) => !(c.id === "injected" && discovered.length > 0));
-  return (
-    <Dialog open={open} onClose={onClose} title={t("chooseWallet")}>
-      {list.length === 0 ? <p className="text-sm text-muted">{t("noWallets")}</p> : null}
-      <div className="flex flex-col gap-2">
-        {list.map((c) => (
-          <ConnectorRow
-            key={c.uid}
-            connector={c}
-            pending={isPending && variables?.connector === c}
-            onClick={() => connect({ connector: c }, { onSuccess: onClose })}
-          />
-        ))}
-      </div>
-      {error ? (
-        <p className="mt-3 text-sm text-bad" role="alert">
-          {error.message.split("\n")[0]}
-        </p>
-      ) : null}
-      <p className="mt-4 text-xs text-muted">{t("signInHint")}</p>
-    </Dialog>
-  );
-}
-
-function ConnectorRow({ connector, pending, onClick }: { connector: Connector; pending: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={pending}
-      className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-left font-semibold transition-colors hover:border-ink hover:bg-surface-2 disabled:opacity-60"
-    >
-      {connector.icon ? (
-        // Wallet icons are data: URIs announced by the wallet itself (EIP-6963).
-        <img src={connector.icon} alt="" className="size-7 rounded" />
-      ) : (
-        <span className="grid size-7 place-items-center rounded bg-surface-2">
-          <Wallet className="size-4" />
-        </span>
-      )}
-      <span className="flex-1">{connector.name}</span>
-      {pending ? <span className="text-xs text-muted">…</span> : null}
-    </button>
-  );
+  return <ConnectWalletButton compact />;
 }
 
 export function LocaleSwitch() {

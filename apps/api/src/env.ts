@@ -27,6 +27,8 @@ export const apiEnvSchema = runtimeEnvSchema
     /** Free quotes per wallet per day: each new quote costs Kazi a router call (06-ROUTER §8). */
     QUOTE_DAILY_LIMIT: z.coerce.number().int().min(1).default(30),
     /** RPC URL handed to browsers via GET /config. Defaults to the network's public RPC, never ARC_RPC_URL (it may carry a key). */
+    /** Requests per minute per API key (public API, docs/12-PUBLIC-API.md). */
+    API_KEY_RATE_LIMIT: z.coerce.number().int().min(1).default(120),
     PUBLIC_RPC_URL: z.preprocess((v) => (v === "" ? undefined : v), z.url().optional()),
   });
 

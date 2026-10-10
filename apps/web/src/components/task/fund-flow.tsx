@@ -15,6 +15,7 @@ import { useAuth } from "../auth";
 import { useKaziConfig } from "../config";
 import { TxStepper } from "../tx-stepper";
 import { Button, Notice } from "../ui";
+import { ConnectWalletButton } from "../wallet";
 
 /**
  * Exact USDC approve (never infinite) → TaskEscrow.createAndFund(quote, signature). The task becomes
@@ -105,7 +106,14 @@ export function FundFlow({ taskId, quoteClient }: { taskId: string; quoteClient:
   }
 
   if (funded) return <Notice tone="ok">{t("funded")}</Notice>;
-  if (!address) return <Notice tone="info">{t("connectToFund")}</Notice>;
+  if (!address) {
+    return (
+      <div className="space-y-3 rounded-xl border border-ink bg-surface p-5 shadow-stamp-sm">
+        <p className="text-sm">{t("connectToFund")}</p>
+        <ConnectWalletButton variant="primary" size="md" />
+      </div>
+    );
+  }
   if (!rightWallet) return <Notice tone="warn">{t("wrongWallet", { wallet: shortAddress(quoteClient) })}</Notice>;
 
   return (

@@ -20,7 +20,7 @@ const env = loadEnv(
     .extend({ SETUP_PRIVATE_KEY: z.string().regex(/^0x[0-9a-fA-F]{64}$/) }),
 );
 const log = pino({ level: "info" });
-const deployment = loadDeployment(env.KAZI_NETWORK);
+const deployment = loadDeployment(env.KAZI_NETWORK, process.env["DEPLOYMENTS_DIR"] || undefined);
 const chain = getChainConfig(env.KAZI_NETWORK, {
   rpcUrl: env.ARC_RPC_URL,
   usdcAddress: env.USDC_ADDRESS ?? deployment.usdc,

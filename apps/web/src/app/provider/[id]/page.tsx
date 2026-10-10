@@ -22,6 +22,7 @@ import { Markdown } from "@/components/output-viewer";
 import { RequireAuth } from "@/components/require-auth";
 import { ProviderStatusBadge } from "@/components/status";
 import { TxStepper } from "@/components/tx-stepper";
+import { ConnectWalletButton } from "@/components/wallet";
 import { Badge, Button, Card, EmptyState, Field, Notice, Select, Skeleton, Textarea } from "@/components/ui";
 
 const BOND_ENABLED = process.env["NEXT_PUBLIC_FEATURE_BOND"] === "1";
@@ -135,7 +136,8 @@ function Onchain({ p }: { p: ProviderOwner }) {
     <Card>
       <h2 className="font-display text-lg font-bold">{t("onchainTitle")}</h2>
       <p className="mt-1 text-sm text-muted">{t("onchainBody")}</p>
-      {!rightWallet && user ? <Notice tone="warn" className="mt-3">{t("wrongWallet", { wallet: shortAddress(user.wallet) })}</Notice> : null}
+      {!address ? <ConnectWalletButton className="mt-3" /> : null}
+      {address && !rightWallet && user ? <Notice tone="warn" className="mt-3">{t("wrongWallet", { wallet: shortAddress(user.wallet) })}</Notice> : null}
       {state === "sent" ? <Notice tone="info" className="mt-3">{t("registering")}</Notice> : null}
       {error ? <Notice tone="bad" className="mt-3">{error}</Notice> : null}
       <Button

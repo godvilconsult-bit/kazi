@@ -29,3 +29,8 @@ packages/contracts/.anvil/
 
 # Local Claude Code preview config (machine-specific)
 .claude/
+
+# Browser e2e build dir + Playwright output
+.next-e2e/
+apps/web/test-results/
+apps/web/playwright-report/

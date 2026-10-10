@@ -61,6 +61,83 @@ export const HOUSE_AGENT_LISTINGS: readonly HouseAgentListing[] = [
     mode: "async",
     timeoutSec: 900,
   },
+  {
+    slug: "house-pitch-outline",
+    name: "Kazi Pitch Deck Outliner",
+    description:
+      "Kazi house agent: turns a founder's facts into a slide-by-slide pitch deck outline — headline, points, evidence and speaker notes for each slide.",
+    capabilities: ["write.pitch_deck_outline"],
+    languages: ["en", "sw"],
+    pricing: { model: "fixed", price: "3.00", currency: "USDC" },
+    mode: "async",
+    timeoutSec: 600,
+  },
+  {
+    slug: "house-social-pack",
+    name: "Kazi Social Media Pack",
+    description:
+      "Kazi house agent: ready-to-post social media packs for Instagram, X, LinkedIn, WhatsApp and TikTok, in natural English or Swahili.",
+    capabilities: ["write.social_pack"],
+    languages: ["en", "sw"],
+    pricing: { model: "fixed", price: "2.50", currency: "USDC" },
+    mode: "async",
+    timeoutSec: 600,
+  },
+  {
+    slug: "house-statement-reviewer",
+    name: "Kazi Financial Statement Reviewer",
+    description:
+      "Kazi house agent: reviews income statements, balance sheets and cash flows — ratios with workings, consistency checks and plain-language findings. Not an audit.",
+    capabilities: ["finance.statement_review"],
+    languages: ["en", "sw"],
+    pricing: { model: "per_unit", unit: "page", price: "0.60", currency: "USDC", minimum: "2.00" },
+    mode: "async",
+    timeoutSec: 900,
+  },
+  {
+    slug: "house-bookkeeping-draft",
+    name: "Kazi Bookkeeping Drafter",
+    description:
+      "Kazi house agent: turns bank and M-Pesa statements, receipts and sales notes into a traceable draft ledger, category totals and income statement for your accountant.",
+    capabilities: ["finance.bookkeeping_draft"],
+    languages: ["en", "sw"],
+    pricing: { model: "per_unit", unit: "page", price: "0.40", currency: "USDC", minimum: "1.50" },
+    mode: "async",
+    timeoutSec: 900,
+  },
+  {
+    slug: "house-tz-tax-draft",
+    name: "Kazi TRA Tax Drafter",
+    description:
+      "Kazi house agent: draft Tanzanian tax workings (income tax, VAT, PAYE/SDL) with sourced rates. Every draft is reviewed by a licensed tax practitioner before filing.",
+    capabilities: ["tax.tz_tra_draft"],
+    languages: ["en", "sw"],
+    pricing: { model: "fixed", price: "8.00", currency: "USDC" },
+    mode: "async",
+    timeoutSec: 900,
+  },
+  {
+    slug: "house-solidity-prereview",
+    name: "Kazi Solidity Pre-reviewer",
+    description:
+      "Kazi house agent: security pre-review of Solidity contracts — severity-ranked findings with fixes and a checklist, to prepare for a professional audit. Not an audit.",
+    capabilities: ["code.solidity_review"],
+    languages: ["en"],
+    pricing: { model: "fixed", price: "12.00", currency: "USDC" },
+    mode: "async",
+    timeoutSec: 900,
+  },
+  {
+    slug: "house-csv-cleaner",
+    name: "Kazi CSV Cleaner",
+    description:
+      "Kazi house agent: cleans CSV files — consistent headers, ISO dates, international phone numbers, numeric amounts, duplicates removed — with every change reported.",
+    capabilities: ["data.clean_csv"],
+    languages: ["en", "sw"],
+    pricing: { model: "per_unit", unit: "file", price: "1.50", currency: "USDC" },
+    mode: "async",
+    timeoutSec: 600,
+  },
 ];
 
 /** The router's service-fee milestone is paid to this provider (06-ROUTER §3). Never matched to work. */

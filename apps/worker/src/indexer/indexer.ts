@@ -82,7 +82,7 @@ export class ChainIndexer {
       take: limit,
     });
     let done = 0;
-    for (const event of pending) {
+    for (const event of closeLastPerTx(pending, pending.length === limit)) {
       const contract = this.byAddress.get(event.contract);
       if (!contract) continue;
       try {
@@ -145,3 +145,25 @@ export function toJson(value: unknown): never {
 
 const maxBig = (a: bigint, b: bigint) => (a > b ? a : b);
 const minBig = (a: bigint, b: bigint) => (a < b ? a : b);
+
+/**
+ * TaskEscrow emits `TaskClosed` from inside the last settlement, i.e. *before* that milestone's
+ * `MilestoneReleased`/`MilestoneRefunded`/`DisputeResolved` in the same transaction. Apply it after
+ * the other events of its transaction, so a task never shows as closed while its last milestone
+ * still looks unpaid. When the batch was cut at `limit`, the last transaction waits for the next
+ * batch so it is never split.
+ */
+export function closeLastPerTx<T extends { txHash: string; name: string }>(events: readonly T[], truncated: boolean): T[] {
+  const out: T[] = [];
+  let i = 0;
+  while (i < events.length) {
+    const tx = events[i]?.txHash;
+    let j = i;
+    while (j < events.length && events[j]?.txHash === tx) j++;
+    if (truncated && j === events.length && i > 0) break; // possibly incomplete: next batch
+    const group = events.slice(i, j);
+    out.push(...group.filter((e) => e.name !== "TaskClosed"), ...group.filter((e) => e.name === "TaskClosed"));
+    i = j;
+  }
+  return out;
+}

@@ -35,7 +35,7 @@ import { pollHostedRuns, runHosted } from "./hosted/run";
 import { ChainIndexer } from "./indexer/indexer";
 import { bullmqSink } from "./jobs/sink";
 import { reconcileEscrow } from "./jobs/reconcile";
-import { AnthropicLlm, anthropicBatchApi } from "./llm";
+import { AnthropicLlm, anthropicBatchApi, createE2eMockLlm, type LlmClient } from "./llm";
 import { payoutsTick, settleMilestone } from "./payouts/payouts";
 import { recomputeAllReputations, recomputeReputation } from "./reputation/reputation";
 import { createQueues } from "./queues";
@@ -69,14 +69,19 @@ const env = loadEnv(
         .int()
         .min(10_000)
         .default(5 * 60_000),
+      /** Browser e2e only: a deterministic stand-in for Claude (llm/e2e-mock.ts). */
+      KAZI_LLM_MOCK: z.preprocess((v) => (v === "" ? undefined : v), z.enum(["e2e"]).optional()),
+      /** Read contract addresses from this directory instead of packages/config/deployments. */
+      DEPLOYMENTS_DIR: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
     }),
 );
+if (env.KAZI_LLM_MOCK && env.NODE_ENV === "production") throw new Error("KAZI_LLM_MOCK is not allowed in production");
 const log = pino({
   level: "info",
   ...(env.NODE_ENV === "development" ? { transport: { target: "pino-pretty" } } : {}),
 });
 
-const deployment = loadDeployment(env.KAZI_NETWORK);
+const deployment = loadDeployment(env.KAZI_NETWORK, env.DEPLOYMENTS_DIR);
 const chain = getChainConfig(env.KAZI_NETWORK, {
   rpcUrl: env.ARC_RPC_URL,
   usdcAddress: env.USDC_ADDRESS ?? deployment.usdc,
@@ -102,10 +107,13 @@ const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 3 });
 const queues = createQueues(connection, env.REDIS_KEY_PREFIX);
 const jobs = bullmqSink(queues);
 
-const llm = new AnthropicLlm({
-  apiKey: env.ANTHROPIC_API_KEY,
-  log: log.child({ component: "llm" }),
-});
+const llm: LlmClient = env.KAZI_LLM_MOCK
+  ? createE2eMockLlm()
+  : new AnthropicLlm({
+      apiKey: env.ANTHROPIC_API_KEY,
+      log: log.child({ component: "llm" }),
+    });
+if (env.KAZI_LLM_MOCK) log.warn("KAZI_LLM_MOCK=e2e: Claude is replaced by a scripted mock");
 const routerChain = createRouterChain(client, chain.chainId, deployment);
 const signer = createQuoteSigner(
   env.QUOTER_PRIVATE_KEY as Hex,

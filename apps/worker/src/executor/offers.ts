@@ -12,6 +12,8 @@ import { recordFailedAttempt } from "./results";
  */
 
 export const OFFER_WINDOW_MS = 2 * 3_600_000;
+/** A freelancer working on a step is reminded once per attempt when this little time is left. */
+export const DUE_SOON_MS = 2 * 3_600_000;
 
 export async function createDirectOffer(
   prisma: PrismaClient,
@@ -43,7 +45,14 @@ export async function offersTick(deps: { prisma: PrismaClient; log: Logger; now?
   let changed = 0;
   for (const st of waiting) {
     const current = st.offers.filter((o) => o.attempt === st.attempts);
-    if (current.some((o) => o.status === "ACCEPTED")) continue; // someone is working on it
+    const accepted = current.find((o) => o.status === "ACCEPTED");
+    if (accepted) {
+      // Someone is working on it: remind them once when the deadline gets close.
+      if (st.timeoutAt && st.timeoutAt.getTime() - now.getTime() < DUE_SOON_MS && st.timeoutAt > now) {
+        if (await remindOnce(deps.prisma, st, accepted.providerId)) changed++;
+      }
+      continue;
+    }
     const open = current.filter((o) => o.status === "OFFERED" && o.expiresAt > now);
     if (open.length > 0) continue;
 
@@ -90,6 +99,31 @@ export async function offersTick(deps: { prisma: PrismaClient; log: Logger; now?
     changed++;
   }
   return changed;
+}
+
+async function remindOnce(
+  prisma: PrismaClient,
+  st: { id: string; taskId: string; attempts: number; title: string; timeoutAt: Date | null },
+  providerId: string,
+): Promise<boolean> {
+  const already = await prisma.taskEvent.findFirst({
+    where: { taskId: st.taskId, type: "FREELANCER_REMINDED", data: { path: ["subtaskId"], equals: st.id } },
+    select: { data: true },
+    orderBy: { createdAt: "desc" },
+  });
+  if ((already?.data as { attempt?: number } | null)?.attempt === st.attempts) return false;
+  const provider = await prisma.provider.findUnique({ where: { id: providerId }, select: { ownerId: true } });
+  if (!provider) return false;
+  await prisma.taskEvent.create({
+    data: { taskId: st.taskId, type: "FREELANCER_REMINDED", data: { subtaskId: st.id, attempt: st.attempts } },
+  });
+  await notify(prisma, provider.ownerId, {
+    type: "DUE_SOON",
+    title: "Work due soon",
+    body: `"${st.title}" is due ${st.timeoutAt?.toUTCString() ?? "soon"}. Submit before then or it goes to someone else.`,
+    link: `/freelancer/subtasks/${st.id}`,
+  });
+  return true;
 }
 
 /**

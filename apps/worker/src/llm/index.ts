@@ -13,6 +13,7 @@ export {
   type TextRequest,
 } from "./client";
 export { MockLlm, MOCK_USAGE } from "./mock";
+export { createE2eMockLlm } from "./e2e-mock";
 export {
   addBatchUsage,
   anthropicBatchApi,

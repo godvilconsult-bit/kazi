@@ -22,6 +22,8 @@ export interface AuthContext {
   wallet: `0x${string}`;
   roles: (typeof ROLES)[number][];
   authTime: number;
+  /** Set when the request authenticated with an API key instead of a SIWE session. */
+  apiKeyId?: string;
 }
 
 export class TokenService {

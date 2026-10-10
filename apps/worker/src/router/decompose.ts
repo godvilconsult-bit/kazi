@@ -99,10 +99,51 @@ export async function decompose(
     usage = addUsage(usage, res.usage);
     try {
       validatePlan(res.data, known);
-      return { plan: res.data, usage };
+      const plan = withRequiredReviews(res.data);
+      validatePlan(plan, known);
+      return { plan, usage };
     } catch (err) {
       if (!(err instanceof PlanValidationError) || attempt >= 2) throw err;
       user = `${renderDecomposeUser(input)}\n\nYour previous plan was rejected: ${err.message}. Return a corrected plan.`;
     }
   }
+}
+
+/**
+ * Steps that must always be checked by a licensed person (docs/06-ROUTER.md §7): a Tanzanian tax
+ * draft gets a `human.review` step after it, whatever the model planned. If no reviewer can take
+ * that step, the task can't be quoted — Kazi never sells an unreviewed tax draft.
+ */
+export const REVIEWED_CAPABILITIES: Readonly<Record<string, { title: string; instructions: string; rubric: string[] }>> = {
+  "tax.tz_tra_draft": {
+    title: "Licensed tax practitioner review",
+    instructions:
+      "As a licensed Tanzanian tax practitioner, review the draft tax workings from the earlier step: check every rate, threshold, classification and calculation against the client's records and current TRA rules, correct any errors, list each change you made, and state clearly whether the return can be filed as corrected.",
+    rubric: [
+      "Every figure checked against the client's records and current TRA rules",
+      "Corrections listed with reasons",
+      "Clear statement on whether the return can be filed",
+    ],
+  },
+};
+
+export function withRequiredReviews(plan: Plan): Plan {
+  const subtasks = [...plan.subtasks];
+  for (const st of plan.subtasks) {
+    const rule = REVIEWED_CAPABILITIES[st.capability];
+    if (!rule) continue;
+    const reviewed = subtasks.some((r) => r.capability === "human.review" && r.dependsOn.includes(st.index));
+    if (reviewed) continue;
+    subtasks.push({
+      index: subtasks.length,
+      title: rule.title,
+      capability: "human.review",
+      instructions: rule.instructions,
+      dependsOn: [st.index],
+      estimatedUnits: 1,
+      acceptance: { rubric: rule.rubric, format: "markdown" },
+      needsHuman: true,
+    });
+  }
+  return subtasks.length === plan.subtasks.length ? plan : { ...plan, subtasks };
 }

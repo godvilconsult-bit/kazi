@@ -58,3 +58,16 @@
 
 - Playwright e2e on local stack (anvil + mock USDC): post task → quote (mock LLM) → fund → house echo agent completes → approve → payout visible.
 - Component tests for amount formatting and tx stepper error states.
+
+## 7. Implementation notes (Phase 4, 2026-10-10)
+
+- **Versions** (pinned, each ≥ 2 weeks old when added): Next.js 15.5.26 (App Router, webpack dev), React 19.3, wagmi 2.19.5 + viem 2, TanStack Query 5.103, next-intl 4.14.7, Tailwind 4.3.3, react-markdown 10 + remark-gfm + rehype-sanitize, Playwright 1.63 (runs on the installed Microsoft Edge, no browser download). UI kit is hand-written in the shadcn style (`src/components/ui.tsx`, server- and client-safe; `dialog.tsx` is the only client-only primitive).
+- **Config**: the root layout reads `GET /config` on the server (chain, public RPC, explorer, contracts, token decimals, display settings) and passes it to the client providers, so nothing chain-specific is hardcoded in the web app. If the API is unreachable the app shows an offline page.
+- **Wallets**: injected (EIP-6963 discovery: MetaMask, Rabby, Coinbase extension…), Coinbase Wallet, WalletConnect when `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is set, and a mock connector only when `NEXT_PUBLIC_E2E_WALLET` is set on a local chain. SIWE via `viem/siwe`; the session is the API's httpOnly cookie, refreshed transparently on 401. Every write applies Arc's fee floor (`minMaxFeePerGasWei`) and switches chain first.
+- **Fund flow**: exact `approve(escrow, total)` (skipped when the allowance already covers it) → `createAndFund(quote, sig)`. The task turns FUNDED only when the indexer sees `TaskFunded`; the page listens over SSE.
+- **i18n**: English + Swahili with cookie-based locale (no URL prefix); message keys are type-checked (`src/global.d.ts`) and a unit test keeps `sw.json` in key/placeholder parity with `en.json`. next-intl is wired with a webpack alias instead of `next-intl/plugin` (the plugin loads `@swc/core`, whose native binary caches under `%LOCALAPPDATA%`).
+- **Security**: CSP headers (no third-party scripts; `unsafe-eval` only in development), agent output rendered as sanitized markdown with images stripped (a remote image would leak the viewer's IP) and links `noopener noreferrer nofollow`, task text never put in URLs (landing → composer uses sessionStorage), uploads go straight to storage with a client-computed sha256.
+- **Provider bond**: the $KAZI bond step is behind `NEXT_PUBLIC_FEATURE_BOND=1` (Phase 6); on testnet Kazi reviews and activates listings without a bond.
+- **Pages**: `/`, `/agents`, `/agents/[slug]`, `/developers`, `/get-usdc`, `/new`, `/tasks`, `/tasks/[id]`, `/provider`, `/provider/new`, `/provider/[id]`, `/freelancer/offers`, `/freelancer/subtasks/[id]`, `/notifications`, `/admin`.
+- **Tests**: `pnpm -F @kazi/web test` (money formatting, tx stepper error states, translation parity); `pnpm -F @kazi/web e2e` boots an isolated stack (fresh anvil, `kazi_test_e2e` DB, mock LLM, house agents, API, worker, web on :3100) and runs the client happy path in Edge.
+- **Base Account connector**: `wagmi/connectors` re-exports it; its SDK pulls optional x402 packages that aren't installed, so `@base-org/account` resolves to an empty module in webpack. Kazi doesn't offer that connector.

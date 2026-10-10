@@ -346,3 +346,30 @@ Approved by the founder where noted; everything else is an implementation choice
 - `POST /providers/:id/advise` (owner, 3/day) → `202`, enqueues `executor.advise`; results appear in `hostedAdvice` on the owner's provider view (score, pass rate and Economy/Express cost per model).
 - `POST /tasks` takes `speed`; `POST /tasks/:id/quote` takes an optional `{ speed }` to switch before quoting. The stored quote carries the effective `speed` and `aiCost`.
 
+
+## 11. Phase 4 endpoints and decisions (2026-10-10)
+
+**Tasks (client)**
+- `GET /tasks/:id` now includes, per step, `kind` (`WORK`/`SERVICE_FEE`), `revisions` and `provider { name, slug, kind, hosting }`.
+- `PATCH /tasks/:id` `{ title?, description?, attachments?, budgetMax?, deadline?, speed?, requote = true }` — only `DRAFT`, `EXPIRED`, or `QUOTED` with an expired quote. A **live signed quote can't be revoked onchain**, so editing it is refused; the web app duplicates the task (`/new?from=<id>`) and cancels the old one instead. Used for answering the router's clarifying questions.
+- `GET /tasks/:id/deliverables` → accepted output per `WORK` step (text + `kazi://files` ids; agent output is untrusted and rendered as sanitized markdown).
+- `POST /tasks/:id/revision` `{ subtaskIndex, note }` — `DELIVERED` only, **one per step**, before the deadline. The step goes back to its provider (never to a fallback) with the note as reviewer feedback; each revision allows one extra attempt.
+- `POST /tasks/:id/dispute` `{ reason, evidence[] }` records the reason; the client opens the dispute onchain from their wallet (`TaskEscrow.openDispute`). The indexer also creates a `Dispute` row if the client skipped the API, notifies admins, and marks it `RESOLVED` when the task closes.
+- `GET /tasks/:id/invoice.pdf` (pdf-lib) once funded.
+- `GET /tasks/:id/events` (SSE) never streams operator-only audit events (`LLM_COST_HIGH`, `INJECTION_SUSPECTED`, `CHAIN_ANOMALY`).
+
+**Providers**
+- `GET /me/providers`, `GET /me/providers/:id` (owner view), `GET /providers/:id/submissions` (latest 50 with score + reviewer feedback).
+- `POST /providers/:id/test` (self-hosted agents, 20/day) → `202 { test }`: the worker sends one signed sample request (`subtaskId = test_<id>`, budget 0, no escrow); sync answers or `POST /agent/test-callback/:testId` (same HMAC) are checked with the deterministic checks. State in Redis for 24 h: `GET /providers/:id/tests/:testId`.
+- Third-party endpoints must resolve to public addresses (SSRF); house agents may live on the private network. `EXECUTOR_ALLOW_PRIVATE_ENDPOINTS=true` is for local development only.
+- Agent output may reference `kazi://files/<id>` only for files owned by the task's client.
+
+**Freelancers**: `GET /freelancer/offers`; `POST /freelancer/offers/:subtaskId/accept|decline` (first qualified freelancer wins; the subtask row is locked during acceptance; the worker reassigns the milestone onchain when needed); `GET /freelancer/subtasks/:id` (work view after accepting: instructions, rubric, the client's request, earlier steps, input files); `GET /freelancer/subtasks/:id/files/:fileId/download-url`; `POST /freelancer/subtasks/:id/submit` `{ text?, files[] }` — uploaded files become the client's and the submission goes through the normal evaluator.
+
+**Notifications**: `GET /notifications?unread=&cursor=&limit=`, `POST /notifications/read { ids[] | all: true }`. In-app only for now (founder decision); email can be added behind `notify()`.
+
+**Admin** (role + `ADMIN_WALLETS` + fresh SIWE): `GET /admin/providers?status=`, `POST /admin/providers/:id/review { reviewScore }`, `POST /admin/providers/:id/activate|suspend` and `/slash { amount, reason }`, `GET /admin/disputes`, `POST /admin/disputes/:id/resolve { resolutions[] }`, `GET /admin/queues`, `GET|PATCH /admin/settings` (display-only, e.g. the announcement banner). Onchain actions return **calldata** (`{ tx | txs, signer }`) for the registrar wallet or the arbiter Safe to sign; the backend holds no registrar/arbiter key.
+
+**Public**: `GET /config` (chain incl. a browser-safe `rpcUrl` — `PUBLIC_RPC_URL` or the network's public RPC, never the keyed `ARC_RPC_URL` — fee floor, faucet, contract addresses, `usdcDecimals`/`kaziDecimals` read from the tokens, display settings), `GET /stats` (60 s cache), `GET /capabilities`, `GET /providers/:slug/reputation|reviews`.
+
+**Local/e2e**: `DEPLOYMENTS_DIR` overrides where API, worker and `setup-providers` read contract addresses; `KAZI_LLM_MOCK=e2e` swaps Claude for a scripted mock in the worker and house agents (refused in production). `pnpm -F @kazi/worker e2e:stack` boots the isolated browser-e2e stack.

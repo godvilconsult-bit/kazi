@@ -1,0 +1,57 @@
+[
+  {
+    "name": "presumptive tax small trader",
+    "capability": "tax.tz_tra_draft",
+    "instructions": "Prepare a draft presumptive income tax computation for a resident small trader in Arusha with annual turnover of TZS 9,500,000 who keeps basic records.",
+    "input": "Business: retail of household goods. Year: 2025. No instalments paid yet.",
+    "acceptance": {
+      "rubric": ["Identifies the presumptive tax band for the turnover", "Cites the source and date of the rates or marks them for the practitioner to confirm", "Shows the computation", "States that a licensed practitioner must review before filing"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "vat return worksheet",
+    "capability": "tax.tz_tra_draft",
+    "instructions": "Draft the VAT return workings for September for a VAT-registered company.",
+    "input": "Standard-rated sales (excluding VAT): TZS 85,000,000. Exempt sales: TZS 6,000,000. Purchases with valid EFD receipts (excluding VAT): TZS 52,000,000. Imports VAT paid: TZS 2,100,000.",
+    "acceptance": {
+      "rubric": ["Output VAT on standard-rated sales at the confirmed or cited rate", "Input VAT on purchases plus import VAT", "Net payable computed with steps shown", "Exempt sales treated as exempt", "Draft-for-practitioner note"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "paye and sdl",
+    "capability": "tax.tz_tra_draft",
+    "instructions": "Compute draft PAYE and SDL for October for a company with 12 employees.",
+    "input": "Gross monthly salaries: 4 staff at TZS 600,000; 6 staff at TZS 1,200,000; 2 staff at TZS 3,500,000. NSSF employee contributions deducted at 10%.",
+    "acceptance": {
+      "rubric": ["PAYE computed per salary group using cited or flagged bands", "Taxable pay after the pension deduction", "SDL computed on gross emoluments with the rate cited or flagged", "Totals shown"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "corporate income tax with add-backs",
+    "capability": "tax.tz_tra_draft",
+    "instructions": "Prepare a draft corporate income tax computation for 2025.",
+    "input": "Accounting profit TZS 120,000,000. Included expenses: entertainment TZS 4,000,000; fines and penalties TZS 1,500,000; depreciation TZS 18,000,000. Wear and tear allowances per tax schedules: TZS 22,000,000. Provisional tax paid: TZS 25,000,000.",
+    "acceptance": {
+      "rubric": ["Adds back non-deductible items and accounting depreciation", "Deducts wear and tear allowances", "Applies the corporate rate with a cited source or flag", "Balance due after provisional tax", "Open questions for the practitioner"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  },
+  {
+    "name": "swahili summary missing data",
+    "capability": "tax.tz_tra_draft",
+    "instructions": "Andaa rasimu ya hesabu ya kodi ya mapato kwa Kiswahili kwa duka langu.",
+    "input": "Mauzo ya mwaka TZS 60,000,000.",
+    "acceptance": {
+      "rubric": ["Written in Swahili", "Asks for the missing expenses and records instead of inventing them", "Explains which figures the practitioner needs", "Draft-only note"],
+      "format": "markdown"
+    },
+    "expectPass": true
+  }
+]

@@ -8,7 +8,7 @@ import { parseEnv } from "node:util";
 import pg from "pg";
 import { pgPoolConfig } from "../src/pg-config";
 
-export const TEST_DATABASES = ["kazi_test_api", "kazi_test_worker"] as const;
+export const TEST_DATABASES = ["kazi_test_api", "kazi_test_worker", "kazi_test_e2e"] as const;
 
 const root = resolve(import.meta.dirname, "../../..");
 const envPath = resolve(root, ".env");
