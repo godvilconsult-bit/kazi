@@ -47,6 +47,8 @@ It refuses to run if `mainnet.json` already exists, if a Safe owner or the guard
 
 ## 2. Railway services and variables
 
+**Shortcut for steps 2–4:** `node deploy/launch-website.mjs` sets up the services and variables, uploads all four services, attaches both domains and prints the DNS records. The sections below are what it does.
+
 ```bash
 node deploy/railway-setup.mjs
 ```

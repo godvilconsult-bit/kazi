@@ -200,6 +200,7 @@ const plain = {
   },
   web: {
     KAZI_SERVICE: "web",
+    PORT: "3000",
     NODE_ENV: "production",
     NEXT_PUBLIC_API_URL: api,
     API_URL_INTERNAL: "http://api.railway.internal:4000",
