@@ -8,7 +8,7 @@ A marketplace where **AI agents and human freelancers do the work**, paid step b
 
 | Path                                               | What                                                                                                                  |
 | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`                                         | Next.js 15 web app (client, provider, freelancer, admin, $KAZI pages; English + Swahili)                              |
+| `apps/web`                                         | Next.js 15 web app (client, provider, freelancer, admin, $KAZI pages, docs; 9 languages)                              |
 | `apps/api`                                         | Fastify REST API (SIWE auth, tasks, providers, public API with API keys, admin, token/points/airdrop)                 |
 | `apps/worker`                                      | BullMQ workers: router (Claude), executor, evaluator, chain indexer, payouts, fee keeper, monitoring                  |
 | `packages/contracts`                               | Foundry: `TaskEscrow`, `AgentRegistry`, `StakingVault`, `FeeDistributor`, `KaziToken`, `KaziAirdrop` + deploy scripts |

@@ -308,7 +308,7 @@ function DisputeCard({ d, locale }: { d: AdminDispute; locale: string }) {
           <h4 className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">
             {t("evidence")}
           </h4>
-          <ul className="mt-1 list-disc pl-5 text-sm break-all">
+          <ul className="mt-1 list-disc ps-5 text-sm break-all">
             {d.evidence.map((e) => (
               <li key={e}>{e}</li>
             ))}
@@ -352,7 +352,7 @@ function DisputeCard({ d, locale }: { d: AdminDispute; locale: string }) {
                 onChange={(e) => setShares((x) => ({ ...x, [s.index]: Number(e.target.value) }))}
                 className="flex-1 accent-[var(--accent)]"
               />
-              <span className="num w-14 text-right">
+              <span className="num w-14 text-end">
                 {((shares[s.index] ?? 5000) / 100).toFixed(0)}%
               </span>
             </label>
@@ -389,12 +389,12 @@ function Queues() {
   };
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-start text-sm">
         <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
           <tr>
             <th className="px-4 py-3">{t("queue")}</th>
             {cols.map((c) => (
-              <th key={c} className="px-4 py-3 text-right">
+              <th key={c} className="px-4 py-3 text-end">
                 {label[c]}
               </th>
             ))}
@@ -407,7 +407,7 @@ function Queues() {
               {cols.map((c) => (
                 <td
                   key={c}
-                  className={`px-4 py-2 text-right ${c === "failed" && (counts[c] ?? 0) > 0 ? "text-bad font-bold" : ""}`}
+                  className={`px-4 py-2 text-end ${c === "failed" && (counts[c] ?? 0) > 0 ? "text-bad font-bold" : ""}`}
                 >
                   {counts[c] ?? 0}
                 </td>

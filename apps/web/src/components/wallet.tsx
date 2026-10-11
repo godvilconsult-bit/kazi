@@ -50,7 +50,12 @@ export function WalletPicker({ open, onClose }: { open: boolean; onClose: () => 
             key={c.uid}
             connector={c}
             pending={isPending && variables?.connector === c}
-            onClick={() => connect({ connector: c }, { onSuccess: onClose })}
+            onClick={() => {
+              // WalletConnect opens its own QR modal. This picker is a native <dialog> in the
+              // browser's top layer, so it would cover that modal: close it first.
+              if (c.type === "walletConnect") onClose();
+              connect({ connector: c }, { onSuccess: onClose });
+            }}
           />
         ))}
       </div>
@@ -78,7 +83,7 @@ function ConnectorRow({
       type="button"
       onClick={onClick}
       disabled={pending}
-      className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-left font-semibold transition-colors hover:border-ink hover:bg-surface-2 disabled:opacity-60"
+      className="flex items-center gap-3 rounded-lg border border-line bg-surface px-3 py-3 text-start font-semibold transition-colors hover:border-ink hover:bg-surface-2 disabled:opacity-60"
     >
       {connector.icon ? (
         // Wallet icons are data: URIs announced by the wallet itself (EIP-6963).

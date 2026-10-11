@@ -10,6 +10,8 @@ import { sharePct } from "@/lib/staking";
 import type { FeeSplit, TokenMetrics, VestingProgress } from "@/lib/types";
 import { useKaziConfig, useTokenName } from "@/components/config";
 import { PageBody } from "@/components/container";
+import { KaziBurnCard } from "@/components/kazi-burn";
+import { KaziCaCard } from "@/components/kazi-ca";
 import { AddressPill, Usdc } from "@/components/money";
 import {
   ButtonLink,
@@ -56,6 +58,10 @@ export default function TokenPage() {
       >
         {t("intro", { token: tokenLabel })}
       </PageHeader>
+      <div className="mb-8 grid items-start gap-4 lg:grid-cols-2">
+        <KaziCaCard />
+        <KaziBurnCard />
+      </div>
       {q.isLoading ? (
         <Skeleton className="h-72" />
       ) : q.error || !q.data ? (
@@ -209,7 +215,7 @@ function Stat({
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
       <p className="num text-xl font-bold">
         {value}
-        {unit ? <span className="ml-1 text-[0.7em] font-medium text-muted">{unit}</span> : null}
+        {unit ? <span className="ms-1 text-[0.7em] font-medium text-muted">{unit}</span> : null}
       </p>
       {sub ? <p className="text-xs text-muted">{sub}</p> : null}
     </Card>

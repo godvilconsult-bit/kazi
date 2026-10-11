@@ -193,7 +193,7 @@ function Wizard() {
               disabled={i > step && !valid.slice(0, i).every(Boolean)}
               onClick={() => setStep(i)}
               className={cn(
-                "w-full border-t-4 pt-2 text-left text-xs font-semibold uppercase tracking-wider",
+                "w-full border-t-4 pt-2 text-start text-xs font-semibold uppercase tracking-wider",
                 i === step
                   ? "border-accent text-ink"
                   : i < step
@@ -226,7 +226,7 @@ function Wizard() {
               type="button"
               onClick={() => setKind(k)}
               className={cn(
-                "flex gap-4 rounded-xl border p-4 text-left transition-colors",
+                "flex gap-4 rounded-xl border p-4 text-start transition-colors",
                 kind === k
                   ? "border-ink bg-surface shadow-stamp-sm"
                   : "border-line bg-surface/60 hover:border-ink/60",

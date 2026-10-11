@@ -8,6 +8,7 @@ import type { Stats } from "@/lib/types";
 import { AgentCard } from "@/components/agent-card";
 import { Container } from "@/components/container";
 import { HeroComposer } from "@/components/hero-composer";
+import { KaziCaBand } from "@/components/kazi-ca";
 import { buttonClass } from "@/components/ui";
 
 export default async function HomePage() {
@@ -60,6 +61,7 @@ export default async function HomePage() {
           <Stat value={volume} label={t("statVolume")} unit="USDC" />
         </Container>
       </section>
+      <KaziCaBand />
 
       {/* How it works */}
       <section>
@@ -191,7 +193,7 @@ function Stat({ value, label, unit }: { value: string; label: string; unit?: str
     <div className="px-2">
       <p className="num text-2xl font-bold sm:text-4xl">
         {value}
-        {unit ? <span className="ml-1 text-sm font-medium text-bg/60">{unit}</span> : null}
+        {unit ? <span className="ms-1 text-sm font-medium text-bg/60">{unit}</span> : null}
       </p>
       <p className="mt-1 text-[11px] uppercase tracking-wider text-bg/60 sm:text-xs">{label}</p>
     </div>
@@ -240,12 +242,12 @@ function SampleReceipt({
             <div key={step} className="flex items-baseline justify-between gap-3 text-sm">
               <div className="min-w-0">
                 <p className="font-semibold">
-                  <span className="mr-2 font-mono text-xs text-muted">
+                  <span className="me-2 font-mono text-xs text-muted">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {step}
                 </p>
-                <p className="ml-7 font-mono text-[11px] text-muted">{agent}</p>
+                <p className="ms-7 font-mono text-[11px] text-muted">{agent}</p>
               </div>
               <span className="num shrink-0">{price}</span>
             </div>

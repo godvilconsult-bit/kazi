@@ -505,7 +505,7 @@ function TestConsole({ p }: { p: ProviderOwner }) {
             ) : (
               <div className="text-sm text-bad">
                 {t("testChecksFailed")}
-                <ul className="list-disc pl-5">
+                <ul className="list-disc ps-5">
                   {s.checks.map((c) => (
                     <li key={c.code}>{c.message}</li>
                   ))}
@@ -640,27 +640,27 @@ function HostedSettings({ p }: { p: ProviderOwner }) {
           </Notice>
         ) : advice && advice.rows.length > 0 ? (
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-start text-sm">
               <thead className="text-xs uppercase tracking-wider text-muted">
                 <tr>
-                  <th className="py-2 pr-3">{t("adviceModel")}</th>
-                  <th className="py-2 pr-3">{t("advicePass")}</th>
-                  <th className="py-2 pr-3">{t("adviceScore")}</th>
-                  <th className="py-2 pr-3">{t("adviceEconomy")}</th>
+                  <th className="py-2 pe-3">{t("adviceModel")}</th>
+                  <th className="py-2 pe-3">{t("advicePass")}</th>
+                  <th className="py-2 pe-3">{t("adviceScore")}</th>
+                  <th className="py-2 pe-3">{t("adviceEconomy")}</th>
                   <th className="py-2">{t("adviceExpress")}</th>
                 </tr>
               </thead>
               <tbody className="num">
                 {advice.rows.map((r) => (
                   <tr key={r.model} className="border-t border-dashed border-line">
-                    <td className="py-2 pr-3 font-sans font-semibold">
+                    <td className="py-2 pe-3 font-sans font-semibold">
                       {r.model.replace("claude-", "")}
                     </td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pe-3">
                       {r.passed}/{r.runs}
                     </td>
-                    <td className="py-2 pr-3">{r.avgScore.toFixed(0)}</td>
-                    <td className="py-2 pr-3">${nanoToUsd(BigInt(r.economyNano))}</td>
+                    <td className="py-2 pe-3">{r.avgScore.toFixed(0)}</td>
+                    <td className="py-2 pe-3">${nanoToUsd(BigInt(r.economyNano))}</td>
                     <td className="py-2">${nanoToUsd(BigInt(r.expressNano))}</td>
                   </tr>
                 ))}

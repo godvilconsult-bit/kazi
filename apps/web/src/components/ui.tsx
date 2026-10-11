@@ -268,7 +268,7 @@ export const Textarea = forwardRef<
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
   function Select({ className, children, ...rest }, ref) {
     return (
-      <select ref={ref} className={cn(fieldBase, "h-10 pr-8", className)} {...rest}>
+      <select ref={ref} className={cn(fieldBase, "h-10 pe-8", className)} {...rest}>
         {children}
       </select>
     );
@@ -368,7 +368,7 @@ export function Tabs<T extends string>({
         >
           {it.label}
           {it.count !== undefined ? (
-            <span className="ml-1.5 font-mono text-xs text-muted">{it.count}</span>
+            <span className="ms-1.5 font-mono text-xs text-muted">{it.count}</span>
           ) : null}
         </button>
       ))}

@@ -16,6 +16,9 @@
   # Public settings, inlined into the site at build time (none of these are secrets).
   NEXT_PUBLIC_API_URL = "https://api.kazilabs.online"
   NEXT_PUBLIC_FEATURE_BOND = "0"
+  # Reown (WalletConnect) project; public, it ships in the browser bundle. Allowed domains are set at
+  # cloud.reown.com.
+  NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID = "f6edc8280d6951704c9a4d4bc6381d82"
   # Netlify's proxy adds the visitor's ISO country code as x-country (docs/08 §7 geo hooks).
   NEXT_PUBLIC_GEO_COUNTRY_HEADER = "x-country"
   NEXT_PUBLIC_GEO_RESTRICTED_COUNTRIES = "US,CU,IR,KP,SY"

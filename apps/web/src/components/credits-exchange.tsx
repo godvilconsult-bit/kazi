@@ -130,7 +130,7 @@ function Balance({ label, value, unit }: { label: string; value: ReactNode; unit
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
       <p className="num text-xl font-bold">
         {value}
-        <span className="ml-1 text-[0.7em] font-medium text-muted">{unit}</span>
+        <span className="ms-1 text-[0.7em] font-medium text-muted">{unit}</span>
       </p>
     </Card>
   );

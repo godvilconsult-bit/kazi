@@ -350,7 +350,7 @@ export function DisputeDialog({
               onChange={(e) => setEvidence(e.target.value)}
             />
           </Field>
-          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted">
+          <ol className="list-decimal space-y-1 ps-5 text-sm text-muted">
             <li className={stage === "api" ? "font-semibold text-ink" : ""}>{t("disputeStep1")}</li>
             <li className={stage === "wallet" ? "font-semibold text-ink" : ""}>
               {t("disputeStep2")}

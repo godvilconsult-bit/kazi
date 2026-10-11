@@ -152,11 +152,11 @@
   }
   .prose-kazi ul {
     list-style: disc;
-    padding-left: 1.3em;
+    padding-inline-start: 1.3em;
   }
   .prose-kazi ol {
     list-style: decimal;
-    padding-left: 1.3em;
+    padding-inline-start: 1.3em;
   }
   .prose-kazi a {
     color: var(--accent);
@@ -180,8 +180,8 @@
     padding: 0;
   }
   .prose-kazi blockquote {
-    border-left: 3px solid var(--line);
-    padding-left: 0.8em;
+    border-inline-start: 3px solid var(--line);
+    padding-inline-start: 0.8em;
     color: var(--muted);
   }
   .prose-kazi table {
@@ -189,11 +189,34 @@
     overflow-x: auto;
     border-collapse: collapse;
   }
+  /* Long-form pages (docs, whitepaper): roomier type, anchors clear the sticky header. */
+  .prose-doc {
+    font-size: 1.02rem;
+    line-height: 1.7;
+  }
+  .prose-doc h2 {
+    margin-top: 2.2em;
+    font-size: 1.6rem;
+    scroll-margin-top: 6rem;
+  }
+  .prose-doc h2:first-child {
+    margin-top: 0;
+  }
+  .prose-doc h3 {
+    margin-top: 1.6em;
+    font-size: 1.15rem;
+  }
+  .prose-doc li + li {
+    margin-top: 0.3em;
+  }
+  .prose-doc table {
+    font-size: 0.95em;
+  }
   .prose-kazi th,
   .prose-kazi td {
     border: 1px solid var(--line);
     padding: 0.35em 0.6em;
-    text-align: left;
+    text-align: start;
   }
 }
 

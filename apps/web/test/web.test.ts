@@ -1,10 +1,18 @@
 import { describe, expect, it } from "vitest";
 import en from "../src/messages/en.json";
 import sw from "../src/messages/sw.json";
+import fr from "../src/messages/fr.json";
+import es from "../src/messages/es.json";
+import de from "../src/messages/de.json";
+import sv from "../src/messages/sv.json";
+import ru from "../src/messages/ru.json";
+import zh from "../src/messages/zh.json";
+import ar from "../src/messages/ar.json";
+import { LOCALES, localeDir, matchAcceptLanguage, mergeMessages } from "../src/i18n/locales";
 import { parseUsdcInput, priceLabel, shortAddress, tokenAmount, usdc } from "../src/lib/format";
 import { initSteps, isBusy, isUserRejection, nextStep, stepsReducer } from "../src/lib/tx-steps";
 
-/** docs/07-FRONTEND.md §6: amount formatting and tx stepper error states; plus en/sw parity. */
+/** docs/07-FRONTEND.md §6: amount formatting and tx stepper error states; plus translation parity. */
 
 describe("money display", () => {
   it("shows 2 decimals rounded down, with the exact value kept", () => {
@@ -86,16 +94,52 @@ describe("translations", () => {
   const lookup = (o: unknown, path: string) =>
     path.split(".").reduce<unknown>((acc, k) => (acc as Record<string, unknown>)?.[k], o);
 
-  it("Swahili has exactly the English keys", () => {
-    expect(keys(sw).sort()).toEqual(keys(en).sort());
+  const catalogs: Record<string, unknown> = { en, sw, fr, es, de, sv, ru, zh, ar };
+
+  it("has a catalog for every locale", () => {
+    expect(Object.keys(catalogs).sort()).toEqual([...LOCALES].sort());
   });
 
-  it("every Swahili string keeps the English placeholders", () => {
-    for (const k of keys(en)) {
-      const e = lookup(en, k);
-      const s = lookup(sw, k);
-      if (typeof e === "string" && typeof s === "string")
-        expect(placeholders(s), k).toEqual(placeholders(e));
-    }
+  for (const [locale, catalog] of Object.entries(catalogs).filter(([l]) => l !== "en")) {
+    it(`${locale} has exactly the English keys`, () => {
+      expect(keys(catalog).sort()).toEqual(keys(en).sort());
+    });
+
+    it(`every ${locale} string keeps the English placeholders and is not empty`, () => {
+      for (const k of keys(en)) {
+        const e = lookup(en, k);
+        const s = lookup(catalog, k);
+        if (typeof e === "string" && typeof s === "string") {
+          expect(placeholders(s), `${locale}:${k}`).toEqual(placeholders(e));
+          expect(s.trim().length, `${locale}:${k}`).toBeGreaterThan(0);
+        }
+      }
+    });
+  }
+});
+
+describe("locale detection", () => {
+  it("picks the best supported language from Accept-Language", () => {
+    expect(matchAcceptLanguage("sv-SE,sv;q=0.9,en;q=0.8")).toBe("sv");
+    expect(matchAcceptLanguage("zh-CN,zh;q=0.9")).toBe("zh");
+    expect(matchAcceptLanguage("ja;q=1,de;q=0.7,fr;q=0.8")).toBe("fr");
+    expect(matchAcceptLanguage("pt-BR,pt;q=0.9")).toBe("en");
+    expect(matchAcceptLanguage(undefined)).toBe("en");
+  });
+
+  it("falls back to English per key and keeps lists as lists", () => {
+    const merged = mergeMessages(en, ar) as typeof ar;
+    const items = merged.roadmapPage.phases.launch.items;
+    expect(Array.isArray(items)).toBe(true);
+    expect(items).toEqual(ar.roadmapPage.phases.launch.items);
+    expect(mergeMessages({ a: { b: "en", c: "en" } }, { a: { b: "ar" } })).toEqual({
+      a: { b: "ar", c: "en" },
+    });
+  });
+
+  it("lays Arabic out right to left", () => {
+    expect(localeDir("ar")).toBe("rtl");
+    expect(localeDir("en")).toBe("ltr");
+    expect(localeDir("ru")).toBe("ltr");
   });
 });

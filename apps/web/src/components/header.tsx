@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useAccount, useSwitchChain } from "wagmi";
 import { KeyRound, Languages, LogOut, Menu, Moon, Sparkles, Sun, X } from "lucide-react";
+import { LOCALES, LOCALE_COOKIE, LOCALE_NAMES, isLocale } from "@/i18n/locales";
 import { cn } from "@/lib/cn";
 import { shortAddress } from "@/lib/format";
 import { useAuth } from "./auth";
@@ -25,7 +26,8 @@ export function Header() {
 
   const links = [
     { href: "/agents", label: t("agents"), show: true },
-    { href: "/developers", label: t("developers"), show: !user },
+    { href: "/developers", label: t("developers"), show: true },
+    { href: "/docs", label: t("docs"), show: true },
     { href: "/tasks", label: t("myTasks"), show: Boolean(user) },
     { href: "/provider", label: t("provide"), show: Boolean(user) },
     {
@@ -39,12 +41,12 @@ export function Header() {
   return (
     <>
       <Banners />
-      <header className="sticky top-0 z-40 border-b border-ink/15 bg-bg/90 backdrop-blur supports-[backdrop-filter]:bg-bg/75">
+      <header className="sticky top-0 z-40 print:hidden border-b border-ink/15 bg-bg/90 backdrop-blur supports-[backdrop-filter]:bg-bg/75">
         <Container className="flex h-16 items-center gap-3">
           <Link href="/" className="shrink-0 rounded-md" aria-label={t("home")}>
             <Logo />
           </Link>
-          <nav className="ml-4 hidden items-center gap-1 md:flex" aria-label="Main">
+          <nav className="ms-4 hidden items-center gap-1 md:flex" aria-label="Main">
             {links.map((l) => (
               <NavLink
                 key={l.href}
@@ -54,7 +56,7 @@ export function Header() {
               />
             ))}
           </nav>
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ms-auto flex items-center gap-1.5">
             <Link
               href="/new"
               className="hidden h-9 items-center rounded-lg border border-ink bg-accent px-3 text-sm font-semibold text-accent-ink shadow-stamp-sm transition-all hover:shadow-stamp sm:inline-flex"
@@ -128,7 +130,7 @@ function Banners() {
   const { user, mismatch, signIn, signingIn } = useAuth();
   const wrongNetwork = isConnected && chainId !== undefined && chainId !== cfg.chain.id;
   return (
-    <div className="text-sm">
+    <div className="text-sm print:hidden">
       {cfg.settings.announcement ? (
         <div className="bg-ink px-4 py-2 text-center text-bg">{cfg.settings.announcement}</div>
       ) : null}
@@ -200,7 +202,7 @@ function WalletButton() {
         </button>
         {menu ? (
           <div
-            className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-ink bg-surface p-2 shadow-stamp"
+            className="absolute end-0 z-50 mt-2 w-56 rounded-xl border border-ink bg-surface p-2 shadow-stamp"
             onMouseLeave={() => setMenu(false)}
           >
             <p className="px-2 pt-1 text-xs text-muted">{t("signedInAs")}</p>
@@ -223,7 +225,7 @@ function WalletButton() {
             </Link>
             <button
               type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm hover:bg-surface-2"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-start text-sm hover:bg-surface-2"
               onClick={() => {
                 setMenu(false);
                 void signOut();
@@ -262,24 +264,31 @@ function WalletButton() {
   return <ConnectWalletButton compact />;
 }
 
+/** Language menu: a native select (keyboard and screen-reader friendly, a picker on phones). */
 export function LocaleSwitch() {
   const t = useTranslations("nav");
   const locale = useLocale();
   const router = useRouter();
-  const next = locale === "en" ? "sw" : "en";
   return (
-    <button
-      type="button"
-      className="inline-flex h-9 items-center gap-1 rounded-lg px-2 text-sm font-semibold hover:bg-surface-2"
-      aria-label={`${t("language")}: ${next === "sw" ? "Kiswahili" : "English"}`}
-      onClick={() => {
-        document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=31536000; samesite=lax`;
-        router.refresh();
-      }}
-    >
-      <Languages className="size-4" aria-hidden />
-      <span className="font-mono text-xs uppercase">{next}</span>
-    </button>
+    <label className="relative inline-flex h-9 items-center rounded-lg hover:bg-surface-2">
+      <Languages className="pointer-events-none absolute start-2 size-4" aria-hidden />
+      <span className="sr-only">{t("language")}</span>
+      <select
+        value={locale}
+        onChange={(e) => {
+          if (!isLocale(e.target.value)) return;
+          document.cookie = `${LOCALE_COOKIE}=${e.target.value}; path=/; max-age=31536000; samesite=lax`;
+          router.refresh();
+        }}
+        className="h-9 cursor-pointer appearance-none rounded-lg bg-transparent ps-8 pe-2 text-sm font-semibold focus-visible:outline-2"
+      >
+        {LOCALES.map((l) => (
+          <option key={l} value={l} lang={l}>
+            {LOCALE_NAMES[l]}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

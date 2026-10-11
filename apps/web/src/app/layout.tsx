@@ -4,6 +4,7 @@ import { Bricolage_Grotesque, Instrument_Sans, JetBrains_Mono } from "next/font/
 import { NextIntlClientProvider } from "next-intl";
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
+import { localeDir } from "@/i18n/locales";
 import { geoFromHeaders } from "@/lib/geo";
 import { getPublicConfig } from "@/lib/server-api";
 import { Providers } from "@/components/providers";
@@ -54,6 +55,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html
       lang={locale}
+      dir={localeDir(locale)}
       suppressHydrationWarning
       className={`${display.variable} ${sans.variable} ${mono.variable}`}
     >

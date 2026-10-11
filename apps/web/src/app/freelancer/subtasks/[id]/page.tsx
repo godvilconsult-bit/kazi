@@ -89,7 +89,7 @@ function Work({ id }: { id: string }) {
           <h3 className="mt-4 text-xs font-semibold uppercase tracking-wider text-muted">
             {t("acceptance")}
           </h3>
-          <ul className="mt-1 list-disc pl-5 text-sm">
+          <ul className="mt-1 list-disc ps-5 text-sm">
             {(s.acceptance.rubric ?? []).map((r) => (
               <li key={r}>{r}</li>
             ))}
@@ -141,7 +141,7 @@ function Work({ id }: { id: string }) {
                 <li key={f.id}>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-lg border border-line px-3 py-2 text-left text-sm hover:border-ink"
+                    className="flex w-full items-center gap-2 rounded-lg border border-line px-3 py-2 text-start text-sm hover:border-ink"
                     onClick={() =>
                       void openFile(`/freelancer/subtasks/${id}/files/${f.id}/download-url`)
                     }

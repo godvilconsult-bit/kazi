@@ -369,7 +369,7 @@ function Stat({
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
       <p className="num text-xl font-bold">
         {value}
-        {unit ? <span className="ml-1 text-[0.7em] font-medium text-muted">{unit}</span> : null}
+        {unit ? <span className="ms-1 text-[0.7em] font-medium text-muted">{unit}</span> : null}
       </p>
       {sub ? <p className="text-xs text-muted">{sub}</p> : null}
     </Card>

@@ -1,5 +1,6 @@
 export * from "./abis";
 export * from "./ai-cost";
+export * from "./argus";
 export * from "./capabilities";
 export * from "./checks";
 export * from "./hosted";

@@ -77,8 +77,13 @@ It refuses to run if `mainnet.json` already exists, if a Safe owner or the guard
 
 1. On [app.netlify.com](https://app.netlify.com): **Add new project → Import an existing project → GitHub** → `godvilconsult-bit/kazi`.
 2. Netlify detects the monorepo. Choose **`apps/web`** as the site to deploy (package directory) and leave the base directory as the repository root. The build command (`pnpm --filter @kazi/web build`) and publish directory (`apps/web/.next`) come from `apps/web/netlify.toml`. Deploy.
-3. Optional: add `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` under Project configuration → Environment variables, then redeploy. It's needed only for WalletConnect (mobile) wallets.
+3. WalletConnect (mobile wallets) uses the Reown project ID in `netlify.toml` (`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, public). The site's domains must be on that project's allowlist at [cloud.reown.com](https://cloud.reown.com): `https://www.kazilabs.online` and `https://kazilabs.online`.
 4. **Domains:** Project configuration → Domain management → Add a domain → `www.kazilabs.online`, and set it as the primary domain. Add `kazilabs.online` too; Netlify redirects it to `www`. Netlify issues the HTTPS certificates.
+   - **`www` must be the primary domain.** The API's CORS and sign-in accept only `APP_URL` (`https://www.kazilabs.online`). With the bare domain as primary, the site loads but every API call and sign-in fails.
+   - Netlify won't change custom domains while a certificate is being provisioned. If the wrong domain is primary, fix DNS first (§4), wait for the certificate, then set `www` as primary.
+   - Skip Netlify's "Set up Netlify DNS" offer. DNS stays at Namecheap (§4), which also keeps Namecheap's email forwarding. A Netlify DNS zone the registrar doesn't delegate to blocks certificate provisioning; delete it under Team → DNS.
+
+The live site is the Netlify project `wonderful-biscochitos-b17b1b` (team `primeauditors11`).
 
 Every push to `main` rebuilds the site.
 
@@ -98,7 +103,19 @@ Domain List → `kazilabs.online` → **Advanced DNS**:
 3. `@` → the record Netlify's domain page asks for for the bare domain (an **A** record to Netlify's load balancer). Netlify then redirects `kazilabs.online` to `https://www.kazilabs.online`. Sign-in and the API only accept `www.kazilabs.online` as the site's origin.
 4. `api` → **CNAME** → the target Railway printed, plus Railway's **TXT** verification record.
 
-Netlify and Railway issue certificates once DNS resolves (minutes to an hour).
+The live records (2026-10-11):
+
+| Type  | Host                  | Value                                                         |
+| ----- | --------------------- | ------------------------------------------------------------- |
+| A     | `@`                   | `75.2.60.5` (Netlify's load balancer)                         |
+| CNAME | `www`                 | `wonderful-biscochitos-b17b1b.netlify.app.`                   |
+| CNAME | `api`                 | `1rkudxjs.up.railway.app.`                                    |
+| TXT   | `_railway-verify.api` | `railway-verify=…` (from `railway domain status`)             |
+| MX    | (Mail settings)       | Namecheap email forwarding, `eforward*.registrar-servers.com` |
+
+Namecheap appends the domain to every host, so the bare domain's host is `@`. A host of `kazilabs.online` creates a record for `kazilabs.online.kazilabs.online`, and the bare domain then doesn't resolve.
+
+Netlify and Railway issue certificates once DNS resolves (minutes to an hour). Namecheap caches "no such record" for an hour (SOA TTL 3601 s), so a record added after a failed lookup can take that long to verify.
 
 ## 5. Register the house agents onchain
 

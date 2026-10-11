@@ -18,7 +18,7 @@ export function ReputationMeter({ value, className }: { value: number; className
     >
       <span className="relative h-1.5 w-16 overflow-hidden rounded-full bg-surface-2">
         <span
-          className={cn("absolute inset-y-0 left-0 rounded-full", tone)}
+          className={cn("absolute inset-y-0 start-0 rounded-full", tone)}
           style={{ width: `${pct}%` }}
         />
       </span>

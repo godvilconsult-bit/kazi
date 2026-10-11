@@ -76,6 +76,35 @@ export function loadCreditsGate(
   return creditsGateSchema.parse(JSON.parse(readFileSync(path, "utf8")));
 }
 
+/**
+ * KAZI's launch on Argus (docs/08-TOKENOMICS.md §8), read from the launch transaction: the pool hook
+ * (buy/sell tax), the revenue splitter (tax split and the buyback-and-burn budget) and the
+ * permissionless executor that market-buys KAZI and sends it to `burnAddress`. Third-party
+ * contracts: Kazi only reads them.
+ */
+export const argusLaunchSchema = z.object({
+  network: z.string(),
+  chainId: z.number().int().positive(),
+  token: addressSchema,
+  portal: addressSchema,
+  hook: addressSchema,
+  splitter: addressSchema,
+  burnExecutor: addressSchema,
+  burnAddress: addressSchema,
+  launchBlock: z.number().int().nonnegative(),
+});
+export type ArgusLaunch = z.infer<typeof argusLaunchSchema>;
+
+/** KAZI's Argus launch for a network, or null when there is none. */
+export function loadArgusLaunch(
+  network: KaziNetwork,
+  dir: string = DEFAULT_DEPLOYMENTS_DIR,
+): ArgusLaunch | null {
+  const path = resolve(dir, `${network}-argus.json`);
+  if (!existsSync(path)) return null;
+  return argusLaunchSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+}
+
 export function loadDeployment(
   network: KaziNetwork,
   dir: string = DEFAULT_DEPLOYMENTS_DIR,

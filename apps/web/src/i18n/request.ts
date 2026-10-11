@@ -1,22 +1,32 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
+import {
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE,
+  isLocale,
+  matchAcceptLanguage,
+  mergeMessages,
+  type Locale,
+} from "./locales";
 
-/** English + Swahili (docs/07-FRONTEND.md §1). Locale lives in a cookie; URLs stay the same. */
-export const LOCALES = ["en", "sw"] as const;
-export type Locale = (typeof LOCALES)[number];
-export const LOCALE_COOKIE = "NEXT_LOCALE";
-
-function isLocale(v: string | undefined): v is Locale {
-  return v !== undefined && (LOCALES as readonly string[]).includes(v);
-}
-
+/** Locale from the cookie (set by the header's language menu), else the browser's languages. */
 export default getRequestConfig(async () => {
   const fromCookie = (await cookies()).get(LOCALE_COOKIE)?.value;
-  let locale: Locale = "en";
-  if (isLocale(fromCookie)) locale = fromCookie;
-  else if (/(^|[,\s])sw\b/i.test((await headers()).get("accept-language") ?? "")) locale = "sw";
+  const locale: Locale = isLocale(fromCookie)
+    ? fromCookie
+    : matchAcceptLanguage((await headers()).get("accept-language"));
   const messages = (await import(`../messages/${locale}.json`)) as {
     default: Record<string, unknown>;
   };
-  return { locale, messages: messages.default, timeZone: "Africa/Nairobi" };
+  // Every catalog has every key (test/web.test.ts); English fills anything a build somehow misses.
+  const fallback =
+    locale === DEFAULT_LOCALE
+      ? messages.default
+      : ((await import("../messages/en.json")) as { default: Record<string, unknown> }).default;
+  return {
+    locale,
+    messages:
+      locale === DEFAULT_LOCALE ? messages.default : mergeMessages(fallback, messages.default),
+    timeZone: "Africa/Nairobi",
+  };
 });

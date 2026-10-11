@@ -61,18 +61,18 @@ export function QuoteCard({
             <li key={s.index} className="flex items-start justify-between gap-4 px-5 py-3">
               <div className="min-w-0">
                 <p className="font-semibold">
-                  <span className="mr-2 font-mono text-xs text-muted">
+                  <span className="me-2 font-mono text-xs text-muted">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {s.title}
                 </p>
-                <p className="ml-7 mt-0.5 text-sm text-muted">
+                <p className="ms-7 mt-0.5 text-sm text-muted">
                   {t("doneBy")} <span className="font-medium text-ink">{s.providerName}</span>
                   {s.aiCost ? (
-                    <Cpu className="ml-1 inline size-3.5 text-accent" aria-label={t("aiCost")} />
+                    <Cpu className="ms-1 inline size-3.5 text-accent" aria-label={t("aiCost")} />
                   ) : null}
                   {plan && plan.dependsOn.length > 0 ? (
-                    <span className="ml-2 font-mono text-[11px]">
+                    <span className="ms-2 font-mono text-[11px]">
                       · {t("dependsOn", { steps: plan.dependsOn.map((d) => d + 1).join(", ") })}
                     </span>
                   ) : null}

@@ -1,0 +1,11 @@
+{
+  "network": "mainnet",
+  "chainId": 5042,
+  "token": "0x9A4dE59eCB39c85E00687006E55624298D75F79b",
+  "portal": "0xeed7559B8A6ABf64427dc41Cb5cc6400109C5D93",
+  "hook": "0x1fD5833C3b17a09a03920dD281C34e76B92a20cC",
+  "splitter": "0x9119DAdC5E1fEdB24Ead18260A514922c6e08155",
+  "burnExecutor": "0x917E6E0deC873b8Ee8A8F183a43c397ee3fe527d",
+  "burnAddress": "0x000000000000000000000000000000000000dEaD",
+  "launchBlock": 25355364
+}

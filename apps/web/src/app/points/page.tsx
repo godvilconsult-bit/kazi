@@ -72,13 +72,13 @@ function Mine() {
           <EmptyState title={t("empty")} />
         ) : (
           <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-start text-sm">
               <thead className="border-b border-line text-xs uppercase tracking-wider text-muted">
                 <tr>
                   <th className="px-4 py-3">{t("date")}</th>
                   <th className="px-4 py-3">{t("task")}</th>
                   <th className="px-4 py-3">{t("role")}</th>
-                  <th className="px-4 py-3 text-right">{t("pointsCol")}</th>
+                  <th className="px-4 py-3 text-end">{t("pointsCol")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,7 +110,7 @@ function Mine() {
                         {e.role === "CLIENT" ? t("role_CLIENT") : t("role_PROVIDER")}
                       </Badge>
                     </td>
-                    <td className="num px-4 py-3 text-right font-bold">
+                    <td className="num px-4 py-3 text-end font-bold">
                       {e.points.toLocaleString(locale)}
                     </td>
                   </tr>
@@ -156,7 +156,7 @@ function Leaderboard() {
         <ol className="mt-3 divide-y divide-dashed divide-line">
           {q.data?.map((l) => (
             <li key={l.rank} className="flex items-center gap-3 py-2 text-sm">
-              <span className="num w-6 text-right text-muted">{l.rank}</span>
+              <span className="num w-6 text-end text-muted">{l.rank}</span>
               <span className="flex-1 font-mono text-xs">{l.wallet}</span>
               <span className="num font-semibold">{l.points.toLocaleString(locale)}</span>
             </li>
@@ -173,7 +173,7 @@ function Rules() {
   return (
     <Card>
       <h2 className="font-display text-lg font-bold">{t("rules")}</h2>
-      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm">
+      <ul className="mt-3 list-disc space-y-2 ps-5 text-sm">
         <li>
           {t("rule1", {
             client: CLIENT_POINTS_PER_USDC.toString(),

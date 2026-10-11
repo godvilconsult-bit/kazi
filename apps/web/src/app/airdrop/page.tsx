@@ -193,7 +193,7 @@ function Figure({ label, value, strong }: { label: string; value: ReactNode; str
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p>
       <p className={`num mt-1 text-xl ${strong ? "font-extrabold text-accent" : "font-bold"}`}>
         {value}
-        <span className="ml-1 text-[0.7em] font-medium text-muted">KAZI</span>
+        <span className="ms-1 text-[0.7em] font-medium text-muted">KAZI</span>
       </p>
     </div>
   );

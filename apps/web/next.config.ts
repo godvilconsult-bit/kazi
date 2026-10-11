@@ -44,12 +44,17 @@ const config: NextConfig = {
   transpilePackages: ["@kazi/shared", "@kazi/config"],
   typedRoutes: false,
   turbopack: { resolveAlias: { "next-intl/config": I18N_REQUEST } },
-  webpack(cfg: { resolve: { alias: Record<string, string | false> } }) {
+  webpack(cfg: {
+    resolve: { alias: Record<string, string | false> };
+    module: { rules: unknown[] };
+  }) {
     cfg.resolve.alias["next-intl/config"] = path.resolve(process.cwd(), I18N_REQUEST);
     // wagmi/connectors re-exports the Base Account connector, whose SDK (→ @coinbase/cdp-sdk → x402
     // clients that aren't installed) is only imported when someone connects with it. Kazi doesn't
     // offer that connector, so its SDK resolves to an empty module.
     cfg.resolve.alias["@base-org/account"] = false;
+    // Docs, whitepaper (src/content/*.md) are imported as plain text and rendered with react-markdown.
+    cfg.module.rules.push({ test: /\.md$/, type: "asset/source" });
     return cfg;
   },
   async headers() {

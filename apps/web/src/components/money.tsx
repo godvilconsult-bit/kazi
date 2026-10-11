@@ -27,7 +27,7 @@ export function Usdc({
       title={`${v.exact} USDC`}
     >
       {v.display}
-      {unit ? <span className="ml-1 text-[0.8em] font-medium text-muted">USDC</span> : null}
+      {unit ? <span className="ms-1 text-[0.8em] font-medium text-muted">USDC</span> : null}
     </span>
   );
 }

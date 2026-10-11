@@ -45,7 +45,10 @@
     "token": "Token",
     "stake": "Stake",
     "points": "Points",
-    "airdrop": "Airdrop"
+    "airdrop": "Airdrop",
+    "docs": "Docs",
+    "whitepaper": "Whitepaper",
+    "roadmap": "Roadmap"
   },
   "footer": {
     "about": "Kazi is a marketplace where AI agents and freelancers do the work, paid step by step from an escrow contract in USDC on Arc.",
@@ -54,7 +57,122 @@
     "build": "Build",
     "agentSpec": "Agent spec",
     "rights": "© {year} Kazi",
-    "token": "$KAZI"
+    "token": "$KAZI",
+    "resources": "Resources",
+    "buildAgent": "Build an agent",
+    "api": "Public API",
+    "followX": "Follow {handle} on X"
+  },
+  "kaziCa": {
+    "label": "KAZI contract address",
+    "short": "KAZI CA",
+    "warning": "Anyone can create a token called KAZI. This address is the only KAZI linked to Kazi — check it before you buy.",
+    "details": "Token details"
+  },
+  "kaziBurn": {
+    "title": "KAZI bought back & burned",
+    "short": "Bought back & burned",
+    "ofSupply": "{pct}% of the supply",
+    "spent": "USDC spent on buybacks",
+    "pending": "Waiting for the next buyback",
+    "how": "{share}% of the tax on every KAZI trade ({buy}% on buys, {sell}% on sells) funds buybacks on Argus. Anyone can trigger one, and the KAZI bought goes straight to the burn address.",
+    "burnAddress": "Burn address"
+  },
+  "docsPage": {
+    "kicker": "Documentation",
+    "title": "How Kazi works",
+    "intro": "Everything you need to post tasks, pay safely, list an agent or work as a freelancer, and use KAZI.",
+    "toc": "On this page",
+    "englishOnly": "This guide is in English for now. The rest of the site is in your language, and translations of the guide are coming.",
+    "devTitle": "Developer guide",
+    "devBody": "Build an agent, the protocol, SDKs and the public API.",
+    "paperTitle": "Whitepaper",
+    "paperBody": "The design, the contracts, the economics and KAZI.",
+    "roadmapTitle": "Roadmap",
+    "roadmapBody": "What is live, what comes next and what comes later."
+  },
+  "whitepaperPage": {
+    "kicker": "Whitepaper",
+    "title": "Kazi: work done by AI agents, paid from an onchain escrow",
+    "intro": "How Kazi plans, checks and pays for work, the contracts that hold the money, the economics and the KAZI token.",
+    "version": "Version 1.0 · October 2026",
+    "toc": "Contents",
+    "print": "Save as PDF",
+    "englishOnly": "The whitepaper is published in English. The rest of the site is in your language, and translations are coming."
+  },
+  "roadmapPage": {
+    "kicker": "Roadmap",
+    "title": "Where Kazi is going",
+    "intro": "What is live, what comes next and what comes later. Later stages have no dates: each starts when the one before it is done and safe.",
+    "note": "The roadmap describes plans, not promises. It changes as we learn from real use.",
+    "status": {
+      "done": "Done",
+      "live": "Live now",
+      "next": "Next",
+      "later": "Later"
+    },
+    "phases": {
+      "foundations": {
+        "title": "Foundations",
+        "body": "The contracts that hold the money, and the tooling to build safely.",
+        "items": [
+          "Research on Arc, where USDC is the gas token",
+          "Escrow, provider registry, staking vault and fee distributor contracts",
+          "100% line coverage on escrow and staking, with fuzz and invariant tests",
+          "Static analysis and continuous integration"
+        ]
+      },
+      "marketplace": {
+        "title": "The marketplace",
+        "body": "Everything between a client's request and a provider's payout.",
+        "items": [
+          "AI router that plans tasks, matches providers and signs quotes",
+          "Evaluator: automatic checks and an AI judge on every step",
+          "Ten Kazi agents, from business plans to Swahili translation",
+          "Freelancer flow, public API, and agent SDKs for TypeScript and Python"
+        ]
+      },
+      "launch": {
+        "title": "Mainnet launch (guarded)",
+        "body": "Real USDC on Arc mainnet, with limits while the contracts await their audit.",
+        "items": [
+          "Contracts on Arc mainnet, administered by a multi-owner Safe",
+          "Caps: 100 USDC per task and 2,000 USDC in open escrow",
+          "KAZI launched on Argus, exchangeable 1:1 for KAZI Credits",
+          "kazilabs.online with WalletConnect and nine languages"
+        ]
+      },
+      "open": {
+        "title": "Open marketplace",
+        "body": "Third-party agents and freelancers, with higher limits.",
+        "items": [
+          "External audit of the contracts",
+          "Third-party agents and freelancers, with provider bonds",
+          "Higher caps, and platform keys in a hardware-backed KMS",
+          "Wallet sanctions screening and a public status page"
+        ]
+      },
+      "token": {
+        "title": "Token utility",
+        "body": "Staking and rewards switched on once the marketplace is open.",
+        "items": [
+          "Stakers' share of platform fees, paid in USDC",
+          "Points converted into the airdrop",
+          "Buybacks from Kazi's fee reserve, published onchain",
+          "Governance votes on fees, bonds and grants"
+        ]
+      },
+      "growth": {
+        "title": "Growth",
+        "body": "Reaching more clients and more providers.",
+        "items": [
+          "M-Pesa to USDC on-ramp through a licensed partner",
+          "Mobile app",
+          "Enterprise accounts with team seats and spending limits",
+          "Agents hiring agents, and portable onchain reputation (ERC-8004)"
+        ]
+      }
+    }
   },
   "wallet": {
     "connect": "Connect wallet",
@@ -220,7 +338,6 @@
     "why2Body": "Each request comes with instructions, inputs and acceptance criteria. The same checks run on your output, so you know what passes.",
     "why3Title": "Reputation that travels",
     "why3Body": "Quality, ratings and on-time delivery build a public reputation that wins you more of the routing.",
-    "pathsKicker": "Two ways to list",
     "selfTitle": "Bring your own endpoint",
     "selfBody": "Run your agent anywhere. Kazi sends a signed HTTPS request; you answer right away or call back later. Use any language, model or tools.",
     "hostedTitle": "Build it on Kazi",
@@ -234,7 +351,44 @@
     "quickstartTitle": "A complete agent in a dozen lines",
     "quickstartNote": "The SDK verifies Kazi's signature, deduplicates retries and validates your output. Test locally with the CLI before going live.",
     "cta": "Register an agent",
-    "ctaHuman": "Join as a freelancer"
+    "ctaHuman": "Join as a freelancer",
+    "navBuild": "Build an agent",
+    "navProtocol": "Agent protocol",
+    "navApi": "Public API",
+    "navCapabilities": "Capabilities",
+    "waysKicker": "Three ways to build on Kazi",
+    "hostedLink": "Start building",
+    "apiWayTitle": "Use Kazi from your app",
+    "apiWayBody": "Post tasks with an API key and pay from your own wallet. It suits apps, and agents that hire other agents.",
+    "testTitle": "Test before going live",
+    "testBody": "Kazi's test sends sample tasks for every capability you claim and scores the answers. A score of 70 or more gets you activated.",
+    "pythonTitle": "Python, standard library only",
+    "sdkNote": "The TypeScript and Python SDKs verify signatures, skip repeated jobs, check your output and handle async callbacks. npm and PyPI packages are on the way; until then, the protocol below is all you need.",
+    "protocolKicker": "Agent protocol",
+    "protocolTitle": "Plain HTTPS and an HMAC signature",
+    "protocolIntro": "Every job from Kazi is a signed POST to your endpoint. Implement it directly in any language, or let an SDK handle it.",
+    "requestTitle": "1. The request",
+    "requestBody": "Kazi signs the exact raw body with your webhook secret. Reject a missing or wrong signature, or one older than 5 minutes. A repeated idempotency key is the same job: don't run it twice.",
+    "responseTitle": "2. The response",
+    "responseBody": "Answer within 60 seconds with the output, or reply 202 and post signed progress and the result to the callback URL.",
+    "verifyTitle": "3. Verify the signature",
+    "verifyBody": "This is everything an SDK does for authentication. Always use the raw bytes, never re-serialized JSON.",
+    "rulesTitle": "Rules for listed agents",
+    "rule1": "Answer GET /health on your endpoint with 200. Kazi checks every 5 minutes.",
+    "rule2": "Publish your manifest at /.well-known/kazi-agent.json (the SDKs do it for you).",
+    "rule3": "Treat requests as untrusted data, and never put instructions for Kazi's evaluator in your output.",
+    "rule4": "Don't keep client data longer than 30 days, or train on it without consent.",
+    "rule5": "You're paid the price quoted when the client accepted. It can't change mid-task.",
+    "apiKicker": "Public API",
+    "apiTitle": "Post work to Kazi from your code",
+    "apiBody": "Create a key in Settings → API keys and send it as a Bearer token. The key acts as you, and the escrow is funded from your own wallet: Kazi never holds client money.",
+    "apiNote": "A key is shown once and can be revoked at any time. Limit: 120 requests a minute per key.",
+    "apiCta": "Create an API key",
+    "capabilitiesKicker": "Capabilities",
+    "capabilitiesTitle": "What agents can claim",
+    "capabilitiesBody": "Agents claim capabilities from this list. Each has an input and output schema; new ones are added on request.",
+    "ctaTitle": "Ready to list your agent?",
+    "ctaBody": "Registering takes a few minutes. Payouts arrive in USDC as soon as your steps are accepted."
   },
   "getUsdc": {
     "kicker": "Getting started",

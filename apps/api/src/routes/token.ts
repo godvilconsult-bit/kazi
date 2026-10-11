@@ -1,8 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { erc20Abi, getAddress, type Address } from "viem";
 import { z } from "zod";
-import type { CreditsGate, TokenLaunch } from "@kazi/config/deployments";
-import { feeDistributorAbi, kaziCreditsGateAbi, kaziTokenAbi, stakingVaultAbi } from "@kazi/shared";
+import type { ArgusLaunch, CreditsGate, TokenLaunch } from "@kazi/config/deployments";
+import {
+  argusBurnShareBps,
+  argusHookAbi,
+  argusSplitterAbi,
+  feeDistributorAbi,
+  kaziCreditsGateAbi,
+  kaziTokenAbi,
+  stakingVaultAbi,
+} from "@kazi/shared";
 import type { AppServices } from "../app";
 import { requireAuth } from "../auth/guards";
 import { notFound, parse } from "../http/errors";
@@ -68,12 +76,14 @@ const walletParams = z.object({ wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/) 
 export interface TokenDeps {
   tokenLaunch?: TokenLaunch | null | undefined;
   creditsGate?: CreditsGate | null | undefined;
+  argusLaunch?: ArgusLaunch | null | undefined;
   /** Identifies the published airdrop allocation set (AirdropAllocation.airdropId). */
   airdropId?: string | undefined;
 }
 
 export function tokenRoutes(s: AppServices & TokenDeps) {
   let metricsCache: { at: number; body: unknown } | null = null;
+  let burnCache: { at: number; body: unknown } | null = null;
 
   /** Current fee split (FeeDistributor), or null before it is deployed. */
   const feeSplit = async () => {
@@ -276,6 +286,77 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
         },
       };
       metricsCache = { at: Date.now(), body };
+      return body;
+    });
+
+    /**
+     * KAZI bought back and burned through its Argus launch (docs/08-TOKENOMICS.md §8): the KAZI held
+     * by the burn address, the quote asset (USDC) the burn executor has spent, and what is waiting
+     * for the next buyback. Realized onchain figures only; decimals are read from the tokens.
+     */
+    app.get("/token/kazi-burn", async () => {
+      if (burnCache && Date.now() - burnCache.at < METRICS_CACHE_MS) return burnCache.body;
+      const argus = s.argusLaunch ?? null;
+      const client = s.publicClient;
+      if (!argus || !client) return { available: false };
+      const splitter = (
+        functionName: Exclude<(typeof argusSplitterAbi)[number]["name"], "quoteAsset">,
+      ) =>
+        client.readContract({
+          address: argus.splitter,
+          abi: argusSplitterAbi,
+          functionName,
+        }) as Promise<bigint>;
+      const hook = (functionName: (typeof argusHookAbi)[number]["name"]) =>
+        client.readContract({
+          address: argus.hook,
+          abi: argusHookAbi,
+          functionName,
+        }) as Promise<bigint>;
+      const [burned, supply, kaziDecimals, quote] = await Promise.all([
+        client.readContract({
+          address: argus.token,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [argus.burnAddress],
+        }),
+        client.readContract({ address: argus.token, abi: erc20Abi, functionName: "totalSupply" }),
+        client.readContract({ address: argus.token, abi: erc20Abi, functionName: "decimals" }),
+        client.readContract({
+          address: argus.splitter,
+          abi: argusSplitterAbi,
+          functionName: "quoteAsset",
+        }),
+      ]);
+      const [budget, spent, received, creatorBps, burnBps, buyTax, sellTax, quoteDecimals] =
+        await Promise.all([
+          splitter("budgetBurn"),
+          splitter("burnDrawn"),
+          splitter("totalReceived"),
+          splitter("creatorBps"),
+          splitter("burnBps"),
+          hook("buyTaxBps"),
+          hook("sellTaxBps"),
+          client.readContract({ address: quote, abi: erc20Abi, functionName: "decimals" }),
+        ]);
+      const body = {
+        available: true,
+        token: argus.token,
+        burnAddress: argus.burnAddress,
+        kaziDecimals: Number(kaziDecimals),
+        totalSupply: supply.toString(),
+        burned: burned.toString(),
+        burnedBps: supply > 0n ? Number((burned * 10_000n) / supply) : 0,
+        quoteAsset: getAddress(quote),
+        quoteDecimals: Number(quoteDecimals),
+        buybackSpent: spent.toString(),
+        buybackPending: (budget > spent ? budget - spent : 0n).toString(),
+        taxCollected: received.toString(),
+        burnShareBps: argusBurnShareBps(creatorBps, burnBps),
+        buyTaxBps: Number(buyTax),
+        sellTaxBps: Number(sellTax),
+      };
+      burnCache = { at: Date.now(), body };
       return body;
     });
 

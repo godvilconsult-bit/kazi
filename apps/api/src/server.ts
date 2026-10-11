@@ -3,6 +3,7 @@ import { createPublicClient, http } from "viem";
 import { getChainConfig } from "@kazi/config";
 import {
   DeploymentNotFoundError,
+  loadArgusLaunch,
   loadCreditsGate,
   loadDeployment,
   loadTokenLaunch,
@@ -45,6 +46,16 @@ if (
     `${env.KAZI_NETWORK}-credits-gate.json doesn't match this network's deployment (chain ${creditsGate.chainId}, credits ${creditsGate.credits})`,
   );
 }
+const argusLaunch = loadArgusLaunch(env.KAZI_NETWORK, process.env["DEPLOYMENTS_DIR"] || undefined);
+if (
+  argusLaunch &&
+  (argusLaunch.chainId !== chain.chainId ||
+    (creditsGate && argusLaunch.token.toLowerCase() !== creditsGate.kazi.toLowerCase()))
+) {
+  throw new Error(
+    `${env.KAZI_NETWORK}-argus.json doesn't match this network (chain ${argusLaunch.chainId}, token ${argusLaunch.token})`,
+  );
+}
 const prisma = createPrismaClient(env.DATABASE_URL);
 const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 3 });
 // BullMQ needs its own connection with maxRetriesPerRequest disabled.
@@ -61,6 +72,7 @@ const app = await buildApp({
   escrowAddress: deployment?.taskEscrow,
   tokenLaunch: loadTokenLaunch(env.KAZI_NETWORK, process.env["DEPLOYMENTS_DIR"] || undefined),
   creditsGate,
+  argusLaunch,
   airdropId: process.env["AIRDROP_ID"] || undefined,
   reportError: initSentry(env.SENTRY_DSN, `${env.KAZI_NETWORK}-${env.NODE_ENV}`),
   contracts: deployment

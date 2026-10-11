@@ -70,7 +70,7 @@ function OfferList() {
                 {o.wave > 1 ? <Badge tone="info">{t("wave2")}</Badge> : null}
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-end">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">
                 {t("payout")}
               </p>

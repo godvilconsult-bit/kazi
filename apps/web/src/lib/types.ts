@@ -342,6 +342,27 @@ export interface VestingProgress {
   end: number;
 }
 
+/** GET /token/kazi-burn: KAZI bought back and burned through its Argus launch (docs/08 §8). */
+export type KaziBurn =
+  | { available: false }
+  | {
+      available: true;
+      token: Address;
+      burnAddress: Address;
+      kaziDecimals: number;
+      totalSupply: string;
+      burned: string;
+      burnedBps: number;
+      quoteAsset: Address;
+      quoteDecimals: number;
+      buybackSpent: string;
+      buybackPending: string;
+      taxCollected: string;
+      burnShareBps: number;
+      buyTaxBps: number;
+      sellTaxBps: number;
+    };
+
 export type TokenMetrics =
   | { deployed: false; launched: false }
   | {

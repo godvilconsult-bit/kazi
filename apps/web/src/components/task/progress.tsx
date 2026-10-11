@@ -24,7 +24,7 @@ export function StepTimeline({ steps, events }: { steps: SubtaskView[]; events: 
     }
   }
   return (
-    <ol className="relative space-y-3 before:absolute before:top-4 before:bottom-4 before:left-[15px] before:w-px before:bg-line">
+    <ol className="relative space-y-3 before:absolute before:top-4 before:bottom-4 before:start-[15px] before:w-px before:bg-line">
       {work.map((s, i) => {
         const p = progress.get(s.index);
         const working =

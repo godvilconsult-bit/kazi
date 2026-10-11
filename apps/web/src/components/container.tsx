@@ -6,13 +6,17 @@ export function Container({
   children,
   className,
   narrow,
+  id,
 }: {
   children: ReactNode;
   className?: string;
   narrow?: boolean;
+  /** Anchor target, e.g. /developers#protocol. */
+  id?: string;
 }) {
   return (
     <div
+      id={id}
       className={cn("mx-auto w-full px-4 sm:px-6", narrow ? "max-w-3xl" : "max-w-6xl", className)}
     >
       {children}

@@ -49,7 +49,7 @@ export function NotificationsBell() {
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-ink bg-surface shadow-stamp">
+        <div className="absolute end-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-ink bg-surface shadow-stamp">
           <div className="flex items-center justify-between border-b border-dashed border-line px-4 py-3">
             <p className="font-display font-bold">{t("title")}</p>
             {unread > 0 ? (

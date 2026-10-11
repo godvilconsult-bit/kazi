@@ -297,7 +297,7 @@ function Clarify({ task, questions }: { task: TaskView; questions: string[] }) {
   return (
     <Card className="border-info/60">
       <h2 className="font-display text-xl font-bold">{t("clarifyTitle")}</h2>
-      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
+      <ul className="mt-3 list-disc space-y-1 ps-5 text-sm">
         {questions.map((q) => (
           <li key={q}>{q}</li>
         ))}

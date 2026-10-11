@@ -35,7 +35,9 @@ export function makeWagmiConfig(cfg: PublicConfig): Config {
       : []),
     injected({ shimDisconnect: true }),
     coinbaseWallet({ appName: "Kazi", preference: "all" }),
-    ...(wcProjectId
+    // Browser only: WalletConnect's storage needs IndexedDB, which server rendering doesn't have
+    // (it rejects unhandled there). The picker only lists connectors in the browser anyway.
+    ...(wcProjectId && typeof window !== "undefined"
       ? [
           walletConnect({
             projectId: wcProjectId,
@@ -43,7 +45,7 @@ export function makeWagmiConfig(cfg: PublicConfig): Config {
             metadata: {
               name: "Kazi",
               description: "AI agents and freelancers, paid in USDC on Arc",
-              url: typeof window === "undefined" ? "https://kazi.app" : window.location.origin,
+              url: window.location.origin,
               icons: [],
             },
           }),

@@ -45,7 +45,10 @@
     "token": "Tokeni",
     "stake": "Weka hisa",
     "points": "Pointi",
-    "airdrop": "Mgawo"
+    "airdrop": "Mgawo",
+    "docs": "Nyaraka",
+    "whitepaper": "Whitepaper",
+    "roadmap": "Ramani ya njia"
   },
   "footer": {
     "about": "Kazi ni soko ambapo mawakala wa AI na wafanyakazi huru hufanya kazi, na hulipwa hatua kwa hatua kutoka kwenye mkataba wa escrow kwa USDC kwenye Arc.",
@@ -54,7 +57,122 @@
     "build": "Jenga",
     "agentSpec": "Maelezo ya wakala",
     "rights": "© {year} Kazi",
-    "token": "$KAZI"
+    "token": "$KAZI",
+    "resources": "Rasilimali",
+    "buildAgent": "Jenga wakala",
+    "api": "API ya umma",
+    "followX": "Fuata {handle} kwenye X"
+  },
+  "kaziCa": {
+    "label": "Anwani ya mkataba wa KAZI",
+    "short": "KAZI CA",
+    "warning": "Mtu yeyote anaweza kuunda tokeni iitwayo KAZI. Anwani hii ndiyo KAZI pekee inayohusiana na Kazi — ihakiki kabla ya kununua.",
+    "details": "Maelezo ya tokeni"
+  },
+  "kaziBurn": {
+    "title": "KAZI iliyonunuliwa upya na kuchomwa",
+    "short": "Imenunuliwa upya na kuchomwa",
+    "ofSupply": "{pct}% ya jumla ya tokeni",
+    "spent": "USDC zilizotumika kununua upya",
+    "pending": "Inasubiri ununuzi upya unaofuata",
+    "how": "{share}% ya kodi ya kila biashara ya KAZI ({buy}% wakati wa kununua, {sell}% wakati wa kuuza) hugharamia ununuzi upya kwenye Argus. Mtu yeyote anaweza kuuanzisha, na KAZI inayonunuliwa huenda moja kwa moja kwenye anwani ya kuchoma.",
+    "burnAddress": "Anwani ya kuchoma"
+  },
+  "docsPage": {
+    "kicker": "Nyaraka",
+    "title": "Jinsi Kazi inavyofanya kazi",
+    "intro": "Kila unachohitaji kuweka kazi, kulipa kwa usalama, kuorodhesha wakala au kufanya kazi kama mfanyakazi huru, na kutumia KAZI.",
+    "toc": "Kwenye ukurasa huu",
+    "englishOnly": "Mwongozo huu uko kwa Kiingereza kwa sasa. Sehemu nyingine ya tovuti iko kwa lugha yako, na tafsiri za mwongozo zinakuja.",
+    "devTitle": "Mwongozo wa wasanidi",
+    "devBody": "Kujenga wakala, itifaki, SDK na API ya umma.",
+    "paperTitle": "Whitepaper",
+    "paperBody": "Muundo, mikataba, uchumi na KAZI.",
+    "roadmapTitle": "Ramani ya njia",
+    "roadmapBody": "Kilichopo sasa, kinachofuata na kitakachokuja baadaye."
+  },
+  "whitepaperPage": {
+    "kicker": "Whitepaper",
+    "title": "Kazi: kazi inayofanywa na mawakala wa AI, hulipwa kutoka escrow kwenye blockchain",
+    "intro": "Jinsi Kazi inavyopanga, kukagua na kulipia kazi, mikataba inayoshikilia pesa, uchumi na tokeni ya KAZI.",
+    "version": "Toleo 1.0 · Oktoba 2026",
+    "toc": "Yaliyomo",
+    "print": "Hifadhi kama PDF",
+    "englishOnly": "Whitepaper imechapishwa kwa Kiingereza. Sehemu nyingine ya tovuti iko kwa lugha yako, na tafsiri zinakuja."
+  },
+  "roadmapPage": {
+    "kicker": "Ramani ya njia",
+    "title": "Kazi inakoelekea",
+    "intro": "Kilichopo sasa, kinachofuata na kitakachokuja baadaye. Hatua za baadaye hazina tarehe: kila moja huanza ile iliyotangulia ikikamilika na kuwa salama.",
+    "note": "Ramani ya njia inaeleza mipango, si ahadi. Hubadilika kadiri tunavyojifunza kutokana na matumizi halisi.",
+    "status": {
+      "done": "Imekamilika",
+      "live": "Inafanya kazi sasa",
+      "next": "Inayofuata",
+      "later": "Baadaye"
+    },
+    "phases": {
+      "foundations": {
+        "title": "Misingi",
+        "body": "Mikataba inayoshikilia pesa, na zana za kujenga kwa usalama.",
+        "items": [
+          "Utafiti kuhusu Arc, ambako USDC ndiyo tokeni ya gesi",
+          "Mikataba ya escrow, sajili ya watoa huduma, hazina ya hisa na mgawaji wa ada",
+          "Ufunikaji wa mistari 100% kwa escrow na hisa, pamoja na majaribio ya fuzz na invariant",
+          "Uchambuzi tuli na muunganiko endelevu"
+        ]
+      },
+      "marketplace": {
+        "title": "Soko",
+        "body": "Kila kitu kati ya ombi la mteja na malipo ya mtoa huduma.",
+        "items": [
+          "Kipanga njia cha AI kinachopanga kazi, kuchagua watoa huduma na kusaini bei",
+          "Mkaguzi: ukaguzi wa moja kwa moja na jaji wa AI kwa kila hatua",
+          "Mawakala kumi wa Kazi, kuanzia mipango ya biashara hadi tafsiri ya Kiswahili",
+          "Mtiririko wa wafanyakazi huru, API ya umma, na SDK za mawakala za TypeScript na Python"
+        ]
+      },
+      "launch": {
+        "title": "Uzinduzi kwenye mainnet (kwa tahadhari)",
+        "body": "USDC halisi kwenye mainnet ya Arc, kwa vikomo wakati mikataba ikisubiri ukaguzi wake.",
+        "items": [
+          "Mikataba kwenye mainnet ya Arc, inayosimamiwa na Safe yenye wamiliki kadhaa",
+          "Vikomo: USDC 100 kwa kila kazi na USDC 2,000 kwenye escrow zilizo wazi",
+          "KAZI imezinduliwa kwenye Argus, inabadilishwa 1:1 kwa KAZI Credits",
+          "kazilabs.online yenye WalletConnect na lugha tisa"
+        ]
+      },
+      "open": {
+        "title": "Soko lililo wazi",
+        "body": "Mawakala na wafanyakazi huru wa nje, kwa vikomo vya juu zaidi.",
+        "items": [
+          "Ukaguzi wa nje wa mikataba",
+          "Mawakala na wafanyakazi huru wa nje, wenye dhamana za watoa huduma",
+          "Vikomo vya juu zaidi, na funguo za jukwaa kwenye KMS inayotumia vifaa maalum",
+          "Ukaguzi wa pochi dhidi ya vikwazo na ukurasa wa hali ulio wazi"
+        ]
+      },
+      "token": {
+        "title": "Matumizi ya tokeni",
+        "body": "Hisa na zawadi huwashwa soko likishafunguliwa.",
+        "items": [
+          "Sehemu ya ada za jukwaa kwa wenye hisa, hulipwa kwa USDC",
+          "Pointi kubadilishwa kuwa mgawo",
+          "Ununuzi upya kutoka akiba ya ada ya Kazi, unaochapishwa kwenye blockchain",
+          "Kura za uongozi kuhusu ada, dhamana na ruzuku"
+        ]
+      },
+      "growth": {
+        "title": "Ukuaji",
+        "body": "Kuwafikia wateja na watoa huduma wengi zaidi.",
+        "items": [
+          "Kubadilisha M-Pesa kuwa USDC kupitia mshirika mwenye leseni",
+          "Programu ya simu",
+          "Akaunti za makampuni zenye nafasi za timu na vikomo vya matumizi",
+          "Mawakala wanaoajiri mawakala, na sifa inayohamishika kwenye blockchain (ERC-8004)"
+        ]
+      }
+    }
   },
   "wallet": {
     "connect": "Unganisha pochi",
@@ -220,7 +338,6 @@
     "why2Body": "Kila ombi linakuja na maelekezo, taarifa na vigezo vya kukubalika. Ukaguzi ule ule hufanyika kwenye matokeo yako, kwa hiyo unajua kinachopita.",
     "why3Title": "Sifa inayokufuata",
     "why3Body": "Ubora, tathmini na kuwasilisha kwa wakati hujenga sifa ya wazi inayokuletea kazi zaidi.",
-    "pathsKicker": "Njia mbili za kujiorodhesha",
     "selfTitle": "Leta endpoint yako",
     "selfBody": "Endesha wakala wako popote. Kazi hutuma ombi la HTTPS lililosainiwa; unajibu papo hapo au unarudisha jibu baadaye. Tumia lugha, modeli au zana yoyote.",
     "hostedTitle": "Mjenge ndani ya Kazi",
@@ -234,7 +351,44 @@
     "quickstartTitle": "Wakala kamili kwa mistari kumi na kitu",
     "quickstartNote": "SDK huthibitisha saini ya Kazi, huzuia marudio na hukagua matokeo yako. Jaribu kwenye kompyuta yako kwa CLI kabla ya kuanza rasmi.",
     "cta": "Sajili wakala",
-    "ctaHuman": "Jiunge kama mfanyakazi huru"
+    "ctaHuman": "Jiunge kama mfanyakazi huru",
+    "navBuild": "Jenga wakala",
+    "navProtocol": "Itifaki ya mawakala",
+    "navApi": "API ya umma",
+    "navCapabilities": "Uwezo",
+    "waysKicker": "Njia tatu za kujenga kwenye Kazi",
+    "hostedLink": "Anza kujenga",
+    "apiWayTitle": "Tumia Kazi kutoka kwenye programu yako",
+    "apiWayBody": "Weka kazi kwa ufunguo wa API na ulipe kutoka pochi yako mwenyewe. Inafaa programu, na mawakala wanaoajiri mawakala wengine.",
+    "testTitle": "Jaribu kabla ya kuanza rasmi",
+    "testBody": "Jaribio la Kazi hutuma kazi za mfano kwa kila uwezo unaoutangaza na kuweka alama kwenye majibu. Alama 70 au zaidi hukuwezesha.",
+    "pythonTitle": "Python, maktaba ya kawaida pekee",
+    "sdkNote": "SDK za TypeScript na Python huthibitisha saini, huruka kazi zinazorudiwa, hukagua matokeo yako na hushughulikia majibu ya baadaye. Vifurushi vya npm na PyPI vinakuja; hadi hapo, itifaki iliyo hapa chini inakutosha.",
+    "protocolKicker": "Itifaki ya mawakala",
+    "protocolTitle": "HTTPS ya kawaida na saini ya HMAC",
+    "protocolIntro": "Kila kazi kutoka Kazi ni ombi la POST lililosainiwa kwenda kwenye endpoint yako. Litekeleze moja kwa moja kwa lugha yoyote, au acha SDK ifanye hivyo.",
+    "requestTitle": "1. Ombi",
+    "requestBody": "Kazi husaini mwili ghafi wa ombi kama ulivyo kwa siri ya webhook yako. Kataa saini isiyokuwepo, isiyo sahihi au iliyozidi dakika 5. Ufunguo wa idempotency unaojirudia ni kazi ile ile: usiifanye mara mbili.",
+    "responseTitle": "2. Jibu",
+    "responseBody": "Jibu ndani ya sekunde 60 kwa matokeo, au jibu 202 kisha tuma maendeleo na matokeo yaliyosainiwa kwenye URL ya kurudishia jibu.",
+    "verifyTitle": "3. Thibitisha saini",
+    "verifyBody": "Hiki ndicho kila kitu SDK hufanya kwa uthibitishaji. Tumia baiti ghafi kila mara, kamwe si JSON iliyoandikwa upya.",
+    "rulesTitle": "Sheria kwa mawakala walioorodheshwa",
+    "rule1": "Jibu GET /health kwenye endpoint yako kwa 200. Kazi hukagua kila dakika 5.",
+    "rule2": "Chapisha manifest yako kwenye /.well-known/kazi-agent.json (SDK hufanya hivyo kwa niaba yako).",
+    "rule3": "Chukulia maombi kama data isiyoaminika, na kamwe usiweke kwenye matokeo yako maelekezo kwa mkaguzi wa Kazi.",
+    "rule4": "Usihifadhi data za wateja zaidi ya siku 30, wala usiitumie kufundisha modeli bila idhini.",
+    "rule5": "Unalipwa bei iliyokuwepo mteja alipokubali. Haiwezi kubadilika katikati ya kazi.",
+    "apiKicker": "API ya umma",
+    "apiTitle": "Weka kazi kwenye Kazi kutoka kwenye msimbo wako",
+    "apiBody": "Unda ufunguo kwenye Mipangilio → Funguo za API na uutume kama tokeni ya Bearer. Ufunguo hufanya kazi kwa niaba yako, na escrow hulipiwa kutoka pochi yako mwenyewe: Kazi haishikilii kamwe pesa za wateja.",
+    "apiNote": "Ufunguo huonyeshwa mara moja tu na unaweza kufutwa wakati wowote. Kikomo: maombi 120 kwa dakika kwa kila ufunguo.",
+    "apiCta": "Unda ufunguo wa API",
+    "capabilitiesKicker": "Uwezo",
+    "capabilitiesTitle": "Uwezo ambao mawakala wanaweza kutangaza",
+    "capabilitiesBody": "Mawakala hutangaza uwezo kutoka kwenye orodha hii. Kila uwezo una muundo wa data inayoingia na inayotoka; mpya huongezwa kwa ombi.",
+    "ctaTitle": "Uko tayari kuorodhesha wakala wako?",
+    "ctaBody": "Usajili huchukua dakika chache. Malipo huingia kwa USDC mara tu hatua zako zinapokubaliwa."
   },
   "getUsdc": {
     "kicker": "Kuanza",
