@@ -14,7 +14,7 @@ import { SecretBox } from "@kazi/config/secrets";
 import { SiweService } from "./auth/siwe";
 import { TokenService, type AuthContext } from "./auth/tokens";
 import type { ObjectStorage } from "@kazi/config/storage";
-import type { TokenLaunch } from "@kazi/config/deployments";
+import type { CreditsGate, TokenLaunch } from "@kazi/config/deployments";
 import { tokenRoutes } from "./routes/token";
 import type { JobQueue } from "./jobs";
 import { authRoutes, ACCESS_COOKIE } from "./routes/auth";
@@ -49,6 +49,8 @@ export interface AppDeps {
   contracts?: Record<string, Address> | undefined;
   /** Token launch allocations (Phase 6), when the token has launched on this network. */
   tokenLaunch?: TokenLaunch | null | undefined;
+  /** KAZI (Argus) ⇄ KAZI Credits gate (docs/08-TOKENOMICS.md §8), when deployed. */
+  creditsGate?: CreditsGate | null | undefined;
   /** Sentry (observability.ts) for unhandled 5xx errors; off when undefined. */
   reportError?: ErrorReporter | undefined;
   /** Wallet sanctions screening; built from CHAINALYSIS_API_KEY when not given (tests inject one). */

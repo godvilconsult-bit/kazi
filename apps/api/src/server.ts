@@ -1,7 +1,12 @@
 import { Redis } from "ioredis";
 import { createPublicClient, http } from "viem";
 import { getChainConfig } from "@kazi/config";
-import { DeploymentNotFoundError, loadDeployment, loadTokenLaunch } from "@kazi/config/deployments";
+import {
+  DeploymentNotFoundError,
+  loadCreditsGate,
+  loadDeployment,
+  loadTokenLaunch,
+} from "@kazi/config/deployments";
 import { createPrismaClient } from "@kazi/db";
 import { buildApp } from "./app";
 import { bullmqJobQueue } from "./jobs";
@@ -29,6 +34,17 @@ const chain = getChainConfig(env.KAZI_NETWORK, {
   confirmations: env.CONFIRMATIONS,
 });
 
+const creditsGate = loadCreditsGate(env.KAZI_NETWORK, process.env["DEPLOYMENTS_DIR"] || undefined);
+// A gate file from another chain or for another token would show wrong numbers: refuse to start.
+if (
+  creditsGate &&
+  (creditsGate.chainId !== chain.chainId ||
+    (deployment && creditsGate.credits.toLowerCase() !== deployment.kaziToken.toLowerCase()))
+) {
+  throw new Error(
+    `${env.KAZI_NETWORK}-credits-gate.json doesn't match this network's deployment (chain ${creditsGate.chainId}, credits ${creditsGate.credits})`,
+  );
+}
 const prisma = createPrismaClient(env.DATABASE_URL);
 const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 3 });
 // BullMQ needs its own connection with maxRetriesPerRequest disabled.
@@ -44,6 +60,7 @@ const app = await buildApp({
   jobs,
   escrowAddress: deployment?.taskEscrow,
   tokenLaunch: loadTokenLaunch(env.KAZI_NETWORK, process.env["DEPLOYMENTS_DIR"] || undefined),
+  creditsGate,
   airdropId: process.env["AIRDROP_ID"] || undefined,
   reportError: initSentry(env.SENTRY_DSN, `${env.KAZI_NETWORK}-${env.NODE_ENV}`),
   contracts: deployment
@@ -52,6 +69,8 @@ const app = await buildApp({
         stakingVault: deployment.stakingVault,
         kaziToken: deployment.kaziToken,
         feeDistributor: deployment.feeDistributor,
+        // KAZI (Argus) ⇄ KAZI Credits gate, for the stake page's exchange.
+        ...(creditsGate ? { creditsGate: creditsGate.gate, argusKazi: creditsGate.kazi } : {}),
       }
     : undefined,
   storage: new SupabaseStorage(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, env.STORAGE_BUCKET),

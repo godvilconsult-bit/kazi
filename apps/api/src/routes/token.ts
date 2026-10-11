@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { erc20Abi, getAddress, type Address } from "viem";
 import { z } from "zod";
-import type { TokenLaunch } from "@kazi/config/deployments";
-import { feeDistributorAbi, kaziTokenAbi, stakingVaultAbi } from "@kazi/shared";
+import type { CreditsGate, TokenLaunch } from "@kazi/config/deployments";
+import { feeDistributorAbi, kaziCreditsGateAbi, kaziTokenAbi, stakingVaultAbi } from "@kazi/shared";
 import type { AppServices } from "../app";
 import { requireAuth } from "../auth/guards";
 import { notFound, parse } from "../http/errors";
@@ -67,6 +67,7 @@ const walletParams = z.object({ wallet: z.string().regex(/^0x[0-9a-fA-F]{40}$/) 
 
 export interface TokenDeps {
   tokenLaunch?: TokenLaunch | null | undefined;
+  creditsGate?: CreditsGate | null | undefined;
   /** Identifies the published airdrop allocation set (AirdropAllocation.airdropId). */
   airdropId?: string | undefined;
 }
@@ -209,6 +210,33 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
           await read<bigint>(s.chain.usdcAddress, erc20Abi, "balanceOf", [launch.treasury])
         ).toString();
       }
+      // KAZI (Argus) ⇄ KAZI Credits gate: its unissued reserve is not in circulation.
+      let creditsGate: {
+        address: Address;
+        kazi: Address;
+        totalLocked: string;
+        reserve: string;
+        fullyBacked: boolean;
+        paused: boolean;
+      } | null = null;
+      const gate = s.creditsGate ?? null;
+      if (gate) {
+        const [totalLocked, reserve, fullyBacked, paused] = await Promise.all([
+          read<bigint>(gate.gate, kaziCreditsGateAbi, "totalLocked"),
+          read<bigint>(gate.gate, kaziCreditsGateAbi, "reserve"),
+          read<boolean>(gate.gate, kaziCreditsGateAbi, "fullyBacked"),
+          read<boolean>(gate.gate, kaziCreditsGateAbi, "paused"),
+        ]);
+        lock(gate.gate, reserve);
+        creditsGate = {
+          address: gate.gate,
+          kazi: gate.kazi,
+          totalLocked: totalLocked.toString(),
+          reserve: reserve.toString(),
+          fullyBacked,
+          paused,
+        };
+      }
       const nonCirculating = [...locked.values()].reduce((a, b) => a + b, 0n);
       const circulating = supply > nonCirculating ? supply - nonCirculating : 0n;
       const body = {
@@ -231,10 +259,12 @@ export function tokenRoutes(s: AppServices & TokenDeps) {
         treasuryUsdc,
         vesting,
         airdrop,
+        creditsGate,
         contracts: {
           kaziToken: getAddress(token),
           stakingVault: getAddress(vault),
           feeDistributor: distributor ? getAddress(distributor) : null,
+          ...(gate ? { creditsGate: gate.gate, argusKazi: gate.kazi } : {}),
           ...(launch
             ? {
                 teamVesting: launch.teamVesting,

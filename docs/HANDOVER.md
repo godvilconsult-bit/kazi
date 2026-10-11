@@ -68,6 +68,9 @@ You asked me to pick the recommended option whenever there was a question. Each 
 - Geo hooks: suggested list `US,CU,IR,KP,SY`; restricted visitors can't stake or claim airdropped tokens, but can always exit; bonds aren't restricted. The real list is a legal decision [08 §7].
 - Provider bond is on by default; networks with a zero minimum hide it [07 §7].
 
+**KAZI on Argus (2026-10-11)**
+- Kazi's own token is "KAZI Credits" (`KCRED`). It is exchanged 1:1 with the KAZI you launch on Argus through `KaziCreditsGate`, and its whole supply is the exchange's reserve. Staking, bonds and discounts keep working on Credits unchanged [08 §8].
+
 **Hardening (Phase 7)**
 - A guardian wallet (`PAUSER_ROLE`) can pause the escrow; only the Safe can unpause [03 §9, runbooks/pause].
 - AWS KMS is the first signer backend (secp256k1, viem custom account); plaintext keys are refused on mainnet and in production without an explicit testnet override [runbooks/deploy §4].

@@ -26,7 +26,7 @@ import type {
 } from "@/lib/types";
 import { KindBadge } from "@/components/agent-card";
 import { useAuth } from "@/components/auth";
-import { useKaziConfig } from "@/components/config";
+import { useKaziConfig, useTokenName } from "@/components/config";
 import { PageBody } from "@/components/container";
 import { CopyButton, Usdc } from "@/components/money";
 import { Markdown } from "@/components/output-viewer";
@@ -264,6 +264,7 @@ function Onchain({ p }: { p: ProviderOwner }) {
 function Bond({ p }: { p: ProviderOwner }) {
   const t = useTranslations("dashboard");
   const cfg = useKaziConfig();
+  const tokenLabel = useTokenName();
   const { address } = useAccount();
   const { write } = useTx();
   const [steps, dispatch] = useReducer(stepsReducer, initSteps(["approve", "bond"]));
@@ -312,11 +313,14 @@ function Bond({ p }: { p: ProviderOwner }) {
     <Card>
       <h2 className="font-display text-lg font-bold">{t("bondTitle")}</h2>
       <p className="mt-1 text-sm text-muted">
-        {t("bondBody", { amount: min !== null ? tokenAmount(min, decimals, 0) : "…" })}
+        {t("bondBody", {
+          amount: min !== null ? tokenAmount(min, decimals, 0) : "…",
+          token: tokenLabel,
+        })}
       </p>
       {staked !== null ? (
         <p className="mt-2 font-mono text-sm">
-          {t("bondCurrent", { amount: tokenAmount(staked, decimals, 0) })}
+          {t("bondCurrent", { amount: tokenAmount(staked, decimals, 0), token: tokenLabel })}
         </p>
       ) : null}
       {need > 0n ? (
@@ -324,7 +328,10 @@ function Bond({ p }: { p: ProviderOwner }) {
           <div className="mt-4">
             <TxStepper
               steps={steps}
-              labels={{ approve: t("bondApprove", { amount }), bond: t("bondSend", { amount }) }}
+              labels={{
+                approve: t("bondApprove", { amount, token: tokenLabel }),
+                bond: t("bondSend", { amount, token: tokenLabel }),
+              }}
             />
           </div>
           {error ? (

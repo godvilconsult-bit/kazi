@@ -5,10 +5,12 @@ const stat = (page: Page, label: string) =>
   page.getByText(label, { exact: true }).first().locator("..");
 
 /**
- * $KAZI pages (docs/10-BUILD-PLAN.md Phase 6) on the e2e stack, where DeployTokenLaunch has run and
- * the mock wallet has a 1,000 KAZI airdrop allocation plus 10,000 KAZI to stake:
- * claim the vested airdrop → stake (exact approve + stake) → request an unstake → token metrics.
- * Then the same page from a restricted country: staking is off, exits stay available.
+ * Token pages (docs/10-BUILD-PLAN.md Phase 6, docs/08-TOKENOMICS.md §8) on the e2e stack, where
+ * DeployTokenLaunch and DeployCreditsGate have run. Kazi's token shows as "KAZI Credits" there. The
+ * mock wallet has a 1,000-Credit airdrop allocation, 10,000 Credits and 5,000 KAZI (the Argus
+ * stand-in): claim the vested airdrop → lock KAZI for Credits → stake (exact approve + stake) →
+ * request an unstake → return Credits for KAZI → token metrics. Then the same page from a restricted
+ * country: staking and locking are off, exits stay available.
  */
 
 async function connect(page: Page) {
@@ -29,21 +31,31 @@ test("claims the airdrop, stakes, starts an unstake and sees it on the token pag
   await expect(page.getByText("25% unlocks at launch, the rest over 180 days.")).toBeVisible();
   await connect(page);
 
-  // 1,000 KAZI allocation: 25% is claimable at launch.
+  // 1,000-Credit allocation: 25% is claimable at launch.
   await expect(page.getByText("Your allocation")).toBeVisible();
-  const claim = page.getByRole("button", { name: /^claim 250\.\d\d kazi$/i });
+  const claim = page.getByRole("button", { name: /^claim 250\.\d\d kazi credits$/i });
   await expect(claim).toBeEnabled();
   await claim.click();
-  await expect(page.getByRole("button", { name: /^claim 0\.\d\d kazi$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^claim 0\.\d\d kazi credits$/i })).toBeVisible();
 
-  // Stake 1,000 of the wallet's 10,250 KAZI.
+  // Lock 2,000 of the wallet's 5,000 KAZI (Argus) for 2,000 KAZI Credits, 1:1.
   await page.getByRole("contentinfo").getByRole("link", { name: "Stake", exact: true }).click();
   await page.waitForURL(/\/stake$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Stake KAZI Credits");
+  await expect(page.getByRole("heading", { name: "Get KAZI Credits" })).toBeVisible();
+  await expect(stat(page, "KAZI in your wallet")).toContainText("5,000.00");
+  await page.locator("#credits-lock-amount").fill("2000");
+  await page.getByRole("button", { name: "Get KAZI Credits", exact: true }).click();
+  await expect(page.getByText("Allow the exchange to take 2,000.00 KAZI")).toBeVisible();
+  await expect(stat(page, "KAZI in your wallet")).toContainText("3,000.00");
+  await expect(stat(page, "KAZI Credits in your wallet")).toContainText(/12,250\.\d\d/);
+
+  // Stake 1,000 of the wallet's 12,250 Credits.
   await expect(page.getByText(/^Stakers share 30% of Kazi's platform fees/)).toBeVisible();
-  await expect(stat(page, "Wallet balance")).toContainText(/10,250\.\d\d/);
+  await expect(stat(page, "Wallet balance")).toContainText(/12,250\.\d\d/);
   await page.locator("#stake-amount").fill("1000");
   await page.getByRole("button", { name: "Stake", exact: true }).click();
-  await expect(page.getByText("Allow the vault to take 1,000.00 KAZI")).toBeVisible();
+  await expect(page.getByText("Allow the vault to take 1,000.00 KAZI Credits")).toBeVisible();
   await expect(stat(page, "Warming up")).toContainText("1,000.00");
   await expect(page.locator("#stake-amount")).toHaveValue("");
 
@@ -55,10 +67,17 @@ test("claims the airdrop, stakes, starts an unstake and sees it on the token pag
   await expect(stat(page, "Warming up")).toContainText("600.00"); // unstaking takes warming stake first
   await expect(
     page.getByText(
-      "You're already unstaking 400.00 KAZI. Unstaking more restarts the cooldown for all of it.",
+      "You're already unstaking 400.00 KAZI Credits. Unstaking more restarts the cooldown for all of it.",
     ),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /^withdraw 400\.00 kazi$/i })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: /^withdraw 400\.00 kazi credits$/i }),
+  ).toBeDisabled();
+
+  // Return 500 Credits for 500 KAZI.
+  await page.locator("#credits-unlock-amount").fill("500");
+  await page.getByRole("button", { name: "Get my KAZI back", exact: true }).click();
+  await expect(stat(page, "KAZI in your wallet")).toContainText("3,500.00");
 
   // Token metrics: launched, with vesting and the airdrop.
   await page.getByRole("contentinfo").getByRole("link", { name: "Token", exact: true }).click();
@@ -68,6 +87,11 @@ test("claims the airdrop, stakes, starts an unstake and sees it on the token pag
   await expect(page.getByText(/^Launched /)).toBeVisible();
   await expect(page.getByText(/claimed · .* left$/)).toBeVisible();
   await expect(page.getByRole("term").filter({ hasText: "Airdrop" })).toBeVisible();
+  // The exchange: 1,500 KAZI locked. Credits from the token launch circulate outside it locally.
+  await expect(page.getByRole("heading", { name: "KAZI ⇄ KAZI Credits" })).toBeVisible();
+  await expect(stat(page, "KAZI locked")).toContainText("1,500");
+  await expect(page.getByText("Some Credits are not backed by locked KAZI yet.")).toBeVisible();
+  await expect(page.getByRole("term").filter({ hasText: "KAZI (Argus)" })).toBeVisible();
   await page.screenshot({ path: "test-results/token-metrics.png", fullPage: true });
 });
 
@@ -87,12 +111,15 @@ test("visitors from a restricted country can't add stake or claim tokens", async
   await connect(page);
   await expect(page.locator("#stake-amount")).toBeDisabled();
   await expect(page.getByRole("button", { name: "Stake", exact: true })).toBeDisabled();
+  await expect(page.locator("#credits-lock-amount")).toBeDisabled();
   // Exits stay open.
   await page.locator("#unstake-amount").fill("1");
   await expect(page.getByRole("button", { name: "Unstake", exact: true })).toBeEnabled();
+  await page.locator("#credits-unlock-amount").fill("1");
+  await expect(page.getByRole("button", { name: "Get my KAZI back", exact: true })).toBeEnabled();
 
   await page.getByRole("contentinfo").getByRole("link", { name: "Airdrop", exact: true }).click();
   await page.waitForURL(/\/airdrop$/);
-  await expect(page.getByRole("button", { name: /^claim .* kazi$/i })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /^claim .* kazi credits$/i })).toBeDisabled();
   await context.close();
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import { tokenName } from "@/lib/token-name";
 import type { PublicConfig } from "@/lib/types";
 
 export const ConfigContext = createContext<PublicConfig | null>(null);
@@ -10,4 +11,9 @@ export function useKaziConfig(): PublicConfig {
   const cfg = useContext(ConfigContext);
   if (!cfg) throw new Error("Kazi config is not loaded");
   return cfg;
+}
+
+/** Display name of Kazi's own token on this network (lib/token-name.ts). */
+export function useTokenName(): string {
+  return tokenName(useKaziConfig());
 }

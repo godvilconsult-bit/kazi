@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 import { formatDate, toBigInt, tokenAmount } from "@/lib/format";
 import { sharePct } from "@/lib/staking";
 import type { FeeSplit, TokenMetrics, VestingProgress } from "@/lib/types";
-import { useKaziConfig } from "@/components/config";
+import { useKaziConfig, useTokenName } from "@/components/config";
 import { PageBody } from "@/components/container";
 import { AddressPill, Usdc } from "@/components/money";
 import {
@@ -29,12 +29,15 @@ const CONTRACT_LABELS = {
   ecosystemVesting: "c_ecosystemVesting",
   airdrop: "c_airdrop",
   treasury: "c_treasury",
+  creditsGate: "c_creditsGate",
+  argusKazi: "c_argusKazi",
 } as const;
 
 /** $KAZI metrics (docs/08-TOKENOMICS.md §6): realized, onchain numbers only — no prices, no projections. */
 export default function TokenPage() {
   const t = useTranslations("token");
   const tc = useTranslations("common");
+  const tokenLabel = useTokenName();
   const q = useQuery({
     queryKey: ["token", "metrics"],
     queryFn: () => api<TokenMetrics>("/token/metrics"),
@@ -47,11 +50,11 @@ export default function TokenPage() {
         title={t("title")}
         actions={
           <ButtonLink href="/stake" variant="accent">
-            {t("stakeCta")}
+            {t("stakeCta", { token: tokenLabel })}
           </ButtonLink>
         }
       >
-        {t("intro")}
+        {t("intro", { token: tokenLabel })}
       </PageHeader>
       {q.isLoading ? (
         <Skeleton className="h-72" />
@@ -63,7 +66,7 @@ export default function TokenPage() {
           retryLabel={tc("retry")}
         />
       ) : !q.data.deployed ? (
-        <Notice tone="info">{t("notDeployed")}</Notice>
+        <Notice tone="info">{t("notDeployed", { token: tokenLabel })}</Notice>
       ) : (
         <Metrics m={q.data} />
       )}
@@ -78,6 +81,7 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
   const t = useTranslations("token");
   const locale = useLocale();
   const cfg = useKaziConfig();
+  const tokenLabel = useTokenName();
   const d = cfg.kaziDecimals ?? 18;
   const kazi = (v: string) => tokenAmount(v, d, 0);
   const contracts = Object.entries(m.contracts).filter(
@@ -95,15 +99,15 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label={t("supply")} value={kazi(m.totalSupply)} unit="KAZI" />
+        <Stat label={t("supply")} value={kazi(m.totalSupply)} unit={tokenLabel} />
         {/* Before launch the supply sits with the distributor: nothing circulates yet. */}
         {m.launched ? (
-          <Stat label={t("circulating")} value={kazi(m.circulating)} unit="KAZI" />
+          <Stat label={t("circulating")} value={kazi(m.circulating)} unit={tokenLabel} />
         ) : null}
         <Stat
           label={t("staked")}
           value={kazi(m.staked)}
-          unit="KAZI"
+          unit={tokenLabel}
           sub={m.launched ? t("stakedShare", { pct: sharePct(m.stakedBps) }) : undefined}
         />
         <Stat label={t("rewards30")} value={<Usdc value={m.stakerRewards.last30d} />} />
@@ -116,6 +120,24 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
       </div>
 
       {m.split ? <Split split={m.split} /> : null}
+
+      {m.creditsGate ? (
+        <section>
+          <SectionTitle>{t("gateTitle")}</SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat label={t("gateLocked")} value={kazi(m.creditsGate.totalLocked)} unit="KAZI" />
+            <Stat
+              label={t("gateOutstanding")}
+              value={kazi((toBigInt(m.totalSupply) - toBigInt(m.creditsGate.reserve)).toString())}
+              unit="KAZI Credits"
+            />
+          </div>
+          <Notice tone={m.creditsGate.fullyBacked ? "ok" : "warn"} className="mt-3">
+            {m.creditsGate.fullyBacked ? t("gateBacked") : t("gateNotBacked")}
+            {m.creditsGate.paused ? ` ${t("gatePaused")}` : ""}
+          </Notice>
+        </section>
+      ) : null}
 
       {m.vesting.length > 0 ? (
         <section>
@@ -156,7 +178,9 @@ function Metrics({ m }: { m: Extract<TokenMetrics, { deployed: true }> }) {
                 key={name}
                 className="flex flex-wrap items-center justify-between gap-2 px-5 py-3"
               >
-                <dt className="text-sm font-semibold">{t(CONTRACT_LABELS[name])}</dt>
+                <dt className="text-sm font-semibold">
+                  {t(CONTRACT_LABELS[name], { token: tokenLabel })}
+                </dt>
                 <dd>
                   <AddressPill address={address} />
                 </dd>

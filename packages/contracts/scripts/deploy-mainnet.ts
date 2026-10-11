@@ -13,12 +13,15 @@
  *   OPERATOR_ADDRESS       KMS-held operator (pnpm -F @kazi/worker kms-address -- <key id>)
  *   QUOTER_ADDRESS         KMS-held quoter
  * Optional: ADMIN_SAFE (reuse an existing Safe), TREASURY_ADDRESS (default: the Safe),
- *           FEE_BPS (default 1200), ARC_RPC_URL.
+ *           FEE_BPS (default 1200), ARC_RPC_URL,
+ *           ARGUS_KAZI_ADDRESS  the KAZI launched on Argus (docs/08-TOKENOMICS.md §8). When set, the
+ *                               KAZI Credits supply goes straight into the KaziCreditsGate reserve
+ *                               (1:1 exchange); otherwise it is minted to the Safe.
  *
  * Guarded-launch choices (docs/HANDOVER.md §5): no provider bonds and no staker fee share until the
- * token launch (min stakes 0, split 80% treasury / 20% buyback reserve), the whole $KAZI supply
- * minted to the Safe and not distributed. The deployer sends no funds anywhere: the operator's gas
- * is funded by you.
+ * token launch (min stakes 0, split 80% treasury / 20% buyback reserve). Kazi's own token is named
+ * "KAZI Credits" (KCRED) so it can't be confused with the KAZI traded on Argus. The deployer sends no
+ * funds anywhere: the operator's gas is funded by you.
  */
 import { execFileSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
@@ -40,7 +43,14 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { CHAIN_PRESETS, getChainConfig } from "@kazi/config";
-import { agentRegistryAbi, feeDistributorAbi, stakingVaultAbi, taskEscrowAbi } from "@kazi/shared";
+import {
+  agentRegistryAbi,
+  feeDistributorAbi,
+  kaziCreditsGateAbi,
+  kaziTokenAbi,
+  stakingVaultAbi,
+  taskEscrowAbi,
+} from "@kazi/shared";
 
 // Safe v1.4.1 canonical deployments (verified present on Arc mainnet 2026-10-10).
 const SAFE_PROXY_FACTORY: Address = "0x4e1DCf7AD4e460CfD30791CCC4F9c8a4f820ec67";
@@ -51,6 +61,9 @@ const ZERO: Address = "0x0000000000000000000000000000000000000000";
 const ENV_FILE = process.env["ENV_FILE"] ?? resolve(import.meta.dirname, "../../../.env.mainnet");
 const CONTRACTS_DIR = resolve(import.meta.dirname, "..");
 const DEPLOYMENT_FILE = resolve(CONTRACTS_DIR, "../config/deployments/mainnet.json");
+const GATE_FILE = resolve(CONTRACTS_DIR, "../config/deployments/mainnet-credits-gate.json");
+const CREDITS_NAME = "KAZI Credits";
+const CREDITS_SYMBOL = "KCRED";
 
 if (!process.argv.includes("--i-accept-unaudited-contracts")) {
   throw new Error(
@@ -221,6 +234,33 @@ if (!sameOwners || safeThreshold !== threshold) {
 }
 const treasury = env["TREASURY_ADDRESS"] ? getAddress(env["TREASURY_ADDRESS"]) : adminSafe;
 
+// ── 1b. KAZI on Argus (optional): check it before anything is deployed ──────────
+const argus = env["ARGUS_KAZI_ADDRESS"] ? getAddress(env["ARGUS_KAZI_ADDRESS"]) : null;
+if (argus) {
+  const erc20 = parseAbi([
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function decimals() view returns (uint8)",
+    "function totalSupply() view returns (uint256)",
+  ]);
+  const code = await pub.getCode({ address: argus });
+  if (!code || code === "0x")
+    throw new Error(`ARGUS_KAZI_ADDRESS ${argus} has no contract on Arc mainnet`);
+  const [name, symbol, decimals, supply] = await Promise.all([
+    pub.readContract({ address: argus, abi: erc20, functionName: "name" }),
+    pub.readContract({ address: argus, abi: erc20, functionName: "symbol" }),
+    pub.readContract({ address: argus, abi: erc20, functionName: "decimals" }),
+    pub.readContract({ address: argus, abi: erc20, functionName: "totalSupply" }),
+  ]);
+  console.log(
+    `KAZI on Argus: ${name} (${symbol}) ${argus}, ${formatUnits(supply, decimals)} supply, ${decimals} decimals`,
+  );
+  if (decimals !== 18)
+    throw new Error(`KAZI on Argus has ${decimals} decimals; the 1:1 gate needs 18`);
+  if (existsSync(GATE_FILE))
+    throw new Error(`${GATE_FILE} exists — the credits gate is already deployed`);
+}
+
 // ── 2. Contracts ─────────────────────────────────────────────────────────────
 console.log("deploying contracts with forge (this takes a minute)…");
 execFileSync(
@@ -250,7 +290,11 @@ execFileSync(
       PAUSER_ADDRESS: pauser,
       TREASURY_ADDRESS: treasury,
       BUYBACK_RESERVE_ADDRESS: adminSafe,
-      TOKEN_DISTRIBUTOR_ADDRESS: adminSafe,
+      // With the Argus KAZI known, the deployer receives the Credits supply only to move all of it
+      // into the gate right below; otherwise the Safe holds it.
+      TOKEN_DISTRIBUTOR_ADDRESS: argus ? deployer.address : adminSafe,
+      TOKEN_NAME: CREDITS_NAME,
+      TOKEN_SYMBOL: CREDITS_SYMBOL,
       USDC_ADDRESS: chainCfg.usdcAddress,
       FEE_BPS: env["FEE_BPS"] || "1200",
       MIN_AGENT_STAKE: "0",
@@ -262,6 +306,70 @@ execFileSync(
   },
 );
 const d = JSON.parse(readFileSync(DEPLOYMENT_FILE, "utf8")) as Record<string, string | number>;
+const credits = getAddress(String(d["kaziToken"]));
+const creditsSupply = await pub.readContract({
+  address: credits,
+  abi: kaziTokenAbi,
+  functionName: "totalSupply",
+});
+
+// ── 2b. KAZI ⇄ KAZI Credits gate, reserve = the whole Credits supply ─────────
+let gate: Address | null = null;
+if (argus) {
+  console.log("deploying the KAZI ⇄ KAZI Credits gate…");
+  try {
+    execFileSync(
+      forgeBin(),
+      [
+        "script",
+        "script/DeployCreditsGate.s.sol",
+        "--rpc-url",
+        chainCfg.rpcUrl,
+        "--broadcast",
+        "--slow",
+        "--private-key",
+        key(env, "DEPLOYER_PRIVATE_KEY"),
+      ],
+      {
+        cwd: CONTRACTS_DIR,
+        stdio: ["ignore", "inherit", "inherit"],
+        env: {
+          ...process.env,
+          KAZI_NETWORK: "mainnet",
+          KAZI_TOKEN: credits,
+          ADMIN_SAFE: adminSafe,
+          PAUSER_ADDRESS: pauser,
+          ARGUS_KAZI_ADDRESS: argus,
+          FUND_RESERVE_AMOUNT: creditsSupply.toString(),
+        },
+      },
+    );
+  } catch (err) {
+    // Never leave the Credits supply on a hot key: hand it to the Safe and stop.
+    const held = await pub.readContract({
+      address: credits,
+      abi: kaziTokenAbi,
+      functionName: "balanceOf",
+      args: [deployer.address],
+    });
+    if (held > 0n) {
+      const { request } = await pub.simulateContract({
+        account: deployer,
+        address: credits,
+        abi: kaziTokenAbi,
+        functionName: "transfer",
+        args: [adminSafe, held],
+        ...(await fees()),
+      });
+      await pub.waitForTransactionReceipt({ hash: await wallet.writeContract(request) });
+      console.error(`gate deploy failed; moved ${formatUnits(held, 18)} KAZI Credits to the Safe`);
+    }
+    throw err;
+  }
+  gate = getAddress(
+    String((JSON.parse(readFileSync(GATE_FILE, "utf8")) as Record<string, string>)["gate"]),
+  );
+}
 
 // ── 3. Verify roles and settings onchain ─────────────────────────────────────
 const escrow = getAddress(String(d["taskEscrow"]));
@@ -319,12 +427,69 @@ const checks: [string, Promise<boolean>][] = [
     has(distributor, ADMIN_ROLE, deployer.address).then((v) => !v),
   ],
   [
+    `KAZI Credits named ${CREDITS_SYMBOL}`,
+    pub
+      .readContract({ address: credits, abi: kaziTokenAbi, functionName: "symbol" })
+      .then((v) => v === CREDITS_SYMBOL),
+  ],
+  [
+    "deployer holds no KAZI Credits",
+    pub
+      .readContract({
+        address: credits,
+        abi: kaziTokenAbi,
+        functionName: "balanceOf",
+        args: [deployer.address],
+      })
+      .then((v) => v === 0n),
+  ],
+  ...gateChecks(),
+  [
     "staker share off until token launch",
     pub
       .readContract({ address: distributor, abi: feeDistributorAbi, functionName: "stakerBps" })
       .then((v) => Number(v) === 0),
   ],
 ];
+function gateChecks(): [string, Promise<boolean>][] {
+  const holder: Address = gate ?? (adminSafe as Address); // the Safe exists by now (step 1)
+  const supplyWith: [string, Promise<boolean>] = [
+    gate ? "gate reserve = whole KAZI Credits supply" : "Safe holds the whole KAZI Credits supply",
+    pub
+      .readContract({
+        address: credits,
+        abi: kaziTokenAbi,
+        functionName: "balanceOf",
+        args: [holder],
+      })
+      .then((v) => v === creditsSupply),
+  ];
+  if (!gate || !argus) return [supplyWith];
+  const g = gate;
+  const a = argus;
+  const read = <T>(functionName: string, args: readonly unknown[] = []) =>
+    pub.readContract({
+      address: g,
+      abi: kaziCreditsGateAbi,
+      functionName: functionName as "paused",
+      args: args as [],
+    }) as Promise<T>;
+  return [
+    supplyWith,
+    ["gate admin = Safe", read<boolean>("hasRole", [ADMIN_ROLE, adminSafe])],
+    [
+      "gate pauser = guardian",
+      read<Hex>("PAUSER_ROLE").then((r) => read<boolean>("hasRole", [r, pauser])),
+    ],
+    [
+      "deployer holds no gate role",
+      read<boolean>("hasRole", [ADMIN_ROLE, deployer.address]).then((v) => !v),
+    ],
+    ["gate exchanges the Argus KAZI", read<Address>("kazi").then((x) => getAddress(x) === a)],
+    ["gate pays KAZI Credits", read<Address>("credits").then((x) => getAddress(x) === credits)],
+  ];
+}
+
 let ok = true;
 for (const [name, p] of checks) {
   const v = await p;
@@ -333,6 +498,7 @@ for (const [name, p] of checks) {
 }
 console.log(`\ndeployment: ${DEPLOYMENT_FILE}`);
 for (const [k, v] of Object.entries(d)) console.log(`  ${k}: ${v}`);
+if (gate) console.log(`  creditsGate: ${gate} (${GATE_FILE})`);
 if (!ok) throw new Error("role check failed — do NOT use this deployment; pause it from the Safe");
 console.log(
   `\nNext: fund the operator ${operator} with a few USDC for gas (you send it), then follow docs/runbooks/deploy.md §3.`,

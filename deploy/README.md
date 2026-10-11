@@ -23,7 +23,7 @@ Secrets live in two places: `.env.mainnet` (deployer and setup keys) and `.env.p
    pnpm -F @kazi/worker kms-address -- <operator-key-id> <quoter-key-id>
    ```
    This needs `AWS_REGION`, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in your shell.
-5. **Fill `.env.mainnet`**: `ADMIN_SAFE_OWNERS`, `ADMIN_SAFE_THRESHOLD`, `PAUSER_ADDRESS`, `OPERATOR_ADDRESS`, `QUOTER_ADDRESS` (the KMS addresses), and optionally `TREASURY_ADDRESS` (default: the Safe).
+5. **Fill `.env.mainnet`**: `ADMIN_SAFE_OWNERS`, `ADMIN_SAFE_THRESHOLD`, `PAUSER_ADDRESS`, `OPERATOR_ADDRESS`, `QUOTER_ADDRESS` (the KMS addresses), optionally `TREASURY_ADDRESS` (default: the Safe), and `ARGUS_KAZI_ADDRESS`: the contract address of KAZI on Argus. Set that last one before deploying. The KAZI Credits supply then goes straight into the 1:1 exchange, and no Safe transaction is needed (docs/08-TOKENOMICS.md §8).
 6. **Fill `.env.production`**: copy [`production.env.example`](production.env.example) and fill it in.
 7. **Gas.** Arc pays gas in USDC. Send about 1 USDC to the deployer `0xF87AFe58EB6d0a794de62c568c37c59c7BB54e01` and about 0.5 USDC to the setup key `0x8f5f49Dcf29c2d5E6B82d3Ad96E6335294FC64D3`. After step 1 below, keep about 5 USDC on the operator address for releases and refunds; an alert fires below `ALERT_OPERATOR_MIN_GAS`.
 
@@ -36,7 +36,8 @@ pnpm -F @kazi/contracts deploy:mainnet -- --i-accept-unaudited-contracts
 The script:
 
 - Creates the multi-owner admin Safe.
-- Deploys the escrow, registry, staking vault, fee distributor and token with the guarded-launch settings: zero stake minimums, and no staker fee share until the token launch.
+- Deploys the escrow, registry, staking vault, fee distributor and token with the guarded-launch settings: zero stake minimums, and no staker fee share until the token launch. Kazi's token is named **KAZI Credits** (`KCRED`).
+- With `ARGUS_KAZI_ADDRESS` set: checks that token (a contract, 18 decimals), deploys `KaziCreditsGate` (admin = Safe, pauser = guardian) and moves the whole Credits supply into its reserve. The script writes `mainnet-credits-gate.json`; commit it too.
 - Grants each role to its address, then checks every role onchain.
 - Writes `packages/config/deployments/mainnet.json`. Commit that file; the services read it.
 
@@ -104,4 +105,4 @@ It uses the setup key from `.env.mainnet` and the production database's public U
 - Pause: [runbooks/pause.md](../docs/runbooks/pause.md).
 - Incidents: [runbooks/incident-response.md](../docs/runbooks/incident-response.md). Set `ROUTER_DISABLED=true` on api and worker to stop new quotes.
 - Key rotation: [runbooks/key-compromise.md](../docs/runbooks/key-compromise.md).
-- The KAZI token contract is deployed with the others. Its whole supply sits in the admin Safe, and it is **not for sale** until the token launch (docs/08 §4, after volume and legal review). Anyone can create another token called "KAZI", for example on a launchpad. Only the address in `packages/config/deployments/mainnet.json` is Kazi's, so publish it once deployed.
+- Kazi's token, **KAZI Credits**, is deployed with the others. With `ARGUS_KAZI_ADDRESS` set, its whole supply backs the KAZI ⇄ Credits exchange; otherwise it sits in the admin Safe. Anyone can create another token called "KAZI". Only the addresses in `packages/config/deployments/mainnet*.json` are Kazi's, so publish them once deployed (the `/token` page lists them).

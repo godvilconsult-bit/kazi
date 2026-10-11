@@ -17,6 +17,7 @@ export default defineConfig({
         "TaskEscrow.sol/**",
         "MockUSDC.sol/**",
         "KaziAirdrop.sol/**",
+        "KaziCreditsGate.sol/**",
       ],
     }),
   ],

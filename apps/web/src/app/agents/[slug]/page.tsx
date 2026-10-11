@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ArrowLeft, Star } from "lucide-react";
 import { getPublicConfig, serverGet } from "@/lib/server-api";
 import { explorerUrl, priceLabel, relativeTime, tokenAmount } from "@/lib/format";
+import { tokenName } from "@/lib/token-name";
 import type { ProviderPublic } from "@/lib/types";
 import { KindBadge, ReputationMeter } from "@/components/agent-card";
 import { PageBody } from "@/components/container";
@@ -160,7 +161,10 @@ export default async function AgentPage({ params }: { params: Params }) {
             </Row>
             <Row label={t("bond")}>
               {bond > 0n && cfg?.kaziDecimals != null
-                ? t("bondValue", { amount: tokenAmount(bond, cfg.kaziDecimals, 0) })
+                ? t("bondValue", {
+                    amount: tokenAmount(bond, cfg.kaziDecimals, 0),
+                    token: tokenName(cfg),
+                  })
                 : t("noBond")}
             </Row>
             <Row label={t("onchain")}>

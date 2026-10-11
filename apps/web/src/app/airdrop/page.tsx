@@ -11,7 +11,7 @@ import { sharePct } from "@/lib/staking";
 import { useTx } from "@/lib/tx";
 import type { Address, AirdropProof } from "@/lib/types";
 import { useNowSeconds } from "@/lib/use-now";
-import { useKaziConfig } from "@/components/config";
+import { useKaziConfig, useTokenName } from "@/components/config";
 import { PageBody } from "@/components/container";
 import { GeoNotice, useGeo } from "@/components/geo";
 import { TxButton } from "@/components/tx-button";
@@ -25,11 +25,12 @@ import { ConnectWalletButton } from "@/components/wallet";
 export default function AirdropPage() {
   const t = useTranslations("airdrop");
   const cfg = useKaziConfig();
+  const tokenLabel = useTokenName();
   const airdrop = cfg.contracts.airdrop;
   return (
     <PageBody narrow>
       <PageHeader kicker={t("kicker")} title={t("title")}>
-        {t("intro")}
+        {t("intro", { token: tokenLabel })}
       </PageHeader>
       <GeoNotice className="mb-6" />
       {!airdrop || cfg.kaziDecimals === null ? (
@@ -110,6 +111,7 @@ function Allocation({
 }) {
   const t = useTranslations("airdrop");
   const tc = useTranslations("common");
+  const tokenLabel = useTokenName();
   const locale = useLocale();
   const geo = useGeo();
   const { write } = useTx();
@@ -178,7 +180,7 @@ function Allocation({
           }
           onDone={() => void reads.refetch()}
         >
-          {t("claimCta", { amount: kazi(claimable) })}
+          {t("claimCta", { amount: kazi(claimable), token: tokenLabel })}
         </TxButton>
       )}
     </Card>

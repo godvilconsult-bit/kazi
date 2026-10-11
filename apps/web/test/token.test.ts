@@ -4,6 +4,7 @@ import { holderKey, providerKey } from "@kazi/shared";
 import { durationLabel } from "../src/lib/format";
 import { geoFor, geoFromHeaders, parseCountryList } from "../src/lib/geo";
 import { amountError, needsApproval, sharePct, stakePosition } from "../src/lib/staking";
+import { tokenName } from "../src/lib/token-name";
 
 /** Phase 6 helpers: staking position maths (mirrors StakingVault), geo hooks, labels. */
 
@@ -116,5 +117,15 @@ describe("geo restriction", () => {
       }),
     ).toEqual({ country: "TZ", restricted: false });
     expect(geoFromHeaders(h, {})).toEqual({ country: "US", restricted: false });
+  });
+});
+
+describe("token name", () => {
+  it("calls Kazi's token KAZI Credits only where the Argus KAZI exchange exists", () => {
+    expect(tokenName({ contracts: { usdc: "0x1", escrow: null } } as never)).toBe("KAZI");
+    expect(
+      tokenName({ contracts: { usdc: "0x1", escrow: null, creditsGate: "0x2" } } as never),
+    ).toBe("KAZI Credits");
+    expect(tokenName(null)).toBe("KAZI");
   });
 });

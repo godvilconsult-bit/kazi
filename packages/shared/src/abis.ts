@@ -1013,6 +1013,267 @@ export const kaziAirdropAbi = [
 ] as const
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// KaziCreditsGate
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+export const kaziCreditsGateAbi = [
+  {
+    type: "constructor",
+    inputs: [
+      { name: "admin", internalType: "address", type: "address" },
+      { name: "pauser", internalType: "address", type: "address" },
+      { name: "kazi_", internalType: "contract IERC20Metadata", type: "address" },
+      { name: "credits_", internalType: "contract IERC20Metadata", type: "address" },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "DEFAULT_ADMIN_ROLE",
+    outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "PAUSER_ROLE",
+    outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "credits",
+    outputs: [{ name: "", internalType: "contract IERC20", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "fullyBacked",
+    outputs: [{ name: "", internalType: "bool", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "role", internalType: "bytes32", type: "bytes32" }],
+    name: "getRoleAdmin",
+    outputs: [{ name: "", internalType: "bytes32", type: "bytes32" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "account", internalType: "address", type: "address" },
+    ],
+    name: "grantRole",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "account", internalType: "address", type: "address" },
+    ],
+    name: "hasRole",
+    outputs: [{ name: "", internalType: "bool", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "kazi",
+    outputs: [{ name: "", internalType: "contract IERC20", type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "amount", internalType: "uint256", type: "uint256" }],
+    name: "lock",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "outstanding",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  { type: "function", inputs: [], name: "pause", outputs: [], stateMutability: "nonpayable" },
+  {
+    type: "function",
+    inputs: [],
+    name: "paused",
+    outputs: [{ name: "", internalType: "bool", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "callerConfirmation", internalType: "address", type: "address" },
+    ],
+    name: "renounceRole",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "reserve",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32" },
+      { name: "account", internalType: "address", type: "address" },
+    ],
+    name: "revokeRole",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "interfaceId", internalType: "bytes4", type: "bytes4" }],
+    name: "supportsInterface",
+    outputs: [{ name: "", internalType: "bool", type: "bool" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [],
+    name: "totalLocked",
+    outputs: [{ name: "", internalType: "uint256", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    inputs: [{ name: "amount", internalType: "uint256", type: "uint256" }],
+    name: "unlock",
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  { type: "function", inputs: [], name: "unpause", outputs: [], stateMutability: "nonpayable" },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "account", internalType: "address", type: "address", indexed: true },
+      { name: "amount", internalType: "uint256", type: "uint256", indexed: false },
+    ],
+    name: "Locked",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [{ name: "by", internalType: "address", type: "address", indexed: true }],
+    name: "Paused",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "previousAdminRole", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "newAdminRole", internalType: "bytes32", type: "bytes32", indexed: true },
+    ],
+    name: "RoleAdminChanged",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "account", internalType: "address", type: "address", indexed: true },
+      { name: "sender", internalType: "address", type: "address", indexed: true },
+    ],
+    name: "RoleGranted",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "role", internalType: "bytes32", type: "bytes32", indexed: true },
+      { name: "account", internalType: "address", type: "address", indexed: true },
+      { name: "sender", internalType: "address", type: "address", indexed: true },
+    ],
+    name: "RoleRevoked",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [
+      { name: "account", internalType: "address", type: "address", indexed: true },
+      { name: "amount", internalType: "uint256", type: "uint256", indexed: false },
+    ],
+    name: "Unlocked",
+  },
+  {
+    type: "event",
+    anonymous: false,
+    inputs: [{ name: "by", internalType: "address", type: "address", indexed: true }],
+    name: "Unpaused",
+  },
+  { type: "error", inputs: [], name: "AccessControlBadConfirmation" },
+  {
+    type: "error",
+    inputs: [
+      { name: "account", internalType: "address", type: "address" },
+      { name: "neededRole", internalType: "bytes32", type: "bytes32" },
+    ],
+    name: "AccessControlUnauthorizedAccount",
+  },
+  {
+    type: "error",
+    inputs: [
+      { name: "kaziDecimals", internalType: "uint8", type: "uint8" },
+      { name: "creditsDecimals", internalType: "uint8", type: "uint8" },
+    ],
+    name: "DecimalsMismatch",
+  },
+  {
+    type: "error",
+    inputs: [
+      { name: "available", internalType: "uint256", type: "uint256" },
+      { name: "requested", internalType: "uint256", type: "uint256" },
+    ],
+    name: "InsufficientLocked",
+  },
+  {
+    type: "error",
+    inputs: [
+      { name: "available", internalType: "uint256", type: "uint256" },
+      { name: "requested", internalType: "uint256", type: "uint256" },
+    ],
+    name: "InsufficientReserve",
+  },
+  { type: "error", inputs: [], name: "LockPaused" },
+  { type: "error", inputs: [], name: "ReentrancyGuardReentrantCall" },
+  {
+    type: "error",
+    inputs: [{ name: "token", internalType: "address", type: "address" }],
+    name: "SafeERC20FailedOperation",
+  },
+  { type: "error", inputs: [], name: "SameToken" },
+  {
+    type: "error",
+    inputs: [
+      { name: "received", internalType: "uint256", type: "uint256" },
+      { name: "expected", internalType: "uint256", type: "uint256" },
+    ],
+    name: "TransferFeeNotSupported",
+  },
+  { type: "error", inputs: [], name: "ZeroAddress" },
+  { type: "error", inputs: [], name: "ZeroAmount" },
+] as const
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // KaziToken
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -34,8 +34,9 @@ import {
 } from "@/lib/tx-steps";
 import type { Address, StakingInfo } from "@/lib/types";
 import { useNowSeconds } from "@/lib/use-now";
-import { useKaziConfig } from "@/components/config";
+import { useKaziConfig, useTokenName } from "@/components/config";
 import { PageBody } from "@/components/container";
+import { CreditsExchange } from "@/components/credits-exchange";
 import { GeoNotice, useGeo } from "@/components/geo";
 import { Usdc } from "@/components/money";
 import { TxButton } from "@/components/tx-button";
@@ -67,6 +68,7 @@ export default function StakePage() {
   const nav = useTranslations("nav");
   const locale = useLocale();
   const cfg = useKaziConfig();
+  const tokenLabel = useTokenName();
   const info = useQuery({
     queryKey: ["token", "staking"],
     queryFn: () => api<StakingInfo>("/token/staking"),
@@ -82,7 +84,7 @@ export default function StakePage() {
     <PageBody>
       <PageHeader
         kicker={t("kicker")}
-        title={t("title")}
+        title={t("title", { token: tokenLabel })}
         actions={
           <ButtonLink href="/token" variant="outline">
             {nav("token")}
@@ -123,12 +125,16 @@ export default function StakePage() {
 function Realized({ info }: { info: Info }) {
   const t = useTranslations("stake");
   const cfg = useKaziConfig();
+  const tokenLabel = useTokenName();
   return (
     <Card>
       <p className="text-xs font-semibold uppercase tracking-wider text-muted">{t("realized")}</p>
       {toBigInt(info.rewards30d) > 0n ? (
         <p className="num mt-1 text-2xl font-bold">
-          {t("per1000", { amount: usdc(info.per1000Kazi30d, cfg.usdcDecimals).display })}
+          {t("per1000", {
+            amount: usdc(info.per1000Kazi30d, cfg.usdcDecimals).display,
+            token: tokenLabel,
+          })}
         </p>
       ) : (
         <p className="mt-1 font-semibold">{t("noRewards")}</p>
@@ -177,10 +183,14 @@ function Position({
 }) {
   const t = useTranslations("stake");
   const locale = useLocale();
+  const cfg = useKaziConfig();
+  const tokenLabel = useTokenName();
   const geo = useGeo();
   const { write } = useTx();
   const now = useNowSeconds();
   const key = holderKey(address);
+  const gate = cfg.contracts.creditsGate;
+  const argusKazi = cfg.contracts.argusKazi;
   const reads = useReadContracts({
     contracts: [
       { address: token, abi: kaziTokenAbi, functionName: "balanceOf", args: [address] },
@@ -205,15 +215,26 @@ function Position({
 
   return (
     <div className="space-y-6">
+      {gate && argusKazi ? (
+        <CreditsExchange
+          address={address}
+          gate={gate}
+          kazi={argusKazi}
+          credits={token}
+          decimals={decimals}
+          restricted={geo.restricted}
+          onDone={refresh}
+        />
+      ) : null}
       <section>
         <h2 className="mb-3 font-display text-xl font-bold">{t("positionTitle")}</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label={t("balance")} value={kazi(balance)} unit="KAZI" />
-          <Stat label={t("staked")} value={kazi(pos.active)} unit="KAZI" />
+          <Stat label={t("balance")} value={kazi(balance)} unit={tokenLabel} />
+          <Stat label={t("staked")} value={kazi(pos.active)} unit={tokenLabel} />
           <Stat
             label={t("warming")}
             value={kazi(pos.warming)}
-            unit="KAZI"
+            unit={tokenLabel}
             sub={
               pos.warmUntil !== null && !pos.needsActivation
                 ? t("readyAt", { time: formatDate(new Date(pos.warmUntil * 1000), locale) })
@@ -223,7 +244,7 @@ function Position({
           <Stat
             label={t("unbonding")}
             value={kazi(pos.unbonding)}
-            unit="KAZI"
+            unit={tokenLabel}
             sub={
               pos.unbondReadyAt !== null
                 ? t("readyAt", { time: formatDate(new Date(pos.unbondReadyAt * 1000), locale) })
@@ -298,7 +319,7 @@ function Position({
             }
             onDone={refresh}
           >
-            {t("withdrawCta", { amount: kazi(pos.unbonding) })}
+            {t("withdrawCta", { amount: kazi(pos.unbonding), token: tokenLabel })}
           </TxButton>
         </Card>
       ) : null}
@@ -428,6 +449,7 @@ function StakeForm({
   onDone: () => void;
 }) {
   const t = useTranslations("stake");
+  const tokenLabel = useTokenName();
   const { write } = useTx();
   const [value, setValue] = useState("");
   const [steps, setSteps] = useState<TxStep[]>(() => initSteps(STAKE_STEPS));
@@ -475,7 +497,7 @@ function StakeForm({
       <div className="mt-3 space-y-4">
         <AmountField
           id="stake-amount"
-          label={t("amount")}
+          label={t("amount", { token: tokenLabel })}
           value={value}
           onChange={(v) => {
             setValue(v);
@@ -489,8 +511,8 @@ function StakeForm({
         <TxStepper
           steps={steps}
           labels={{
-            approve: t("stepApprove", { amount: label }),
-            stake: t("stepStake", { amount: label }),
+            approve: t("stepApprove", { amount: label, token: tokenLabel }),
+            stake: t("stepStake", { amount: label, token: tokenLabel }),
           }}
         />
         <Button
@@ -523,6 +545,7 @@ function UnstakeForm({
   onDone: () => void;
 }) {
   const t = useTranslations("stake");
+  const tokenLabel = useTokenName();
   const locale = useLocale();
   const { write } = useTx();
   const [value, setValue] = useState("");
@@ -534,7 +557,7 @@ function UnstakeForm({
       <div className="mt-3 space-y-4">
         <AmountField
           id="unstake-amount"
-          label={t("amount")}
+          label={t("amount", { token: tokenLabel })}
           value={value}
           onChange={setValue}
           max={max}
@@ -545,7 +568,10 @@ function UnstakeForm({
         />
         {unbonding > 0n ? (
           <Notice tone="warn">
-            {t("restartsCooldown", { amount: tokenAmount(unbonding, decimals, 2) })}
+            {t("restartsCooldown", {
+              amount: tokenAmount(unbonding, decimals, 2),
+              token: tokenLabel,
+            })}
           </Notice>
         ) : null}
         <TxButton

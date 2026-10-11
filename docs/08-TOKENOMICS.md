@@ -92,3 +92,27 @@ Everything below is built and tested on local anvil; nothing is deployed to main
 **Geo restriction hooks** — `GEO_RESTRICTED_COUNTRIES` (comma-separated ISO codes, read by the web server) and `GEO_COUNTRY_HEADER` (the header your CDN sets: Cloudflare `cf-ipcountry`, Vercel `x-vercel-ip-country`, CloudFront `cloudfront-viewer-country`). Visitors from a listed country can't stake or claim airdropped tokens; unstaking, withdrawing and claiming earned USDC always stay available. The contracts remain permissionless — this only changes the UI. Bonds are not restricted (they're required to list). The country list is a legal decision; `.env.example` suggests a starting point.
 
 **Not built (deliberately)**: a public sale page (higher legal risk; if added, gate it with the same geo hook), automated buybacks (the buyback reserve is spent by the multisig), governance voting UI (`ERC20Votes` is in the token; Phase 8), and a USD-pegged bond minimum.
+
+## 8. KAZI on Argus ⇄ KAZI Credits (owner decision, 2026-10-11)
+
+The owner will launch the public **KAZI** token on Argus, a third-party launchpad on Arc. Argus puts the whole supply into a Uniswap v4 pool, so the creator gets no tokens; the creator earns from the trading tax and pool fees. Kazi's own token, `KaziToken`, becomes **KAZI Credits** (symbol `KCRED` on mainnet). Every Kazi contract keeps using it unchanged: staking, provider bonds, the fee discount and the airdrop. The two are joined 1:1 by `KaziCreditsGate`:
+
+- **`lock(amount)`**: take KAZI, pay the same amount of Credits from the gate's reserve.
+- **`unlock(amount)`**: take Credits back, return the same amount of KAZI. Anyone holding Credits can exit, up to the KAZI locked. Unlock is never paused or geo-restricted.
+- **The reserve is the whole Credits supply** on mainnet. When `ARGUS_KAZI_ADDRESS` is set in `.env.mainnet`, `deploy-mainnet.ts` moves the supply straight into the gate. Every Credit in circulation then came out of the gate against locked KAZI. `fullyBacked()` checks this, and `/token` shows it.
+- **Nobody can take the locked KAZI or the reserve**, not the Safe and not Kazi. The guardian can pause `lock` if the Argus token is ever compromised, for example by a minting bug; only the Safe unpauses.
+- **Fee-on-transfer tokens are refused**: `lock` checks what actually arrived. The decimals of the two tokens must match (18).
+- **Rehearsed** on a local fork of Arc mainnet with a stand-in token: all 24 role, supply and gate checks passed, then lock → stake → unlock. Tests: 18 unit and fuzz tests, plus 3 invariants (locked KAZI is held, Credits are backed 1:1, no value is created or lost), with 100% line and branch coverage.
+
+**In the app**
+- `/stake` gains a "Get KAZI Credits" card (lock and unlock) above the staking position.
+- Wherever the gate exists, the UI calls Kazi's token "KAZI Credits" (`lib/token-name.ts`).
+- `/token` shows the KAZI locked, the Credits outside the exchange, whether they are fully backed, and both contract addresses. The gate's unissued reserve doesn't count as circulating.
+
+**Consequences**
+- The allocations in §1 (team, ecosystem, airdrop, treasury) no longer come from minted supply: the whole Credits supply backs the gate. Fund them by locking KAZI the project holds, or pay them in KAZI directly. `DeployTokenLaunch` still works for any Credits a wallet holds.
+- The staker USDC share stays 0 during the guarded launch (§3, docs/09).
+- Only the address in `<network>-credits-gate.json` is the real KAZI. Others can launch tokens with the same name.
+- The legal review in docs/09 §4 covers selling KAZI. Argus's buy/sell tax goes against §4 ("no buy/sell tax"); this is the owner's call.
+
+**If the Argus KAZI comes after the mainnet deploy**: run `DeployCreditsGate.s.sol` with `FUND_RESERVE_AMOUNT=0`. Then the Safe moves its Credits into the gate with one `transfer` in the Safe app's Transaction Builder (Safe{Wallet} supports Arc).

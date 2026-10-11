@@ -36,6 +36,10 @@ export interface PublicConfig {
     feeDistributor?: Address;
     /** KaziAirdrop, once the token has launched on this network. */
     airdrop?: Address;
+    /** KAZI (Argus) ⇄ KAZI Credits exchange, where deployed (docs/08-TOKENOMICS.md §8). */
+    creditsGate?: Address;
+    /** The KAZI token traded on Argus. */
+    argusKazi?: Address;
   };
 }
 
@@ -356,6 +360,14 @@ export type TokenMetrics =
       treasuryUsdc: string | null;
       vesting: VestingProgress[];
       airdrop: { address: Address; balance: string; claimed: string; deadline: number } | null;
+      creditsGate?: {
+        address: Address;
+        kazi: Address;
+        totalLocked: string;
+        reserve: string;
+        fullyBacked: boolean;
+        paused: boolean;
+      } | null;
       contracts: Record<string, Address | null>;
     };
 

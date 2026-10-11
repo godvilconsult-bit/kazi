@@ -52,6 +52,30 @@ export function loadTokenLaunch(
   return tokenLaunchSchema.parse(JSON.parse(readFileSync(path, "utf8")));
 }
 
+/**
+ * KAZI ⇄ KAZI Credits gate written by script/DeployCreditsGate.s.sol (docs/08-TOKENOMICS.md §8):
+ * `kazi` is the token traded on Argus, `credits` is Kazi's own token (= deployment.kaziToken).
+ */
+export const creditsGateSchema = z.object({
+  network: z.string(),
+  chainId: z.number().int().positive(),
+  deployedAtBlock: z.number().int().nonnegative(),
+  gate: addressSchema,
+  kazi: addressSchema,
+  credits: addressSchema,
+});
+export type CreditsGate = z.infer<typeof creditsGateSchema>;
+
+/** The credits gate for a network, or null when it isn't deployed there. */
+export function loadCreditsGate(
+  network: KaziNetwork,
+  dir: string = DEFAULT_DEPLOYMENTS_DIR,
+): CreditsGate | null {
+  const path = resolve(dir, `${network}-credits-gate.json`);
+  if (!existsSync(path)) return null;
+  return creditsGateSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+}
+
 export function loadDeployment(
   network: KaziNetwork,
   dir: string = DEFAULT_DEPLOYMENTS_DIR,

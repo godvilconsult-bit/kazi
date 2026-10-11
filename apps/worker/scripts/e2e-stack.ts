@@ -9,7 +9,7 @@
  * Uses only anvil's public dev keys. Never point it at a real network.
  */
 import { spawn, execFileSync, type ChildProcess } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { parseEnv } from "node:util";
@@ -235,6 +235,39 @@ await sendTx(chain, KEYS.admin, chain.deployment.kaziToken, kaziTokenAbi, "trans
   client,
   10_000n * KAZI,
 ]);
+
+// ── KAZI (Argus) ⇄ KAZI Credits gate (docs/08-TOKENOMICS.md §8): the real DeployCreditsGate script
+// with a stand-in for the Argus KAZI, a 100,000-Credit reserve, and 5,000 KAZI for the mock wallet ──
+const gateOut = resolve(root, "packages/config/deployments/e2e/local-credits-gate.json");
+execFileSync(
+  forgeBin(),
+  [
+    "script",
+    "script/DeployCreditsGate.s.sol",
+    "--rpc-url",
+    chain.rpcUrl,
+    "--broadcast",
+    "--private-key",
+    KEYS.admin,
+  ],
+  {
+    cwd: resolve(root, "packages/contracts"),
+    stdio: ["ignore", "ignore", "inherit"],
+    env: {
+      ...process.env,
+      KAZI_NETWORK: "local",
+      KAZI_TOKEN: chain.deployment.kaziToken,
+      ADMIN_SAFE: admin,
+      PAUSER_ADDRESS: admin,
+      ARGUS_KAZI_ADDRESS: "",
+      FUND_RESERVE_AMOUNT: (100_000n * KAZI).toString(),
+      CREDITS_GATE_OUT: gateOut,
+    },
+  },
+);
+copyFileSync(gateOut, resolve(deploymentsDir, "local-credits-gate.json"));
+const argusKazi = (JSON.parse(readFileSync(gateOut, "utf8")) as { kazi: `0x${string}` }).kazi;
+await sendTx(chain, KEYS.admin, argusKazi, kaziTokenAbi, "transfer", [client, 5_000n * KAZI]);
 await prisma.$disconnect();
 
 // The test client gets 1,000 test USDC.
@@ -287,6 +320,9 @@ async function waitFor(url: string, label: string, timeoutMs = 300_000) {
 start("house", ["--filter", "@kazi/house-agents", "start"]);
 start("api", ["--filter", "@kazi/api", "start"]);
 start("worker", ["--filter", "@kazi/worker", "start"]);
+// Next keeps server fetches (GET /config, revalidated every 30 s) in .next-e2e across runs and serves
+// a stale entry once after a restart: it would point the first page at the previous run's chain.
+rmSync(resolve(root, "apps/web/.next-e2e/cache/fetch-cache"), { recursive: true, force: true });
 if (!LOAD)
   start("web", ["--filter", "@kazi/web", "exec", "next", "dev", "--port", String(PORTS.web)], {
     NEXT_PUBLIC_API_URL: `http://localhost:${PORTS.api}`,
