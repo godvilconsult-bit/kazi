@@ -161,6 +161,7 @@ const plain = {
   api: {
     ...shared,
     KAZI_SERVICE: "api",
+    API_HOST: "::", // IPv4 + IPv6: Railway's private network (web → api.railway.internal) can be IPv6
     PORT: "4000",
     TRUST_PROXY: "1",
     COOKIE_DOMAIN: `.${env.DOMAIN}`,

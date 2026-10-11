@@ -16,7 +16,30 @@ Everything in `docs/10-BUILD-PLAN.md` Phases 0–7 is built and tested; Phase 8 
 | 7 Mainnet hardening | ✅ runbooks, KMS, monitoring, guarded launch, security pass, load test | `docs/09-SECURITY-COMPLIANCE.md` §6, `docs/runbooks/` |
 | 8 Growth | 🟡 Python SDK built; roadmap for M-Pesa, mobile, enterprise, subcontracting, governance, reputation roots | `docs/13-GROWTH-ROADMAP.md` |
 
-## 2. Deployed (Arc testnet, chain 5042002)
+## 2. Deployed
+
+### Arc mainnet (chain 5042), guarded launch, 2026-10-11, block 25,362,687
+
+| Contract | Address |
+|---|---|
+| Admin Safe (2-of-2, v1.4.1) | `0xe4bF1a867949ea0dB5bdb6ADf611B6f0299d0af3` |
+| TaskEscrow | `0xE83f9887742D1A8c84Aa5169cD3dcE57eC961039` |
+| AgentRegistry | `0x10BAC5c3B04bC84cDda4C5c302F3fF7116C293C2` |
+| StakingVault | `0x3764a642b8E22cdAe93CF8d9CCe5b59F5db44f78` |
+| FeeDistributor | `0xaB0e80CD4F091D976FA099EE0CEcbE14551fE1FA` |
+| KAZI Credits (KCRED) | `0xBeEF9ecDa2b9e16023D437d4d608d814230AfD1b` |
+| KaziCreditsGate (KAZI ⇄ KCRED) | `0xb77f946dFf26B0bd9C0996c2889Dc461cF99F5bE` |
+| KAZI on Argus | `0x9A4dE59eCB39c85E00687006E55624298D75F79b` |
+| USDC | `0x3600000000000000000000000000000000000000` |
+
+Verified onchain after the deploy:
+- The Safe is admin everywhere, and the deployer has renounced.
+- Operator `0x8A5C…3647` and quoter `0xf73e…EFE9` (Railway-held keys).
+- Guardian `0xbBE6…871a` can pause the escrow and the exchange.
+- Staker share 0, fee 12%.
+- The whole KCRED supply is in the exchange reserve.
+
+### Arc testnet (chain 5042002)
 
 | Contract | Address |
 |---|---|
