@@ -868,6 +868,7 @@
     "unlockCta": "Get my KAZI back",
     "paused": "Getting new Credits is paused right now. You can still return Credits for your KAZI.",
     "exitAlways": "Returning Credits is never paused or restricted.",
-    "kaziContract": "KAZI token contract"
+    "kaziContract": "KAZI token contract",
+    "dividendsNote": "KAZI you lock here stops earning Argus dividends until you take it back."
   }
 }

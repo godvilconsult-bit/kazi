@@ -868,6 +868,7 @@
     "unlockCta": "Nirudishie KAZI zangu",
     "paused": "Kupata Credits mpya kumesimamishwa kwa sasa. Bado unaweza kurudisha Credits upate KAZI zako.",
     "exitAlways": "Kurudisha Credits hakusimamishwi wala kuzuiliwa kamwe.",
-    "kaziContract": "Mkataba wa tokeni ya KAZI"
+    "kaziContract": "Mkataba wa tokeni ya KAZI",
+    "dividendsNote": "KAZI unazofunga hapa huacha kupata gawio la Argus hadi utakapozirudisha."
   }
 }

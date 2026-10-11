@@ -78,6 +78,7 @@ export function CreditsExchange({
       <div>
         <h2 className="font-display text-xl font-bold">{t("title")}</h2>
         <p className="mt-1 max-w-3xl text-sm text-muted">{t("intro")}</p>
+        <p className="mt-1 max-w-3xl text-sm text-muted">{t("dividendsNote")}</p>
         <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
           {t("kaziContract")} <AddressPill address={kazi} />
         </p>

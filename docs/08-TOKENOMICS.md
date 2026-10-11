@@ -116,3 +116,9 @@ The owner will launch the public **KAZI** token on Argus, a third-party launchpa
 - The legal review in docs/09 §4 covers selling KAZI. Argus's buy/sell tax goes against §4 ("no buy/sell tax"); this is the owner's call.
 
 **If the Argus KAZI comes after the mainnet deploy**: run `DeployCreditsGate.s.sol` with `FUND_RESERVE_AMOUNT=0`. Then the Safe moves its Credits into the gate with one `transfer` in the Safe app's Transaction Builder (Safe{Wallet} supports Arc).
+
+**KAZI on Argus — facts (checked onchain 2026-10-11)**
+- `0x9A4dE59eCB39c85E00687006E55624298D75F79b`, "KAZI LABS" (KAZI), 18 decimals, 1,000,000,000 supply, created at Arc mainnet block 25,355,364. Argus minted the supply to its portal, which put it into the Uniswap v4 pool.
+- Argus pays holders dividends in USDC through its escrow `0x9119…8155` (10% of routed revenue; the creator gets 70%). The pool, the portal and the burn address are excluded; exclusions are frozen.
+- **Locked KAZI stops earning Argus dividends for the person who locked it.** The gate holds that KAZI, so Argus counts the gate as the holder. Anyone can call Argus's `claimDividendsFor(gate)`, and the gate has no way to pass that USDC on. Owner's decision (2026-10-11): leave dividends to Argus. The exchange card says so.
+- **Rehearsal** with the real token and the owner's real Safe owners and guardian, on a fork of Arc mainnet: all 24 deploy checks passed. Lock 1,000 → 1,000 Credits, with exactly 1,000 KAZI arriving (no transfer fee). Return 400 → 400 KAZI back. Fully backed throughout.
