@@ -1,0 +1,23 @@
+# Netlify config for a site linked at the repository root (no package directory set). A site whose
+# package directory is apps/web reads apps/web/netlify.toml instead; keep the two in sync.
+# The website is the Next.js app in apps/web; the API, worker and agents run on Railway.
+
+[build]
+  command = "pnpm --filter @kazi/web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  # Node 22 LTS; pnpm comes from package.json "packageManager" (pnpm@10.34.6) through corepack.
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+  # Public settings, inlined into the site at build time (none of these are secrets).
+  NEXT_PUBLIC_API_URL = "https://api.kazilabs.online"
+  NEXT_PUBLIC_FEATURE_BOND = "0"
+  # Netlify's proxy adds the visitor's ISO country code as x-country (docs/08 §7 geo hooks).
+  NEXT_PUBLIC_GEO_COUNTRY_HEADER = "x-country"
+  NEXT_PUBLIC_GEO_RESTRICTED_COUNTRIES = "US,CU,IR,KP,SY"
+
+# Netlify's Next.js adapter (OpenNext): declared so it runs even when Netlify doesn't detect
+# Next.js at the repository root. It finds the app through the build's required-server-files.json.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

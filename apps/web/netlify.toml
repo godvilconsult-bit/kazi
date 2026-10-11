@@ -2,6 +2,7 @@
 # The API, the worker and Kazi's agents need always-on servers and run on Railway (deploy/README.md).
 #
 # Netlify site settings: base directory = repository root (default), package directory = apps/web.
+# (A site linked at the root without a package directory uses ../netlify.toml; keep both in sync.)
 # Paths below are relative to the repository root.
 
 [build]
@@ -18,3 +19,7 @@
   # Netlify's proxy adds the visitor's ISO country code as x-country (docs/08 §7 geo hooks).
   NEXT_PUBLIC_GEO_COUNTRY_HEADER = "x-country"
   NEXT_PUBLIC_GEO_RESTRICTED_COUNTRIES = "US,CU,IR,KP,SY"
+
+# Netlify's Next.js adapter (OpenNext), declared explicitly so it always runs.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

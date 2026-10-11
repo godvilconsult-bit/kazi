@@ -80,7 +80,14 @@ It refuses to run if `mainnet.json` already exists, if a Safe owner or the guard
 3. Optional: add `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` under Project configuration → Environment variables, then redeploy. It's needed only for WalletConnect (mobile) wallets.
 4. **Domains:** Project configuration → Domain management → Add a domain → `www.kazilabs.online`, and set it as the primary domain. Add `kazilabs.online` too; Netlify redirects it to `www`. Netlify issues the HTTPS certificates.
 
-Every push to `main` rebuilds the site. Netlify's proxy adds the visitor's country as `x-country`, which the token pages' geo rules read (`netlify.toml`).
+Every push to `main` rebuilds the site.
+
+If the site shows Netlify's **"Page not found"**, the deploy ran without the Next.js app. In Project configuration → Build & deploy → Build settings:
+
+- **Base directory** must be empty (the repository root), never `apps/web`.
+- **Package directory** should be `apps/web`, or empty. With it empty, the root `netlify.toml` builds `apps/web` anyway.
+
+Then go to Deploys → **Trigger deploy → Clear cache and deploy site**. Both `netlify.toml` files declare the Next.js adapter, so it always runs. Netlify's proxy adds the visitor's country as `x-country`, which the token pages' geo rules read (`netlify.toml`).
 
 ## 4. DNS at Namecheap
 
