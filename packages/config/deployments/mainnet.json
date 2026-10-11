@@ -1,0 +1,12 @@
+{
+  "adminSafe": "0xe4bF1a867949ea0dB5bdb6ADf611B6f0299d0af3",
+  "agentRegistry": "0x10BAC5c3B04bC84cDda4C5c302F3fF7116C293C2",
+  "chainId": 5042,
+  "deployedAtBlock": 25362687,
+  "feeDistributor": "0xaB0e80CD4F091D976FA099EE0CEcbE14551fE1FA",
+  "kaziToken": "0xBeEF9ecDa2b9e16023D437d4d608d814230AfD1b",
+  "network": "mainnet",
+  "stakingVault": "0x3764a642b8E22cdAe93CF8d9CCe5b59F5db44f78",
+  "taskEscrow": "0xE83f9887742D1A8c84Aa5169cD3dcE57eC961039",
+  "usdc": "0x3600000000000000000000000000000000000000"
+}
