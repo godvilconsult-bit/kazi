@@ -156,7 +156,8 @@ const llm = trackLlmSpend(
 );
 if (env.KAZI_LLM_MOCK) log.warn("KAZI_LLM_MOCK=e2e: Claude is replaced by a scripted mock");
 const routerChain = createRouterChain(client, chain.chainId, deployment);
-// OPERATOR + QUOTER: KMS in production, dev keys locally (chain/signers.ts refuses them on mainnet).
+// OPERATOR + QUOTER: a KMS, or env keys (local, testnet, and mainnet only under the guarded-launch caps;
+// chain/signers.ts enforces it).
 const accounts = await loadSigners(env);
 const signer = createQuoteSigner(accounts.quoter, chain.chainId, deployment.taskEscrow);
 const operator = createEscrowOperator({

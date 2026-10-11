@@ -28,7 +28,7 @@
 ## 3. Key management
 
 - Admin: Safe multisig (≥ 3/5, hardware wallets, signers in different locations).
-- Backend signers (OPERATOR, QUOTER, REGISTRAR, SLASHER): separate keys, KMS (AWS KMS / GCP KMS with viem custom account) in production; never in plain env in prod.
+- Backend signers (OPERATOR, QUOTER, REGISTRAR, SLASHER): separate keys, KMS (AWS KMS / GCP KMS with viem custom account) in production. Exception, the guarded launch: the operator and quoter keys may be Railway secret variables while open escrow is capped at ≤ 10,000 USDC (enforced in `apps/worker/src/chain/signers.ts`; runbooks/deploy.md §4).
 - Document a key-compromise runbook: revoke role via Safe, rotate, pause new deposits, communicate.
 
 ## 4. Legal & compliance checklist (get professional advice — not legal advice)

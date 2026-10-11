@@ -4,12 +4,12 @@ This is the **guarded launch** (docs/09 §2.4): real USDC on Arc mainnet with un
 
 Hosting is Railway, project `kazi`, environment `production`. That environment already holds Postgres and Redis. There are four services built from the one root `Dockerfile`, and `KAZI_SERVICE` picks the role:
 
-| Service        | Public address                           | Talks to                                                                          |
-| -------------- | ---------------------------------------- | --------------------------------------------------------------------------------- |
-| `web`          | `https://www.kazilabs.online`            | API (public URL in browsers, `api.railway.internal:4000` from the server)         |
-| `api`          | `https://api.kazilabs.online`            | Postgres, Redis, Supabase storage, Arc RPC; runs migrations and the seed on start |
-| `worker`       | —                                        | Postgres, Redis, Claude, Arc RPC; signs as operator/quoter through AWS KMS        |
-| `house-agents` | — (`house-agents.railway.internal:4100`) | Claude only                                                                       |
+| Service        | Public address                           | Talks to                                                                           |
+| -------------- | ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| `web`          | `https://www.kazilabs.online`            | API (public URL in browsers, `api.railway.internal:4000` from the server)          |
+| `api`          | `https://api.kazilabs.online`            | Postgres, Redis, Supabase storage, Arc RPC; runs migrations and the seed on start  |
+| `worker`       | —                                        | Postgres, Redis, Claude, Arc RPC; signs as operator/quoter (keys: Railway secrets) |
+| `house-agents` | — (`house-agents.railway.internal:4100`) | Claude only                                                                        |
 
 Secrets live in two places: `.env.mainnet` (deployer and setup keys) and `.env.production` (service secrets). Both are git-ignored and are never uploaded: `.railwayignore` excludes them.
 
@@ -18,12 +18,14 @@ Secrets live in two places: `.env.mainnet` (deployer and setup keys) and `.env.p
 1. **Domain.** `kazilabs.online` (Namecheap). `.env.production` has `DOMAIN=kazilabs.online` and `SITE_HOST=www.kazilabs.online`.
 2. **Admin Safe owners.** Use 2–5 hardware wallets you control, with threshold ≥ 2 (3-of-5 recommended). None of them may be a key that sits on this computer.
 3. **Guardian wallet.** A separate wallet that can only _pause_ the escrow in an emergency (docs/runbooks/pause.md).
-4. **AWS KMS signers.** Create two asymmetric keys: key spec `ECC_SECG_P256K1`, usage `SIGN_VERIFY`. One is for the operator and one for the quoter. Then create an IAM user that is allowed only `kms:GetPublicKey` and `kms:Sign` on those two keys. Print their addresses:
+4. **Platform signers (operator and quoter).** Generate them once:
    ```bash
-   pnpm -F @kazi/worker kms-address -- <operator-key-id> <quoter-key-id>
+   pnpm -F @kazi/contracts signers:generate
    ```
-   This needs `AWS_REGION`, `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` in your shell.
-5. **Fill `.env.mainnet`**: `ADMIN_SAFE_OWNERS`, `ADMIN_SAFE_THRESHOLD`, `PAUSER_ADDRESS`, `OPERATOR_ADDRESS`, `QUOTER_ADDRESS` (the KMS addresses), optionally `TREASURY_ADDRESS` (default: the Safe), and `ARGUS_KAZI_ADDRESS`: the contract address of KAZI on Argus. Set that last one before deploying. The KAZI Credits supply then goes straight into the 1:1 exchange, and no Safe transaction is needed (docs/08-TOKENOMICS.md §8).
+   - The keys go into `.env.mainnet`. `railway-setup.mjs` pipes them to the worker as Railway secret variables.
+   - The worker accepts keys held this way on mainnet only with `ALLOW_PLAINTEXT_KEYS=true` and while `MAX_OPEN_ESCROW_USDC` is 10,000 or less (docs/runbooks/deploy.md §4).
+   - Before raising the caps further, move the signers to AWS KMS. Set `OPERATOR_KMS_KEY_ID`, `QUOTER_KMS_KEY_ID` and the `AWS_*` credentials in `.env.production`, then have the Safe grant the roles to the KMS addresses (`pnpm -F @kazi/worker kms-address -- <ids>`) and revoke the old keys.
+5. **Fill `.env.mainnet`**: `ADMIN_SAFE_OWNERS`, `ADMIN_SAFE_THRESHOLD`, `PAUSER_ADDRESS`, `OPERATOR_ADDRESS` and `QUOTER_ADDRESS` (written by step 4), optionally `TREASURY_ADDRESS` (default: the Safe), and `ARGUS_KAZI_ADDRESS`: the contract address of KAZI on Argus. Set that last one before deploying. The KAZI Credits supply then goes straight into the 1:1 exchange, and no Safe transaction is needed (docs/08-TOKENOMICS.md §8).
 6. **Fill `.env.production`**: copy [`production.env.example`](production.env.example) and fill it in.
 7. **Gas.** Arc pays gas in USDC. Send about 1 USDC to the deployer `0xF87AFe58EB6d0a794de62c568c37c59c7BB54e01` and about 0.5 USDC to the setup key `0x8f5f49Dcf29c2d5E6B82d3Ad96E6335294FC64D3`. After step 1 below, keep about 5 USDC on the operator address for releases and refunds; an alert fires below `ALERT_OPERATOR_MIN_GAS`.
 

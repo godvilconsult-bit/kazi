@@ -9,7 +9,7 @@ Never deploy to mainnet without: a completed external audit of the exact commit,
 - [ ] `pnpm install --frozen-lockfile && pnpm lint && pnpm typecheck && pnpm test` green; `pnpm -F contracts test:coverage` shows 100% lines on `TaskEscrow` and `StakingVault`.
 - [ ] The commit is tagged; for mainnet, the audited commit hash matches (`git diff <audited>..HEAD -- packages/contracts/src` is empty).
 - [ ] `docs/00-ARC-FACTS.md` re-checked for the target network (chain id, USDC address and decimals, fee floor).
-- [ ] Every signer key exists and is funded with native USDC for gas; production keys live in KMS (`SIGNER_BACKEND=aws-kms`, see §4).
+- [ ] Every signer key exists and is funded with native USDC for gas. Production keys live in a KMS (`SIGNER_BACKEND=aws-kms`), or as Railway secrets only during the guarded launch (see §4).
 - [ ] The admin Safe exists on the target network with the agreed owners and threshold (mainnet ≥ 3/5).
 
 ## 1. Contracts — testnet
@@ -51,9 +51,20 @@ Smoke test after every deploy: `/config` shows the right chain and contracts; si
 
 Rollback: redeploy the previous image; migrations are forward-only, so every migration must be backward compatible with the previous release (add columns nullable, backfill, then tighten in a later release).
 
-## 4. Production signers (KMS)
+## 4. Production signers
 
-Set `SIGNER_BACKEND=aws-kms` and `OPERATOR_KMS_KEY_ID` / `QUOTER_KMS_KEY_ID` (secp256k1 keys, `ECC_SECG_P256K1`, usage `SIGN_VERIFY`), with an IAM role that allows only `kms:Sign` and `kms:GetPublicKey` on those keys. The worker logs each signer's address at start; grant the roles to those addresses from the Safe. Plain `*_PRIVATE_KEY` variables are refused when `NODE_ENV=production` unless `ALLOW_PLAINTEXT_KEYS=true` (testnet only).
+**KMS (target).** Set `SIGNER_BACKEND=aws-kms` and `OPERATOR_KMS_KEY_ID` / `QUOTER_KMS_KEY_ID`: secp256k1 keys, `ECC_SECG_P256K1`, usage `SIGN_VERIFY`. Use an IAM role that allows only `kms:Sign` and `kms:GetPublicKey` on those keys. The worker logs each signer's address at start; grant the roles to those addresses from the Safe.
+
+**Railway secrets (guarded launch, owner's choice 2026-10-11).**
+- `pnpm -F @kazi/contracts signers:generate` writes fresh operator and quoter keys into `.env.mainnet`. `deploy/railway-setup.mjs` sets them on the worker as secret variables, with `SIGNER_BACKEND=env` and `ALLOW_PLAINTEXT_KEYS=true`.
+- On mainnet the worker refuses such keys unless `MAX_TASK_USDC` and `MAX_OPEN_ESCROW_USDC` are set and open escrow is capped at **10,000 USDC or less** (`apps/worker/src/chain/signers.ts`). Raising the cap past that forces the move to a KMS.
+- The trade-off: anyone with access to the Railway project, or to the worker's container, can copy these keys and sign with them until the Safe revokes the roles.
+- What a stolen key can do is limited:
+  - The operator can only release, refund or reassign funded milestones, and only to registered payout addresses.
+  - The quoter can only sign quotes, which clients still have to fund.
+- Protect the Railway account with two-factor authentication, keep the operator's gas balance small, and rotate as in [key-compromise.md](key-compromise.md).
+
+Outside mainnet, plain `*_PRIVATE_KEY` variables are refused when `NODE_ENV=production` unless `ALLOW_PLAINTEXT_KEYS=true`.
 
 ## 5. Monitoring on
 

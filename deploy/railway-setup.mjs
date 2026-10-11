@@ -3,8 +3,9 @@
 //
 //   node deploy/railway-setup.mjs            # needs .env.production and packages/config/deployments/mainnet.json
 //
-// Secrets are read from the git-ignored .env.production and piped to Railway on stdin — they are
-// never printed or passed on a command line. Deploying is a separate step (deploy/README.md).
+// Secrets are read from the git-ignored .env.production (and the platform signer keys from
+// .env.mainnet) and piped to Railway on stdin — never printed or passed on a command line. Deploying
+// is a separate step (deploy/README.md).
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
@@ -14,6 +15,7 @@ import process from "node:process";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const ENV_FILE = resolve(ROOT, ".env.production");
+const MAINNET_ENV_FILE = resolve(ROOT, ".env.mainnet");
 const DEPLOYMENT = resolve(ROOT, "packages/config/deployments/mainnet.json");
 const ENVIRONMENT = "production";
 const SERVICES = ["api", "worker", "house-agents", "web"];
@@ -59,14 +61,34 @@ const required = [
   "ANTHROPIC_API_KEY",
   "SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
-  "AWS_REGION",
-  "AWS_ACCESS_KEY_ID",
-  "AWS_SECRET_ACCESS_KEY",
-  "OPERATOR_KMS_KEY_ID",
-  "QUOTER_KMS_KEY_ID",
 ];
 const missing = required.filter((k) => !env[k]);
 if (missing.length) throw new Error(`.env.production is missing: ${missing.join(", ")}`);
+
+// Platform signers (docs/runbooks/deploy.md §4): AWS KMS when its key ids are set; otherwise the keys
+// in .env.mainnet (`pnpm -F @kazi/contracts signers:generate`), held as Railway secrets. The worker
+// accepts those on mainnet only while open escrow is capped at 10,000 USDC or less.
+const kms = Boolean(env.OPERATOR_KMS_KEY_ID && env.QUOTER_KMS_KEY_ID);
+if (kms) {
+  const miss = ["AWS_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"].filter((k) => !env[k]);
+  if (miss.length) throw new Error(`KMS signers need ${miss.join(", ")} in .env.production`);
+} else {
+  const mainnetEnv = readEnv(MAINNET_ENV_FILE);
+  for (const k of ["OPERATOR_PRIVATE_KEY", "QUOTER_PRIVATE_KEY"]) {
+    if (!/^0x[0-9a-fA-F]{64}$/.test(mainnetEnv[k] ?? ""))
+      throw new Error(
+        `.env.mainnet has no ${k}: run \`pnpm -F @kazi/contracts signers:generate\` (or set the KMS key ids)`,
+      );
+    env[k] = mainnetEnv[k]; // in memory only; piped to the worker below
+  }
+  const units = (v) => {
+    if (!/^\d+(\.\d+)?$/.test(v)) throw new Error(`not a USDC amount: ${v}`);
+    const [whole, fraction = ""] = v.split(".");
+    return BigInt(whole) * 10n ** 18n + BigInt((fraction + "0".repeat(18)).slice(0, 18));
+  };
+  if (units(env.MAX_OPEN_ESCROW_USDC || "2000") > units("10000"))
+    throw new Error("Railway-held signer keys need MAX_OPEN_ESCROW_USDC ≤ 10000: use KMS first");
+}
 const hostname = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
 if (!hostname.test(env.DOMAIN) || env.DOMAIN.startsWith("www."))
   throw new Error(`DOMAIN must be the bare domain (e.g. kazilabs.online), got: ${env.DOMAIN}`);
@@ -78,6 +100,29 @@ if (!existsSync(DEPLOYMENT))
   throw new Error("deploy the contracts first: pnpm -F @kazi/contracts deploy:mainnet");
 const deployment = JSON.parse(readFileSync(DEPLOYMENT, "utf8"));
 const safe = deployment.adminSafe;
+
+// The private files bucket in Supabase Storage (signed URLs only); created once, idempotent.
+const bucket = env.STORAGE_BUCKET || "kazi-files-prod";
+const bucketRes = await globalThis.fetch(
+  `${env.SUPABASE_URL.replace(/\/$/, "")}/storage/v1/bucket`,
+  {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ id: bucket, name: bucket, public: false }),
+  },
+);
+if (bucketRes.ok) console.log(`created private storage bucket ${bucket}`);
+else {
+  const body = await bucketRes.text();
+  if (!/already exists/i.test(body))
+    throw new Error(
+      `creating storage bucket ${bucket} failed: ${bucketRes.status} ${body.slice(0, 200)}`,
+    );
+}
 
 // Generated once, then kept in .env.production so re-runs don't log everyone out.
 const generated = {
@@ -128,10 +173,14 @@ const plain = {
   worker: {
     ...shared,
     KAZI_SERVICE: "worker",
-    SIGNER_BACKEND: "aws-kms",
-    AWS_REGION: env.AWS_REGION,
-    OPERATOR_KMS_KEY_ID: env.OPERATOR_KMS_KEY_ID,
-    QUOTER_KMS_KEY_ID: env.QUOTER_KMS_KEY_ID,
+    ...(kms
+      ? {
+          SIGNER_BACKEND: "aws-kms",
+          AWS_REGION: env.AWS_REGION,
+          OPERATOR_KMS_KEY_ID: env.OPERATOR_KMS_KEY_ID,
+          QUOTER_KMS_KEY_ID: env.QUOTER_KMS_KEY_ID,
+        }
+      : { SIGNER_BACKEND: "env", ALLOW_PLAINTEXT_KEYS: "true" }),
     // Guarded launch: small caps, Kazi's own agents only (no slug matches this allowlist entry).
     MAX_TASK_USDC: env.MAX_TASK_USDC || "100",
     MAX_OPEN_ESCROW_USDC: env.MAX_OPEN_ESCROW_USDC || "2000",
@@ -173,8 +222,9 @@ const secrets = {
     "ENCRYPTION_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "ANTHROPIC_API_KEY",
-    "AWS_ACCESS_KEY_ID",
-    "AWS_SECRET_ACCESS_KEY",
+    ...(kms
+      ? ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
+      : ["OPERATOR_PRIVATE_KEY", "QUOTER_PRIVATE_KEY"]),
     "METRICS_TOKEN",
     "SENTRY_DSN",
     "ALERT_WEBHOOK_URL",
@@ -232,6 +282,7 @@ for (const s of SERVICES) {
   }
   console.log(`${s}: ${pairs.length} settings + ${n} secrets set`);
 }
+console.log(`worker signers: ${kms ? "AWS KMS" : "Railway secrets (keys from .env.mainnet)"}`);
 console.log(
   `\nNext: deploy each service (deploy/README.md), then point ${site} and api.${env.DOMAIN} at Railway.`,
 );

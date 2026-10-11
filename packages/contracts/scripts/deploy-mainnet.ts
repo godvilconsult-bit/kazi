@@ -10,8 +10,9 @@
  *   ADMIN_SAFE_OWNERS      comma-separated owner addresses of the admin Safe (hardware wallets)
  *   ADMIN_SAFE_THRESHOLD   signatures required (≥ 2 unless --allow-single-signer)
  *   PAUSER_ADDRESS         guardian wallet that can pause the escrow (not unpause)
- *   OPERATOR_ADDRESS       KMS-held operator (pnpm -F @kazi/worker kms-address -- <key id>)
- *   QUOTER_ADDRESS         KMS-held quoter
+ *   OPERATOR_ADDRESS       operator signer: `pnpm -F @kazi/contracts signers:generate` (key held as a
+ *                          Railway secret, guarded launch) or a KMS key (pnpm -F @kazi/worker kms-address)
+ *   QUOTER_ADDRESS         quoter signer, same
  * Optional: ADMIN_SAFE (reuse an existing Safe), TREASURY_ADDRESS (default: the Safe),
  *           FEE_BPS (default 1200), ARC_RPC_URL,
  *           ARGUS_KAZI_ADDRESS  the KAZI launched on Argus (docs/08-TOKENOMICS.md §8). When set, the
@@ -404,8 +405,8 @@ const checks: [string, Promise<boolean>][] = [
   ["vault admin = Safe", has(vault, ADMIN_ROLE, adminSafe)],
   ["fee distributor admin = Safe", has(distributor, ADMIN_ROLE, adminSafe)],
   ["escrow arbiter = Safe", has(escrow, arbiter, adminSafe)],
-  ["escrow operator = KMS operator", has(escrow, operatorRole, operator)],
-  ["escrow quoter = KMS quoter", has(escrow, quoterRole, quoter)],
+  ["escrow operator = operator signer", has(escrow, operatorRole, operator)],
+  ["escrow quoter = quoter signer", has(escrow, quoterRole, quoter)],
   ["escrow pauser = guardian", has(escrow, pauserRole, pauser)],
   ["registrar = setup key", has(registry, registrarRole, setup)],
   ["registrar = first Safe owner", has(registry, registrarRole, owners[0] as Address)],

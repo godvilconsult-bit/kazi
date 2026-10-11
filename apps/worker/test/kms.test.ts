@@ -132,7 +132,7 @@ describe("signer policy", () => {
     ALLOW_PLAINTEXT_KEYS: false,
   } as const;
 
-  it("uses dev keys locally, refuses them in production unless allowed, and never on mainnet", async () => {
+  it("uses dev keys locally and refuses them in production unless allowed", async () => {
     const accounts = await loadSigners({
       ...base,
       OPERATOR_PRIVATE_KEY: KEYS.operator,
@@ -153,16 +153,34 @@ describe("signer policy", () => {
         ALLOW_PLAINTEXT_KEYS: true,
       }),
     ).not.toThrow();
-    expect(() =>
-      plaintextAllowed({
-        NODE_ENV: "production",
-        KAZI_NETWORK: "mainnet",
-        ALLOW_PLAINTEXT_KEYS: true,
-      }),
-    ).toThrow(/KMS/);
     await expect(loadSigners({ ...base, SIGNER_BACKEND: "aws-kms" })).rejects.toThrow(
       /OPERATOR_KMS_KEY_ID/,
     );
+  });
+
+  it("allows env keys on mainnet only when opted in and under the guarded-launch caps", async () => {
+    const mainnet = {
+      NODE_ENV: "production",
+      KAZI_NETWORK: "mainnet",
+      ALLOW_PLAINTEXT_KEYS: true,
+      MAX_TASK_USDC: "100",
+      MAX_OPEN_ESCROW_USDC: "2000",
+    } as const;
+    expect(() => plaintextAllowed(mainnet)).not.toThrow();
+    expect(() => plaintextAllowed({ ...mainnet, MAX_OPEN_ESCROW_USDC: "10000" })).not.toThrow();
+    expect(() => plaintextAllowed({ ...mainnet, ALLOW_PLAINTEXT_KEYS: false })).toThrow(/KMS/);
+    expect(() => plaintextAllowed({ ...mainnet, MAX_TASK_USDC: undefined })).toThrow(/caps/);
+    expect(() => plaintextAllowed({ ...mainnet, MAX_OPEN_ESCROW_USDC: undefined })).toThrow(/caps/);
+    expect(() => plaintextAllowed({ ...mainnet, MAX_OPEN_ESCROW_USDC: "10000.01" })).toThrow(
+      /KMS first/,
+    );
+    const accounts = await loadSigners({
+      ...mainnet,
+      SIGNER_BACKEND: "env",
+      OPERATOR_PRIVATE_KEY: KEYS.operator,
+      QUOTER_PRIVATE_KEY: KEYS.quoter,
+    });
+    expect(accounts.quoter.address).toBe(privateKeyToAccount(KEYS.quoter).address);
   });
 });
 

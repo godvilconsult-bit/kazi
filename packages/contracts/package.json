@@ -18,7 +18,8 @@
     "deploy:testnet": "tsx scripts/deploy-testnet.ts",
     "deploy:mainnet": "tsx scripts/deploy-mainnet.ts",
     "token-launch:local": "node scripts/token-launch-local.mjs",
-    "credits-gate:local": "node scripts/credits-gate-local.mjs"
+    "credits-gate:local": "node scripts/credits-gate-local.mjs",
+    "signers:generate": "tsx scripts/generate-signers.ts"
   },
   "devDependencies": {
     "@kazi/config": "workspace:*",

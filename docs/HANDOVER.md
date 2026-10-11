@@ -73,7 +73,7 @@ You asked me to pick the recommended option whenever there was a question. Each 
 
 **Hardening (Phase 7)**
 - A guardian wallet (`PAUSER_ROLE`) can pause the escrow; only the Safe can unpause [03 §9, runbooks/pause].
-- AWS KMS is the first signer backend (secp256k1, viem custom account); plaintext keys are refused on mainnet and in production without an explicit testnet override [runbooks/deploy §4].
+- AWS KMS is the target signer backend (secp256k1, viem custom account). For the guarded launch you chose Railway-held keys instead of AWS (2026-10-11). The worker allows them on mainnet only with `ALLOW_PLAINTEXT_KEYS=true` and open escrow capped at ≤ 10,000 USDC; move to KMS before raising the caps [runbooks/deploy §4].
 - Guarded-launch caps are enforced when quoting (backend), not onchain, to keep the audited escrow unchanged [09 §6].
 - Sanctions screening uses Chainalysis' free API and fails open (configurable) so an outage there doesn't lock everyone out [09 §6].
 - `TRUST_PROXY` defaults to off; production sets the proxy hop count [runbooks/deploy §5].
