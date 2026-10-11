@@ -6,8 +6,8 @@ Hosting is Railway, project `kazi`, environment `production`. That environment a
 
 | Service        | Public address                           | Talks to                                                                          |
 | -------------- | ---------------------------------------- | --------------------------------------------------------------------------------- |
-| `web`          | `https://DOMAIN`                         | API (public URL in browsers, `api.railway.internal:4000` from the server)         |
-| `api`          | `https://api.DOMAIN`                     | Postgres, Redis, Supabase storage, Arc RPC; runs migrations and the seed on start |
+| `web`          | `https://www.kazilabs.online`            | API (public URL in browsers, `api.railway.internal:4000` from the server)         |
+| `api`          | `https://api.kazilabs.online`            | Postgres, Redis, Supabase storage, Arc RPC; runs migrations and the seed on start |
 | `worker`       | —                                        | Postgres, Redis, Claude, Arc RPC; signs as operator/quoter through AWS KMS        |
 | `house-agents` | — (`house-agents.railway.internal:4100`) | Claude only                                                                       |
 
@@ -15,7 +15,7 @@ Secrets live in two places: `.env.mainnet` (deployer and setup keys) and `.env.p
 
 ## 0. What only you can do (once)
 
-1. **Domain.** Pick the name (e.g. `kazi.example`). Put its DNS on Cloudflare if you can: the site then gets the visitor country header (`cf-ipcountry`) used by the geo rules.
+1. **Domain.** `kazilabs.online` (Namecheap). `.env.production` has `DOMAIN=kazilabs.online` and `SITE_HOST=www.kazilabs.online`.
 2. **Admin Safe owners.** Use 2–5 hardware wallets you control, with threshold ≥ 2 (3-of-5 recommended). None of them may be a key that sits on this computer.
 3. **Guardian wallet.** A separate wallet that can only _pause_ the escrow in an emergency (docs/runbooks/pause.md).
 4. **AWS KMS signers.** Create two asymmetric keys: key spec `ECC_SECG_P256K1`, usage `SIGN_VERIFY`. One is for the operator and one for the quoter. Then create an IAM user that is allowed only `kms:GetPublicKey` and `kms:Sign` on those two keys. Print their addresses:
@@ -70,14 +70,17 @@ Watch with `railway logs --service api --environment production`. On start, the 
 ## 4. Domains
 
 ```bash
-railway domain DOMAIN --service web --environment production
-railway domain api.DOMAIN --service api --environment production
+railway domain www.kazilabs.online --service web --environment production
+railway domain api.kazilabs.online --service api --environment production
 ```
 
-Each command prints the DNS records to add: a CNAME and a TXT verification record. Railway issues the certificates. On Cloudflare:
+Each command prints the DNS records to add: a CNAME and a TXT verification record. Railway issues the certificates once DNS resolves. In Namecheap, go to **Domain List → kazilabs.online → Advanced DNS**:
 
-- Proxy `DOMAIN` (orange cloud, SSL mode **Full**). The site then receives the visitor-country header.
-- Set `api.DOMAIN` to **DNS only** (grey cloud). The API then sits behind exactly one proxy (Railway's), which is what `TRUST_PROXY=1` assumes. If you proxy it too, set `TRUST_PROXY=2` on the api service.
+1. Delete the parking records: the `www` CNAME to `parkingpage.namecheap.com` and the `@` URL redirect or A record.
+2. Add a CNAME `www` and a CNAME `api` with the targets Railway printed, plus Railway's TXT records.
+3. Add a **URL Redirect Record** for host `@`, permanent (301), to `https://www.kazilabs.online`. The bare domain then lands on the site. Sign-in and the API only accept `www.kazilabs.online` as the site's origin.
+
+Optional, later: move the DNS to Cloudflare (free). If you do, proxy `www` (SSL mode **Full**), and the site gets the visitor-country header used by the token pages' geo rules. Keep `api` **DNS only**, since `TRUST_PROXY=1` assumes Railway is the only proxy in front of the API; set `TRUST_PROXY=2` if you proxy it. Without Cloudflare the geo rules aren't enforced. That is acceptable while the token isn't public.
 
 ## 5. Register the house agents onchain
 
@@ -91,8 +94,8 @@ It uses the setup key from `.env.mainnet` and the production database's public U
 
 ## 6. Smoke test
 
-- `https://api.DOMAIN/health` returns ok, and `/config` shows chain 5042 and the mainnet addresses.
-- Sign in on `https://DOMAIN` with an admin wallet; the admin page shows the queues and the guarded-launch limits.
+- `https://api.kazilabs.online/health` returns ok, and `/config` shows chain 5042 and the mainnet addresses.
+- Sign in on `https://www.kazilabs.online` with an admin wallet; the admin page shows the queues and the guarded-launch limits.
 - Post a 1 USDC task, fund it, let a house agent deliver, approve it. Then check the release on the explorer and the Safe's balance.
 - Try a 150 USDC task: quoting must refuse it (above `MAX_TASK_USDC`).
 
@@ -101,3 +104,4 @@ It uses the setup key from `.env.mainnet` and the production database's public U
 - Pause: [runbooks/pause.md](../docs/runbooks/pause.md).
 - Incidents: [runbooks/incident-response.md](../docs/runbooks/incident-response.md). Set `ROUTER_DISABLED=true` on api and worker to stop new quotes.
 - Key rotation: [runbooks/key-compromise.md](../docs/runbooks/key-compromise.md).
+- The KAZI token contract is deployed with the others. Its whole supply sits in the admin Safe, and it is **not for sale** until the token launch (docs/08 §4, after volume and legal review). Anyone can create another token called "KAZI", for example on a launchpad. Only the address in `packages/config/deployments/mainnet.json` is Kazi's, so publish it once deployed.

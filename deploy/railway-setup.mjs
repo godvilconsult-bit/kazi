@@ -67,8 +67,13 @@ const required = [
 ];
 const missing = required.filter((k) => !env[k]);
 if (missing.length) throw new Error(`.env.production is missing: ${missing.join(", ")}`);
-if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(env.DOMAIN))
-  throw new Error(`DOMAIN looks wrong: ${env.DOMAIN}`);
+const hostname = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
+if (!hostname.test(env.DOMAIN) || env.DOMAIN.startsWith("www."))
+  throw new Error(`DOMAIN must be the bare domain (e.g. kazilabs.online), got: ${env.DOMAIN}`);
+// The site's own host: the bare domain, or a subdomain of it such as www.
+const site = env.SITE_HOST || env.DOMAIN;
+if (!hostname.test(site) || (site !== env.DOMAIN && !site.endsWith(`.${env.DOMAIN}`)))
+  throw new Error(`SITE_HOST must be ${env.DOMAIN} or a subdomain of it, got: ${site}`);
 if (!existsSync(DEPLOYMENT))
   throw new Error("deploy the contracts first: pnpm -F @kazi/contracts deploy:mainnet");
 const deployment = JSON.parse(readFileSync(DEPLOYMENT, "utf8"));
@@ -89,7 +94,7 @@ for (const [k, make] of Object.entries(generated)) {
   }
 }
 
-const app = `https://${env.DOMAIN}`;
+const app = `https://${site}`;
 const api = `https://api.${env.DOMAIN}`;
 const shared = {
   NODE_ENV: "production",
@@ -228,5 +233,5 @@ for (const s of SERVICES) {
   console.log(`${s}: ${pairs.length} settings + ${n} secrets set`);
 }
 console.log(
-  `\nNext: deploy each service (deploy/README.md), then point ${env.DOMAIN} and api.${env.DOMAIN} at Railway.`,
+  `\nNext: deploy each service (deploy/README.md), then point ${site} and api.${env.DOMAIN} at Railway.`,
 );
