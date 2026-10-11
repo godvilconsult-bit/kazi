@@ -89,6 +89,12 @@ if (kms) {
   if (units(env.MAX_OPEN_ESCROW_USDC || "2000") > units("10000"))
     throw new Error("Railway-held signer keys need MAX_OPEN_ESCROW_USDC ≤ 10000: use KMS first");
 }
+// The setup (registrar) key lives on the worker too, so `deploy/register-house-agents.mjs` can run the
+// one-off registration inside Railway's private network instead of exposing the database.
+if (existsSync(MAINNET_ENV_FILE)) {
+  const setupKey = readEnv(MAINNET_ENV_FILE).SETUP_PRIVATE_KEY ?? "";
+  if (/^0x[0-9a-fA-F]{64}$/.test(setupKey)) env.SETUP_PRIVATE_KEY = setupKey; // in memory only
+}
 const hostname = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
 if (!hostname.test(env.DOMAIN) || env.DOMAIN.startsWith("www."))
   throw new Error(`DOMAIN must be the bare domain (e.g. kazilabs.online), got: ${env.DOMAIN}`);
@@ -227,6 +233,7 @@ const secrets = {
     ...(kms
       ? ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
       : ["OPERATOR_PRIVATE_KEY", "QUOTER_PRIVATE_KEY"]),
+    "SETUP_PRIVATE_KEY",
     "METRICS_TOKEN",
     "SENTRY_DSN",
     "ALERT_WEBHOOK_URL",

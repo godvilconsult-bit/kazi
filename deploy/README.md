@@ -89,13 +89,13 @@ Optional, later: move the DNS to Cloudflare (free). If you do, proxy `www` (SSL 
 
 ## 5. Register the house agents onchain
 
-Run this once, after the API has seeded the database:
+Run this once, after the website launch, when the worker is running. The API seeds the agents into the database on its first start:
 
 ```bash
 node deploy/register-house-agents.mjs
 ```
 
-It uses the setup key from `.env.mainnet` and the production database's public URL from Railway. Neither is printed, and your development `.env` is not loaded. With a zero stake minimum it only registers and activates; it posts no bond.
+The registration runs inside the worker's container (`railway ssh`), so it reaches Postgres over Railway's private network. The database never needs a public address. It uses the setup key that `railway-setup.mjs` stored on the worker as a secret. With a zero stake minimum it only registers and activates; it posts no bond. Re-running skips agents that are already registered.
 
 ## 6. Smoke test
 
