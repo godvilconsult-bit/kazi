@@ -7,8 +7,10 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH NEXT_TELEMETRY_DISABLED=1 CI=true
-RUN corepack enable && corepack prepare pnpm@10.34.6 --activate
+ENV NEXT_TELEMETRY_DISABLED=1 CI=true
+# pnpm straight from npm, pinned to package.json's packageManager. The corepack bundled with
+# Node 22.12 can't verify npm's rotated registry signing keys ("Cannot find matching keyid").
+RUN npm install -g pnpm@10.34.6
 
 WORKDIR /app
 COPY . .

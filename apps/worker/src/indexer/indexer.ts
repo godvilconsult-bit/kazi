@@ -23,6 +23,10 @@ const CONTRACTS: readonly { key: keyof Deployment; kind: ContractKind; abi: Abi 
   { key: "feeDistributor", kind: "FeeDistributor", abi: feeDistributorAbi },
 ];
 
+/** The cursor row the indexer keeps per chain and deployment (IndexerCursor.id). */
+export const indexerCursorId = (chainId: number, deployment: Pick<Deployment, "taskEscrow">) =>
+  `${chainId}:${deployment.taskEscrow.toLowerCase()}`;
+
 /** Polls eth_getLogs → ChainEvent (unique per chain/tx/logIndex) → state processors. Idempotent. */
 export class ChainIndexer {
   private readonly byAddress = new Map<string, { kind: ContractKind; abi: Abi }>();
@@ -39,7 +43,7 @@ export class ChainIndexer {
     for (const c of CONTRACTS) {
       this.byAddress.set(String(deployment[c.key]).toLowerCase(), { kind: c.kind, abi: c.abi });
     }
-    this.cursorId = `${opts.chainId}:${deployment.taskEscrow.toLowerCase()}`;
+    this.cursorId = indexerCursorId(opts.chainId, deployment);
   }
 
   /** Index one batch of confirmed blocks. Returns the scanned range (or null if up to date). */

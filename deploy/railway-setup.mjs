@@ -1,11 +1,13 @@
-// Creates Kazi's services in the Railway `production` environment and sets their variables for
-// Arc mainnet (guarded launch). Idempotent: re-run after changing .env.production.
+// Creates Kazi's backend services (api, worker, house-agents) in the Railway `production`
+// environment and sets their variables for Arc mainnet (guarded launch). Railway builds and deploys
+// them from GitHub; the website is on Netlify (apps/web/netlify.toml). Idempotent: re-run after
+// changing .env.production.
 //
 //   node deploy/railway-setup.mjs            # needs .env.production and packages/config/deployments/mainnet.json
 //
 // Secrets are read from the git-ignored .env.production (and the platform signer keys from
-// .env.mainnet) and piped to Railway on stdin — never printed or passed on a command line. Deploying
-// is a separate step (deploy/README.md).
+// .env.mainnet) and piped to Railway on stdin — never printed or passed on a command line. This
+// script deploys nothing (deploy/README.md).
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
@@ -18,7 +20,7 @@ const ENV_FILE = resolve(ROOT, ".env.production");
 const MAINNET_ENV_FILE = resolve(ROOT, ".env.mainnet");
 const DEPLOYMENT = resolve(ROOT, "packages/config/deployments/mainnet.json");
 const ENVIRONMENT = "production";
-const SERVICES = ["api", "worker", "house-agents", "web"];
+const SERVICES = ["api", "worker", "house-agents"];
 
 function railwayBin() {
   const exe = join(
@@ -205,16 +207,6 @@ const plain = {
     PORT: "4100",
     HOUSE_AGENTS_BASE_URL: "http://house-agents.railway.internal:4100",
   },
-  web: {
-    KAZI_SERVICE: "web",
-    PORT: "3000",
-    NODE_ENV: "production",
-    NEXT_PUBLIC_API_URL: api,
-    API_URL_INTERNAL: "http://api.railway.internal:4000",
-    NEXT_PUBLIC_FEATURE_BOND: "0", // no provider bonds before the token launch
-    GEO_RESTRICTED_COUNTRIES: "US,CU,IR,KP,SY",
-    GEO_COUNTRY_HEADER: "cf-ipcountry", // put Cloudflare (proxied) in front of the domain
-  },
 };
 const secrets = {
   api: [
@@ -239,7 +231,6 @@ const secrets = {
     "ALERT_WEBHOOK_URL",
   ],
   "house-agents": ["HOUSE_AGENTS_SECRET", "ANTHROPIC_API_KEY"],
-  web: ["NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID"],
 };
 
 // ── Services ─────────────────────────────────────────────────────────────────
@@ -293,5 +284,6 @@ for (const s of SERVICES) {
 }
 console.log(`worker signers: ${kms ? "AWS KMS" : "Railway secrets (keys from .env.mainnet)"}`);
 console.log(
-  `\nNext: deploy each service (deploy/README.md), then point ${site} and api.${env.DOMAIN} at Railway.`,
+  "\nRailway deploys api, worker and house-agents from GitHub (connect each service to the repo once)." +
+    `\nThe site ${site} is on Netlify; api.${env.DOMAIN} points at Railway (deploy/README.md).`,
 );

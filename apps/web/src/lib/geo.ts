@@ -32,10 +32,25 @@ export function geoFor(
   return { country, restricted: country !== null && restrictedList.includes(country) };
 }
 
+/**
+ * Geo settings: runtime variables first, then the NEXT_PUBLIC_ copies Next.js inlines at build time.
+ * The copies are for hosts whose config file only sets build variables (netlify.toml); neither
+ * value is secret.
+ */
+function geoEnv(): Record<string, string | undefined> {
+  return {
+    GEO_COUNTRY_HEADER:
+      process.env["GEO_COUNTRY_HEADER"] || process.env["NEXT_PUBLIC_GEO_COUNTRY_HEADER"],
+    GEO_RESTRICTED_COUNTRIES:
+      process.env["GEO_RESTRICTED_COUNTRIES"] ??
+      process.env["NEXT_PUBLIC_GEO_RESTRICTED_COUNTRIES"],
+  };
+}
+
 /** Server side: read the configured header from the incoming request. */
 export function geoFromHeaders(
   headers: { get(name: string): string | null },
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = geoEnv(),
 ): Geo {
   const header = (env["GEO_COUNTRY_HEADER"] || DEFAULT_COUNTRY_HEADER).toLowerCase();
   return geoFor(headers.get(header), parseCountryList(env["GEO_RESTRICTED_COUNTRIES"]));

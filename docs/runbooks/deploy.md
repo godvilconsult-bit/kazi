@@ -37,6 +37,8 @@ Reads the git-ignored `.env.testnet` (never printed). It creates or reuses the a
 
 ## 3. Application
 
+Production hosting (2026-10-11): the website on **Netlify** (`apps/web/netlify.toml`), and the API, worker and house agents on **Railway**, both deploying from GitHub `main` ([deploy/README.md](../../deploy/README.md)). The commands below are what those platforms run.
+
 Order: database migrations → API → worker → web. Each service reads the same `KAZI_NETWORK` and `DEPLOYMENTS_DIR`.
 
 ```bash
@@ -56,7 +58,7 @@ Rollback: redeploy the previous image; migrations are forward-only, so every mig
 **KMS (target).** Set `SIGNER_BACKEND=aws-kms` and `OPERATOR_KMS_KEY_ID` / `QUOTER_KMS_KEY_ID`: secp256k1 keys, `ECC_SECG_P256K1`, usage `SIGN_VERIFY`. Use an IAM role that allows only `kms:Sign` and `kms:GetPublicKey` on those keys. The worker logs each signer's address at start; grant the roles to those addresses from the Safe.
 
 **Railway secrets (guarded launch, owner's choice 2026-10-11).**
-- `pnpm -F @kazi/contracts signers:generate` writes fresh operator and quoter keys into `.env.mainnet`. `deploy/railway-setup.mjs` sets them on the worker as secret variables, with `SIGNER_BACKEND=env` and `ALLOW_PLAINTEXT_KEYS=true`. It also sets the setup (registrar) key there, so `deploy/register-house-agents.mjs` can register Kazi's agents from inside Railway's private network (`railway ssh`) without exposing the database.
+- `pnpm -F @kazi/contracts signers:generate` writes fresh operator and quoter keys into `.env.mainnet`. `deploy/railway-setup.mjs` sets them on the worker as secret variables, with `SIGNER_BACKEND=env` and `ALLOW_PLAINTEXT_KEYS=true`. It also sets the setup (registrar) key there, so the worker registers and activates Kazi's own agents by itself after the first deploy (`apps/worker/src/setup/auto-register.ts`). That needs no manual step and never exposes the database.
 - On mainnet the worker refuses such keys unless `MAX_TASK_USDC` and `MAX_OPEN_ESCROW_USDC` are set and open escrow is capped at **10,000 USDC or less** (`apps/worker/src/chain/signers.ts`). Raising the cap past that forces the move to a KMS.
 - The trade-off: anyone with access to the Railway project, or to the worker's container, can copy these keys and sign with them until the Safe revokes the roles.
 - What a stolen key can do is limited:

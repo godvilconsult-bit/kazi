@@ -1,0 +1,20 @@
+# The website (Next.js) on Netlify. Netlify's Next.js adapter (OpenNext) is applied automatically.
+# The API, the worker and Kazi's agents need always-on servers and run on Railway (deploy/README.md).
+#
+# Netlify site settings: base directory = repository root (default), package directory = apps/web.
+# Paths below are relative to the repository root.
+
+[build]
+  command = "pnpm --filter @kazi/web build"
+  publish = "apps/web/.next"
+
+[build.environment]
+  # Node 22 LTS; pnpm comes from package.json "packageManager" (pnpm@10.34.6) through corepack.
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+  # Public settings, inlined into the site at build time (none of these are secrets).
+  NEXT_PUBLIC_API_URL = "https://api.kazilabs.online"
+  NEXT_PUBLIC_FEATURE_BOND = "0"
+  # Netlify's proxy adds the visitor's ISO country code as x-country (docs/08 §7 geo hooks).
+  NEXT_PUBLIC_GEO_COUNTRY_HEADER = "x-country"
+  NEXT_PUBLIC_GEO_RESTRICTED_COUNTRIES = "US,CU,IR,KP,SY"

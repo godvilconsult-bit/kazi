@@ -118,6 +118,23 @@ describe("geo restriction", () => {
     ).toEqual({ country: "TZ", restricted: false });
     expect(geoFromHeaders(h, {})).toEqual({ country: "US", restricted: false });
   });
+
+  it("falls back to the build-time NEXT_PUBLIC_ settings (netlify.toml) when runtime ones are unset", () => {
+    const headers = new Map([["x-country", "US"]]);
+    const h = { get: (name: string) => headers.get(name) ?? null };
+    const saved = { ...process.env };
+    try {
+      delete process.env["GEO_COUNTRY_HEADER"];
+      delete process.env["GEO_RESTRICTED_COUNTRIES"];
+      process.env["NEXT_PUBLIC_GEO_COUNTRY_HEADER"] = "x-country";
+      process.env["NEXT_PUBLIC_GEO_RESTRICTED_COUNTRIES"] = "US,CU";
+      expect(geoFromHeaders(h)).toEqual({ country: "US", restricted: true });
+      process.env["GEO_RESTRICTED_COUNTRIES"] = "CU"; // runtime settings win
+      expect(geoFromHeaders(h)).toEqual({ country: "US", restricted: false });
+    } finally {
+      process.env = saved;
+    }
+  });
 });
 
 describe("token name", () => {

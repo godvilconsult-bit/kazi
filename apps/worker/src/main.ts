@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { DelayedError, Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import { pino } from "pino";
-import { createPublicClient, defineChain, http } from "viem";
+import { createPublicClient, defineChain, http, type Hex } from "viem";
 import { z } from "zod";
 import {
   authEnvSchema,
@@ -23,7 +23,7 @@ import { SecretBox } from "@kazi/config/secrets";
 import { createPrismaClient } from "@kazi/db";
 import { formatUnits, jobSchemas } from "@kazi/shared";
 import { createEscrowOperator } from "./chain/operator";
-import { loadSigners } from "./chain/signers";
+import { loadSigners, plaintextAllowed } from "./chain/signers";
 import {
   executorEnvSchema,
   feeEnvSchema,
@@ -39,7 +39,7 @@ import { applyAcceptedOffer } from "./executor/offers";
 import { executorTick } from "./executor/tick";
 import { adviseProvider } from "./hosted/advise";
 import { pollHostedRuns, runHosted } from "./hosted/run";
-import { ChainIndexer } from "./indexer/indexer";
+import { ChainIndexer, indexerCursorId } from "./indexer/indexer";
 import { bullmqSink } from "./jobs/sink";
 import { reconcileEscrow } from "./jobs/reconcile";
 import { AnthropicLlm, anthropicBatchApi, createE2eMockLlm, type LlmClient } from "./llm";
@@ -57,6 +57,7 @@ import { chainEventAlerts } from "./monitoring/chain-alerts";
 import { redisSpendRecorder, trackLlmSpend } from "./monitoring/llm-spend";
 import { createWorkerMetrics, startMetricsServer } from "./monitoring/metrics";
 import { monitorTick } from "./monitoring/monitor";
+import { startOwnProviderRegistration } from "./setup/auto-register";
 import { initSentry } from "./monitoring/sentry";
 
 const env = loadEnv(
@@ -159,6 +160,29 @@ const routerChain = createRouterChain(client, chain.chainId, deployment);
 // OPERATOR + QUOTER: a KMS, or env keys (local, testnet, and mainnet only under the guarded-launch caps;
 // chain/signers.ts enforces it).
 const accounts = await loadSigners(env);
+
+// Kazi's own providers (service fee + house agents): registered onchain by the worker itself when
+// the setup key is configured, once the API has seeded them. The setup key follows the same rules
+// as the platform signers (chain/signers.ts).
+if (env.SETUP_PRIVATE_KEY) {
+  plaintextAllowed(env);
+  startOwnProviderRegistration(
+    {
+      prisma,
+      redis,
+      keyPrefix: env.REDIS_KEY_PREFIX,
+      publicClient: client,
+      chain: viemChain,
+      rpcUrl: chain.rpcUrl,
+      deployment,
+      setupKey: env.SETUP_PRIVATE_KEY as Hex,
+      indexerCursorId: indexerCursorId(chain.chainId, deployment),
+      minMaxFeePerGasWei: chain.minMaxFeePerGasWei,
+      log: log.child({ component: "own-providers" }),
+    },
+    60_000,
+  );
+}
 const signer = createQuoteSigner(accounts.quoter, chain.chainId, deployment.taskEscrow);
 const operator = createEscrowOperator({
   publicClient: client,

@@ -298,4 +298,128 @@ describe("onchain setup of Kazi's own providers", () => {
       }
     },
   );
+
+  it(
+    "resumes after a crash: picks up a registration the DB missed and activates it, never registering twice",
+    { timeout: 300_000 },
+    async () => {
+      const { startLocalChain, KEYS } = await import("./anvil");
+      const { registerKaziProviders, providerMetadataUri } = await import("../src/setup/providers");
+      const { registerOwnProvidersOnce } = await import("../src/setup/auto-register");
+      const { indexerCursorId } = await import("../src/indexer/indexer");
+      const { foundry } = await import("viem/chains");
+      const { Redis } = await import("ioredis");
+      const { keccak256, parseEventLogs, stringToHex } = await import("viem");
+      const { SERVICE_FEE_PROVIDER, agentRegistryAbi } = await import("@kazi/shared");
+      const chain = await startLocalChain();
+      const redis = new Redis(process.env["REDIS_URL"]!, { maxRetriesPerRequest: 3 });
+      const registry = chain.deployment.agentRegistry;
+      const read = (functionName: "nextProviderId" | "statusOf", args: readonly bigint[] = []) =>
+        chain.publicClient.readContract({
+          address: registry,
+          abi: agentRegistryAbi,
+          functionName,
+          args: args as never,
+        });
+      const deps = {
+        prisma,
+        redis,
+        keyPrefix: process.env["REDIS_KEY_PREFIX"]!,
+        publicClient: chain.publicClient,
+        chain: foundry,
+        rpcUrl: chain.rpcUrl,
+        deployment: chain.deployment,
+        setupKey: KEYS.admin,
+        indexerCursorId: indexerCursorId(foundry.id, chain.deployment),
+        log,
+      };
+      try {
+        const slug = SERVICE_FEE_PROVIDER.slug;
+        const payout = "0x000000000000000000000000000000000000dEaD";
+        await prisma.provider.deleteMany({ where: { slug } });
+        await prisma.provider.create({
+          data: {
+            ownerId,
+            kind: "AGENT",
+            name: SERVICE_FEE_PROVIDER.name,
+            slug,
+            description: SERVICE_FEE_PROVIDER.description,
+            pricing: { ...SERVICE_FEE_PROVIDER.pricing },
+            payoutAddress: payout.toLowerCase(),
+            isHouse: true,
+          },
+        });
+        // A run that registered onchain and stopped before writing the id to the DB.
+        const admin = chain.wallet(KEYS.admin);
+        const hash = await admin.writeContract({
+          address: registry,
+          abi: agentRegistryAbi,
+          functionName: "register",
+          args: [0, payout, providerMetadataUri(slug), keccak256(stringToHex(slug))],
+          account: admin.account!,
+          chain: foundry,
+        });
+        const receipt = await chain.publicClient.waitForTransactionReceipt({ hash });
+        const [event] = parseEventLogs({
+          abi: agentRegistryAbi,
+          eventName: "ProviderRegistered",
+          logs: receipt.logs,
+        });
+        const id = event!.args.providerId;
+        const next = await read("nextProviderId");
+
+        // The worker waits while another run holds the lock and while the indexer is behind.
+        const lockKey = `${deps.keyPrefix}:lock:own-providers`;
+        await redis.set(lockKey, "1", "PX", 60_000);
+        expect((await registerOwnProvidersOnce(deps)).state).toBe("locked");
+        await redis.del(lockKey);
+        await prisma.indexerCursor.deleteMany({ where: { id: deps.indexerCursorId } });
+        expect((await registerOwnProvidersOnce(deps)).state).toBe("indexer-behind");
+
+        // The indexer has stored the registration and reached the head: the run resumes from it.
+        await prisma.indexerCursor.create({
+          data: { id: deps.indexerCursorId, lastBlock: await chain.publicClient.getBlockNumber() },
+        });
+        await prisma.chainEvent.deleteMany({
+          where: { chainId: foundry.id, txHash: hash, logIndex: event!.logIndex },
+        });
+        await prisma.chainEvent.create({
+          data: {
+            chainId: foundry.id,
+            contract: registry.toLowerCase(),
+            name: "ProviderRegistered",
+            txHash: hash,
+            logIndex: event!.logIndex,
+            blockNumber: receipt.blockNumber,
+            args: {
+              providerId: id.toString(),
+              owner: admin.account!.address,
+              kind: 0,
+              payout,
+              metadataURI: providerMetadataUri(slug),
+              metadataHash: keccak256(stringToHex(slug)),
+            },
+          },
+        });
+        const run = await registerOwnProvidersOnce(deps);
+        expect(["partial", "done"]).toContain(run.state);
+        const service =
+          run.state === "partial" || run.state === "done"
+            ? run.results.find((r) => r.slug === slug)
+            : undefined;
+        expect(service).toEqual({ slug, onchainId: id, status: "activated" });
+        expect(await read("nextProviderId")).toBe(next); // nothing registered twice
+        expect(await read("statusOf", [id])).toBe(2); // ACTIVE
+        const row = await prisma.provider.findUniqueOrThrow({ where: { slug } });
+        expect(row.onchainId).toBe(id);
+        expect(row.status).toBe("ACTIVE");
+        const again = await registerKaziProviders({ ...deps });
+        expect(again.find((r) => r.slug === slug)?.status).toBe("already");
+      } finally {
+        await prisma.indexerCursor.deleteMany({ where: { id: deps.indexerCursorId } });
+        redis.disconnect();
+        chain.stop();
+      }
+    },
+  );
 });

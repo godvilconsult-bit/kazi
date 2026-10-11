@@ -61,6 +61,10 @@ export const signerBackendEnvSchema = z.object({
   ),
   OPERATOR_KMS_KEY_ID: optionalString(z.string().min(1)),
   QUOTER_KMS_KEY_ID: optionalString(z.string().min(1)),
+  /** Setup (registrar) key: when set, the worker registers Kazi's own providers onchain itself. */
+  SETUP_PRIVATE_KEY: optionalString(
+    z.string().regex(/^0x[0-9a-fA-F]{64}$/, "must be a 0x-prefixed 32-byte hex key"),
+  ),
 });
 
 const decimalUsdc = z.string().regex(/^\d+(\.\d+)?$/, "must be a decimal amount like 1000");

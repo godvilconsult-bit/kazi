@@ -2,16 +2,18 @@
 
 This is the **guarded launch** (docs/09 §2.4): real USDC on Arc mainnet with unaudited contracts, so the exposure is capped. Each task can be at most `MAX_TASK_USDC` (100), all open escrow together at most `MAX_OPEN_ESCROW_USDC` (2,000). Only Kazi's own house agents are quoted, and provider bonds and staking are off. Raise the limits only after the external audit.
 
-Hosting is Railway, project `kazi`, environment `production`. That environment already holds Postgres and Redis. There are four services built from the one root `Dockerfile`, and `KAZI_SERVICE` picks the role:
+Everything deploys from GitHub (`godvilconsult-bit/kazi`, branch `main`); nothing is uploaded from a laptop:
 
-| Service        | Public address                           | Talks to                                                                           |
-| -------------- | ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| `web`          | `https://www.kazilabs.online`            | API (public URL in browsers, `api.railway.internal:4000` from the server)          |
-| `api`          | `https://api.kazilabs.online`            | Postgres, Redis, Supabase storage, Arc RPC; runs migrations and the seed on start  |
-| `worker`       | —                                        | Postgres, Redis, Claude, Arc RPC; signs as operator/quoter (keys: Railway secrets) |
-| `house-agents` | — (`house-agents.railway.internal:4100`) | Claude only                                                                        |
+| Part           | Hosting                                                              | Address                                  | Talks to                                                                                    |
+| -------------- | -------------------------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Website        | **Netlify** (`apps/web`, [`netlify.toml`](../apps/web/netlify.toml)) | `https://www.kazilabs.online`            | the API at `https://api.kazilabs.online`                                                    |
+| `api`          | **Railway** (root `Dockerfile`, `KAZI_SERVICE=api`)                  | `https://api.kazilabs.online`            | Postgres, Redis, Supabase storage, Arc RPC; runs migrations and the seed on start           |
+| `worker`       | **Railway** (`KAZI_SERVICE=worker`)                                  | —                                        | Postgres, Redis, Claude, Arc RPC; operator/quoter keys as Railway secrets; registers agents |
+| `house-agents` | **Railway** (`KAZI_SERVICE=house-agents`)                            | — (`house-agents.railway.internal:4100`) | Claude only                                                                                 |
 
-Secrets live in two places: `.env.mainnet` (deployer and setup keys) and `.env.production` (service secrets). Both are git-ignored and are never uploaded: `.railwayignore` excludes them.
+Netlify hosts the website only: the API, the worker (payouts, chain indexer, agent jobs) and Kazi's agents are always-on servers, so they run on Railway next to Postgres and Redis (project `kazi`, environment `production`).
+
+Secrets live in `.env.mainnet` (deployer, setup and signer keys) and `.env.production` (service secrets). Both are git-ignored, and `railway-setup.mjs` pipes them to Railway over stdin. Netlify needs no secrets: its settings are public and live in `netlify.toml`.
 
 ## 0. What only you can do (once)
 
@@ -29,7 +31,7 @@ Secrets live in two places: `.env.mainnet` (deployer and setup keys) and `.env.p
 6. **Fill `.env.production`**: copy [`production.env.example`](production.env.example) and fill it in.
 7. **Gas.** Arc pays gas in USDC. Send about 1 USDC to the deployer `0xF87AFe58EB6d0a794de62c568c37c59c7BB54e01` and about 0.5 USDC to the setup key `0x8f5f49Dcf29c2d5E6B82d3Ad96E6335294FC64D3`. After step 1 below, keep about 5 USDC on the operator address for releases and refunds; an alert fires below `ALERT_OPERATOR_MIN_GAS`.
 
-## 1. Contracts (Arc mainnet)
+## 1. Contracts (Arc mainnet) — done 2026-10-11
 
 ```bash
 pnpm -F @kazi/contracts deploy:mainnet -- --i-accept-unaudited-contracts
@@ -43,59 +45,64 @@ The script:
 - Grants each role to its address, then checks every role onchain.
 - Writes `packages/config/deployments/mainnet.json`. Commit that file; the services read it.
 
-It refuses to run if `mainnet.json` already exists, if a Safe owner or the guardian is a hot key, or if the threshold is 1 without `--allow-single-signer`.
+It refuses to run if `mainnet.json` already exists, if a Safe owner or the guardian is a hot key, or if the threshold is 1 without `--allow-single-signer`. The deployed addresses are in [docs/HANDOVER.md](../docs/HANDOVER.md) §2.
 
-## 2. Railway services and variables
+## 2. Backend on Railway (deploys from GitHub)
 
-**Shortcut for steps 2–4:** `node deploy/launch-website.mjs` sets up the services and variables, uploads all four services, attaches both domains and prints the DNS records. The sections below are what it does.
+1. **Variables.** Run once, and again whenever `.env.production` or `.env.mainnet` changes:
 
-```bash
-node deploy/railway-setup.mjs
-```
+   ```bash
+   node deploy/railway-setup.mjs
+   ```
 
-The script:
+   - It creates the `api`, `worker` and `house-agents` services if they're missing, and the private Supabase bucket.
+   - It generates `JWT_SECRET`, `ENCRYPTION_KEY`, `HOUSE_AGENTS_SECRET` and `METRICS_TOKEN` once, and appends them to `.env.production`.
+   - It sets each service's variables. Secrets go over stdin, so they are never printed or put on a command line. It deploys nothing.
 
-- Generates `JWT_SECRET`, `ENCRYPTION_KEY`, `HOUSE_AGENTS_SECRET` and `METRICS_TOKEN` once, and appends them to `.env.production`.
-- Creates the four services if missing.
-- Sets each service's variables. Secrets go over stdin, so they are never printed or put on a command line.
+2. **Connect each service to GitHub** (once). In the Railway dashboard, open project `kazi` → environment `production`. For each of `api`, `worker` and `house-agents`:
+   - Settings → Source → **Connect Repo** → `godvilconsult-bit/kazi`, branch `main`.
+   - Leave the root directory empty. Railway builds the root `Dockerfile`, and the service's `KAZI_SERVICE` variable picks its role.
 
-Re-run it whenever `.env.production` changes.
+   Every push to `main` then rebuilds and redeploys the three services. Watch a deploy with `railway logs --service api --environment production`. On start, the API applies migrations and runs the idempotent seed, which creates the admin users and the 10 house agents (their payouts go to the Safe).
 
-## 3. Deploy
+3. **API domain.** `api.kazilabs.online` is attached to the `api` service; to see its DNS records again:
 
-```bash
-railway up --service house-agents --environment production --detach
-railway up --service api --environment production --detach
-railway up --service worker --environment production --detach
-railway up --service web --environment production --detach
-```
+   ```bash
+   railway domain status api.kazilabs.online --service api --environment production
+   ```
 
-Watch with `railway logs --service api --environment production`. On start, the API applies migrations and runs the idempotent seed. The seed creates the admin users and the 10 house agents; the agents' payouts go to the Safe.
+4. **Remove the old `web` service** from Railway (the website moved to Netlify): service → Settings → Danger → Delete service. Its `www.kazilabs.online` domain goes with it.
 
-## 4. Domains
+## 3. Website on Netlify (deploys from GitHub)
 
-```bash
-railway domain www.kazilabs.online --service web --environment production
-railway domain api.kazilabs.online --service api --environment production
-```
+1. On [app.netlify.com](https://app.netlify.com): **Add new project → Import an existing project → GitHub** → `godvilconsult-bit/kazi`.
+2. Netlify detects the monorepo. Choose **`apps/web`** as the site to deploy (package directory) and leave the base directory as the repository root. The build command (`pnpm --filter @kazi/web build`) and publish directory (`apps/web/.next`) come from `apps/web/netlify.toml`. Deploy.
+3. Optional: add `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` under Project configuration → Environment variables, then redeploy. It's needed only for WalletConnect (mobile) wallets.
+4. **Domains:** Project configuration → Domain management → Add a domain → `www.kazilabs.online`, and set it as the primary domain. Add `kazilabs.online` too; Netlify redirects it to `www`. Netlify issues the HTTPS certificates.
 
-Each command prints the DNS records to add: a CNAME and a TXT verification record. Railway issues the certificates once DNS resolves. In Namecheap, go to **Domain List → kazilabs.online → Advanced DNS**:
+Every push to `main` rebuilds the site. Netlify's proxy adds the visitor's country as `x-country`, which the token pages' geo rules read (`netlify.toml`).
 
-1. Delete the parking records: the `www` CNAME to `parkingpage.namecheap.com` and the `@` URL redirect or A record.
-2. Add a CNAME `www` and a CNAME `api` with the targets Railway printed, plus Railway's TXT records.
-3. Add a **URL Redirect Record** for host `@`, permanent (301), to `https://www.kazilabs.online`. The bare domain then lands on the site. Sign-in and the API only accept `www.kazilabs.online` as the site's origin.
+## 4. DNS at Namecheap
 
-Optional, later: move the DNS to Cloudflare (free). If you do, proxy `www` (SSL mode **Full**), and the site gets the visitor-country header used by the token pages' geo rules. Keep `api` **DNS only**, since `TRUST_PROXY=1` assumes Railway is the only proxy in front of the API; set `TRUST_PROXY=2` if you proxy it. Without Cloudflare the geo rules aren't enforced. That is acceptable while the token isn't public.
+Domain List → `kazilabs.online` → **Advanced DNS**:
+
+1. Delete the parking records: the `www` CNAME to `parkingpage.namecheap.com`, and the `@` URL redirect or A record.
+2. `www` → **CNAME** → your Netlify site's address (`<name>.netlify.app`; Netlify's domain page shows it).
+3. `@` → the record Netlify's domain page asks for for the bare domain (an **A** record to Netlify's load balancer). Netlify then redirects `kazilabs.online` to `https://www.kazilabs.online`. Sign-in and the API only accept `www.kazilabs.online` as the site's origin.
+4. `api` → **CNAME** → the target Railway printed, plus Railway's **TXT** verification record.
+
+Netlify and Railway issue certificates once DNS resolves (minutes to an hour).
 
 ## 5. Register the house agents onchain
 
-Run this once, after the website launch, when the worker is running. The API seeds the agents into the database on its first start:
+**Automatic.** The worker registers and activates Kazi's own agents by itself once the API has seeded them, usually within a few minutes of the first deploy. It uses the setup key that `railway-setup.mjs` stores on it as a secret.
 
-```bash
-node deploy/register-house-agents.mjs
-```
+- It waits until its indexer has reached the chain head, then checks the registrations that key already made.
+- It stores each id as soon as the transaction is mined, so an interrupted run resumes without registering anything twice.
+- The worker log shows "Kazi's providers registered onchain".
+- With a zero stake minimum it only registers and activates; it posts no bond.
 
-The registration runs inside the worker's container (`railway ssh`), so it reaches Postgres over Railway's private network. The database never needs a public address. It uses the setup key that `railway-setup.mjs` stored on the worker as a secret. With a zero stake minimum it only registers and activates; it posts no bond. Re-running skips agents that are already registered.
+Manual fallback: `node deploy/register-house-agents.mjs` runs the same registration inside the worker's container over `railway ssh`. That needs an SSH key registered with Railway (`ssh-keygen -t ed25519`, then the command asks to add it).
 
 ## 6. Smoke test
 
@@ -106,6 +113,7 @@ The registration runs inside the worker's container (`railway ssh`), so it reach
 
 ## Operating
 
+- Deploys: push to `main`. Netlify rebuilds the website, Railway rebuilds `api`, `worker` and `house-agents`.
 - Pause: [runbooks/pause.md](../docs/runbooks/pause.md).
 - Incidents: [runbooks/incident-response.md](../docs/runbooks/incident-response.md). Set `ROUTER_DISABLED=true` on api and worker to stop new quotes.
 - Key rotation: [runbooks/key-compromise.md](../docs/runbooks/key-compromise.md).

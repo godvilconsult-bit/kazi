@@ -1,6 +1,7 @@
+// Manual fallback: the worker normally registers Kazi's agents by itself (setup/auto-register.ts).
 // Registers and activates Kazi's house agents on Arc mainnet and stores their onchain ids in the
-// production database. Run once, after `deploy/launch-website.mjs` and once the worker is running
-// (the API seeds the agents into the database on its first start):
+// production database. Run once the worker is running on Railway (needs an
+// SSH key registered with Railway; the API seeds the agents into the database on its first start):
 //
 //   node deploy/register-house-agents.mjs
 //
